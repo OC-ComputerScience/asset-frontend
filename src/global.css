@@ -1,0 +1,57 @@
+.select-fixed-width {
+  width: 350px;
+  padding-top: 15px;
+}
+
+.custom-snackbar {
+  position: fixed !important;
+  top: 115px;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: auto !important;
+  right: auto !important;
+}
+
+.table-icons {
+  border: none;
+  box-shadow: none;
+  outline: none;
+}
+
+.report-icons {
+  background-color: transparent !important; /* Ensure background is transparent */
+  border: none;
+  box-shadow: none;
+  outline: none;
+  margin-right: 16px;
+  padding: 0 !important; /* Minimize padding to shrink the clickable area to just around the icon */
+}
+
+.profile-field {
+  font-weight: bold;
+}
+
+.notes-data {
+  white-space: pre-wrap; /* Allows text to wrap and preserves spaces and line breaks */
+  word-wrap: break-word; /* Breaks long words to prevent overflow */
+  overflow-wrap: break-word; /* Ensures the overflow text is broken into the next line */
+  max-width: 100%; /* Ensures the container does not exceed the width of its parent */
+}
+
+/* This is just an illustrative example; you'll need to adjust based on your actual app structure */
+/* .deep .v-menu__content.custom-menu-position {
+  top: 0 !important;
+  left: 100% !important;
+} */
+
+.custom-menu-position {
+  top: 70% !important; /* Adjust as necessary */
+  left: 53% !important; /* Moves it to start from the middle of the activator */
+  transform: translateX(-50%); /* Adjusts it back to center */
+}
+
+/* Search bar highlight color */
+mark {
+  background-color: lightblue; /* Change to your desired color */
+  color: black; /* Adjust text color if needed */
+}

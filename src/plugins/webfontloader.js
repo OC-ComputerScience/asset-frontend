@@ -1,0 +1,12 @@
+import { load } from "webfontloader";
+
+export async function loadFonts() {
+  load({
+    google: {
+      families: ["Roboto:100,300,400,500,700,900&display=swap"],
+    },
+  });
+}
+
+
+// @import url('https://fonts.googleapis.com/css2?family=Sofia+Sans+Extra+Condensed&display=swap');
