@@ -7,7 +7,7 @@ import dns from "dns";
 dns.setDefaultResultOrder("verbatim");
 
 export default () => {
-  const baseURL = process.env.APP_ENV === "development" ? "/" : "/asset/t1/";
+  const baseURL = process.env.APP_ENV === "development" ? "/" : "/";
 
   return defineConfig({
     resolve: {

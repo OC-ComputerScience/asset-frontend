@@ -1,5 +1,5 @@
 {
-  "name": "t1-asset-tracking-frontend",
+  "name": "asset-tracking-frontend",
   "version": "1.0.0",
   "description": "Web-based Asset Tracking Interface: A user-friendly platform for managing and tracking assets in real-time, featuring interactive dashboards, detailed reporting, and seamless integration with backend services.",
   "type": "module",
