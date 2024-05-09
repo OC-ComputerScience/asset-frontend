@@ -7,7 +7,7 @@ var baseurl = "";
 if (import.meta.env.DEV) {
   baseurl = "http://localhost:3031/asset-t1/";
 } else {
-  baseurl = "/asset-t1/";
+  baseurl = "/";
 }
 
 const apiClient = axios.create({
