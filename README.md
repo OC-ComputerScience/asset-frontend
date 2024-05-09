@@ -15,14 +15,12 @@ This project develops a web application for Support Central and general OC opera
 
 The frontend is developed using Vue.js, complemented by HTML, CSS, and Vuetify.
 
-
 ### Technologies Used
 
 - **Frontend**: Vue 3, HTML, CSS, Vuetify, and JavaScript, focusing on responsive design and user experience.
 - **Backend**: Node.js with Express for server management, JavaScript for server-side logic, and Sequelize as the ORM for database interactions.
 - **Database**: MySQL for structured data storage and management.
 - **Local Development Environment**: Node.js and MySQL running on local test machines via XAMPP, with Apache server facilitating local hosting and testing.
-
 
 ### Dependencies
 
@@ -42,5 +40,3 @@ The frontend is developed using Vue.js, complemented by HTML, CSS, and Vuetify.
 - vuetify: `3.5.15`
 - vuex: `4.1.0`
 - webfontloader: `1.6.28`
-
-

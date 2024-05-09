@@ -1,5 +1,5 @@
 {
-  "name": "t1-asset-tracking-frontend",
+  "name": "asset-tracking-frontend",
   "version": "1.0.0",
   "description": "Web-based Asset Tracking Interface: A user-friendly platform for managing and tracking assets in real-time, featuring interactive dashboards, detailed reporting, and seamless integration with backend services.",
   "type": "module",
@@ -8,7 +8,7 @@
     "dev": "cross-env APP_ENV=development vite",
     "build": "cross-env APP_ENV=production vite build",
     "preview": "vite preview",
-    "bundle": "mv .env dist",
+    "bundle": "mkdir deploy && cp -r app server.js package.json package-lock.json .env deploy",
     "test": "cypress run",
     "test:open": "cypress open"
   },
