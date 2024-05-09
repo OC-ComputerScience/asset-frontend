@@ -3,11 +3,12 @@ import Utils from "../config/utils.js";
 import AuthServices from "./authServices.js";
 import Router from "../router.js";
 
+
 var baseurl = "";
-if (import.meta.env.DEV) {
+if (process.env.NODE_ENV === "development") {
   baseurl = "http://localhost:3031/asset-t1/";
 } else {
-  baseurl = "/";
+  baseurl = "/asset-t1/";
 }
 
 const apiClient = axios.create({
