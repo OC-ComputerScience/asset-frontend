@@ -1,6 +1,6 @@
 <script setup>
 import ocLogo from "/src/oc-logo-maroon.png";
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onMounted, nextTick } from "vue";
 import Utils from "../config/utils";
 import AuthServices from "../services/authServices";
 import { useRouter } from "vue-router";
@@ -80,19 +80,22 @@ const serviceActions = computed(() => {
   return services;
 });
 
-const resetMenu = () => {
+const resetMenu = async() => {
   user.value = Utils.getStore("user");
+  console.log(user.value);
   if (user.value && user.value.fName && user.value.lName) {
     initials.value = user.value.fName[0] + user.value.lName[0];
     name.value = user.value.fName + " " + user.value.lName;
   }
+  console.log(store.getters.isAuthenticated)
 };
 
-const logout = () => {
-  AuthServices.logoutUser(user.value)
+const logout = async() => {
+  await AuthServices.logoutUser(user.value)
     .then((response) => {
       console.log(response);
       Utils.removeItem("user");
+      store.commit('setLoginUser', null);
       router.push({ name: "login" }).then(() => {
         // if (process.env.NODE_ENV === "development") {
         //   router.go();
@@ -117,11 +120,15 @@ logoURL.value = ocLogo;
     <v-app-bar app color="primary">
       <router-link
         :to="
-          store.getters.isAdmin
+          store.getters.isAuthenticated
+          ? (
+            store.getters.isAdmin
             ? { name: 'adminDashboard' }
             : (to = store.getters.isRoleAssigned
                 ? { name: 'userDashboard' }
                 : { name: 'unassignedDashboard' })
+          )
+          : {name: 'login'}
         "
       >
         <v-img class="mx-2" :src="logoURL" height="" width="60" contain></v-img>
