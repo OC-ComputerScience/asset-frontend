@@ -42,7 +42,6 @@ const rules = {
 
 // Refs for general use
 const selectedTab = ref("Users");
-const selectedStatus = ref("Active");
 const isUsersTabActive = computed(() => selectedTab.value === "Users");
 const isUserRolesTabActive = computed(() => selectedTab.value === "User Roles");
 const itemToDelete = ref(null);
@@ -128,16 +127,22 @@ const scrollToUser = () => {
   }
 };
 
-const highlightedUsers = computed(() => {
-  return filteredUsers.value.map((user) => {
-    const fName = user.fName || ""; // Default to empty string if null
-    const lName = user.lName || "";
-    return {
-      ...user,
-      fullName: `${highlightText(fName)} ${highlightText(lName)}`, // Ensure null-safe operation
-    };
-  });
-});
+const highlightedUsers = ref([]);
+
+watch(
+  [filteredUsers, searchQuery],
+  ([newFilteredUsers]) => {
+    highlightedUsers.value = newFilteredUsers.map((user) => {
+      const fName = user.fName || ""; // Default to empty string if null
+      const lName = user.lName || "";
+      return {
+        ...user,
+        fullName: `${highlightText(fName)} ${highlightText(lName)}`, // Ensure null-safe operation
+      };
+    });
+  },
+  { deep: true, immediate: true }
+);
 
 const highlightText = (text) => {
   if (!text) return ""; // Return empty string if text is null or undefined
@@ -354,7 +359,7 @@ const resetForm = () => {
 
 // Watcher for the "Users" tab
 watch(
-  [users, isUsersTabActive],
+  [highlightedUsers, isUsersTabActive],
   ([newUsers, isUsersActive]) => {
     if (isUsersActive) {
       newUsers.forEach((user) => {
@@ -474,7 +479,6 @@ onMounted(async () => {
                             class="select-fixed-width"
                             variant="solo"
                             return-object
-                            clearable
                           ></v-autocomplete>
                         </td>
                       </tr>
