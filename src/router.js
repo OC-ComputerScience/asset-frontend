@@ -236,7 +236,7 @@ const router = createRouter({
 
 // Navigation guards
 router.beforeEach((to, from, next) => {
-  console.log('Role id: ', store.getters.getUserRole)
+  // console.log('Role id: ', store.getters.getUserRole)
   // Redirect to login if not authenticated
   if (to.meta.requiresAuth && !store.getters.isAuthenticated) {
     next("/login");
