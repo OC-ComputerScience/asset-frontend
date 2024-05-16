@@ -14,7 +14,6 @@ export default {
   },
 
   getLogsBySerializedAssetId(serializedAssetId) {
-    console.log("Log services recieved serializedAssetId: " + serializedAssetId)
     return apiClient.get(baseURL + "bySerializedAsset/" + `${serializedAssetId}`);
   },
   

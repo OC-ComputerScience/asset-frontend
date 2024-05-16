@@ -194,8 +194,6 @@ const fetchDynamicFields = async (profileId) => {
 const saveProfile = async () => {
   const purchasePrice = newProfile.value.purchasePrice.replace(/[$,]/g, "");
 
-  console.log("Save Profile Called");
-
   let formattedAcquisitionDate = null;
   formattedAcquisitionDate = format(
     new Date(rawAcquisitionDate.value),
@@ -212,36 +210,29 @@ const saveProfile = async () => {
 
   try {
     if (newProfile.value.id && selectedTypeId.value !== initialTypeId.value) {
-      console.log("Changed Type, Delete Profile Data Called");
 
       // Delete existing profile data first
       await ProfileDataServices.deleteByProfileId(newProfile.value.id);
-      // console.log("Existing profile data deleted due to type change.")
     }
 
     // Check if editing profile
     if (newProfile.value.id) {
-      console.log("Editing Profile Called");
-
       // Update the profile itself
       const response = await AssetProfileServices.update(
         newProfile.value.id,
         profilePayload
       );
-      console.log("Profile updated:", response);
 
       // Update the profile data
       await saveProfileData(newProfile.value.id);
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
-      console.log("Creating New Profile Called");
 
       // Create new profile
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
         newProfile.value.id = createResponse.data.profileId;
-        console.log("New profile created:", createResponse);
         await saveProfileData(newProfile.value.id);
         emitSaveSnackbar();
       }

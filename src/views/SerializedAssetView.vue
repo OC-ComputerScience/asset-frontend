@@ -283,8 +283,6 @@ const formatStatus = (activeStatus) => {
 };
 
 const goBack = () => {
-  console.log("Attempting to go back to" + sourcePage);
-  console.log("profileId: " + assetDetails.value.profileId);
   if (sourcePage === "profileView") {
     router.replace({
       name: "profileView",

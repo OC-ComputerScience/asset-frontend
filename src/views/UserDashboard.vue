@@ -30,10 +30,8 @@ const retrievePersonAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      console.log("Getting all person assets");
       response = await PersonAssetServices.getAll();
     } else {
-      console.log("Getting person assets for categoryId: " + userRole.value.data.categoryId);
       response = await PersonAssetServices.getPersonAssetsByCategoryId(userRole.value.data.categoryId);
     }
 
@@ -58,10 +56,8 @@ const retrieveBuildingAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      console.log("Getting all building assets");
       response = await BuildingAssetServices.getAll();
     } else {
-      console.log("Getting building assets for categoryId: " + userRole.value.data.categoryId);
       response = await BuildingAssetServices.getBuildingAssetsByCategoryId(userRole.value.data.categoryId);
     }
 
@@ -86,10 +82,8 @@ const retrieveRoomAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      console.log("Getting all room assets");
       response = await RoomAssetServices.getAll();
     } else {
-      console.log("Getting room assets for categoryId: " + userRole.value.data.categoryId);
       response = await RoomAssetServices.getRoomAssetsByCategoryId(userRole.value.data.categoryId);
     }
 

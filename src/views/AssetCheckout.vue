@@ -115,11 +115,9 @@ const retrievePersonAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      console.log("Getting all person assets")
       response = await PersonAssetServices.getAll();
     } else {
       // Fetch person assets by specific category ID
-      console.log("Getting person assets for categoryId: " + userRole.value.data.categoryId)
 
       response = await PersonAssetServices.getPersonAssetsByCategoryId(userRole.value.data.categoryId);
     }
