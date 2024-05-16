@@ -13,7 +13,6 @@ export default {
     return apiClient.get(baseURL + `${personAssetId}`);
   },
   getPersonAssetsBySerializedAssetId(serializedAssetId) {
-    console.log("PersonAsset services is getting all personAssets with serializedAssetId: " + serializedAssetId)
     return apiClient.get(baseURL + "bySerializedAsset/" + `${serializedAssetId}`);
   },
   getPersonAssetsByCategoryId(categoryId) {

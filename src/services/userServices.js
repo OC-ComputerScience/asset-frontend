@@ -23,7 +23,6 @@ export default {
 
   // Update a user's role by user ID
   updateRole(userId, roleId) {
-    console.log(`Service: Updating user ${userId} role to`, roleId);
     return apiClient.put(`/user/${userId}/role`, { userRoleId: roleId });
   },
 

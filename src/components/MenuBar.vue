@@ -82,18 +82,15 @@ const serviceActions = computed(() => {
 
 const resetMenu = async() => {
   user.value = Utils.getStore("user");
-  console.log(user.value);
   if (user.value && user.value.fName && user.value.lName) {
     initials.value = user.value.fName[0] + user.value.lName[0];
     name.value = user.value.fName + " " + user.value.lName;
   }
-  console.log(store.getters.isAuthenticated)
 };
 
 const logout = async() => {
   await AuthServices.logoutUser(user.value)
     .then((response) => {
-      console.log(response);
       Utils.removeItem("user");
       store.commit('setLoginUser', null);
       router.push({ name: "login" }).then(() => {
@@ -108,8 +105,6 @@ const logout = async() => {
 };
 
 onMounted(() => {
-//   console.log("Can Maint: " + canManageMaintenance.value + "Can Lease: " + canManageLeases.value + "Can Warranty: " + canManageWarranties.value 
-// + "Add: " + canAdd.value + "Edit: " + canEdit.value + "Archive: " + canArchive.value + "Activate: " + canActivate.value)
 logoURL.value = ocLogo;
   resetMenu();
 });
