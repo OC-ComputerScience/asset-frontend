@@ -1,6 +1,7 @@
 <script setup>
 import {ref, onMounted} from 'vue';
 import customFieldServices from "../services/customFieldServices"
+import assetTypeServices from '../services/assetTypeServices';
 import assetCategoryServices from '../services/assetCategoryServices';
 
 const props = defineProps(['type', 'rules', 'categories']);
@@ -10,6 +11,7 @@ const fields = ref([]);
 const typeFields = ref([]);
 const validType = ref(false);
 const selectedCategory = ref({});
+const editMode = ref(false);
 
 const fieldDataTypes = ref(['String', 'List','Decimal', 'Integer'])
 
@@ -19,6 +21,7 @@ onMounted(async() => {
     try{
         let response;
         if(props.type.title != ''){
+            editMode.value = true;
             type.value = props.type;
             response = await assetCategoryServices.getById(type.value.categoryId);
             selectedCategory.value = response.data;
@@ -39,16 +42,44 @@ onMounted(async() => {
 
 const addField = () => {
     typeFields.value.push({
+        id: null,
         name: '',
         identifier: false,
         required: false,
         type: 'String'
-    })
+    });
 };
 
 const removeField = (index) => {
     typeFields.value.splice(index, 1)
-}
+};
+
+const updateFieldValue = (field) => {
+    field.type = fields.value.find((name) => name == field.name).type;
+    console.log(field);
+};
+
+const saveType = async() => {
+    let data = {
+        type: type.value,
+        fields: typeFields.value
+    };
+    try{
+        let response;
+        if(editMode.value){
+            // Update type
+            response = await assetTypeServices.update(props.type.typeId, data);
+        }
+        else{
+            // Create new type
+            response = await assetTypeServices.create(data);
+        }
+    }
+    catch(err){
+        console.error(err)
+    }
+    
+};
 
 </script>
 
@@ -104,7 +135,7 @@ const removeField = (index) => {
                 :key="index"
             >
                 <v-col cols="6">
-                    <v-autocomplete
+                    <v-combobox
                         label="Field"
                         variant="outlined"
                         v-model="field.name"
@@ -115,7 +146,8 @@ const removeField = (index) => {
                         clearable
                         return-object
                         prepend-icon="fill space"
-                    ></v-autocomplete>
+                        @update:modelValue="updateFieldValue(field)"
+                    ></v-combobox>
                 </v-col>
                 <v-col cols="6">
                     <v-radio-group
@@ -182,6 +214,5 @@ const removeField = (index) => {
         <v-btn color="cancelgrey" text @click="$emit('closeModal')">Cancel</v-btn>
         <v-btn color="saveblue" @click="saveType" :disabled="!validType">Save</v-btn>
     </v-card-actions>
-    <!-- :disabled="!validType || !hasTypeChanged" -->
     </v-card>
 </template>
