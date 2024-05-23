@@ -5,6 +5,7 @@ import AssetProfileServices from "../services/assetProfileServices";
 import SerializedAssetServices from "../services/serializedAssetServices";
 import UserRoleServices from "../services/userRoleServices";
 import ProfileDialog from "../components/ProfileDialog.vue";
+import EditType from "../components/EditType.vue";
 import { ref, onMounted, watch, computed, toRaw } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
@@ -323,7 +324,7 @@ const deleteType = async (typeId) => {
 
 const resetForm = () => {
   newType.value = {
-    typeName: "",
+    title: "",
     desc: "",
     categoryId: "",
     id: null,
@@ -1845,115 +1846,13 @@ onMounted(async () => {
     </v-container>
 
     <!-- Add/Edit Type Dialog -->
-    <v-dialog v-model="showAddTypeDialog" max-width="600px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between">
-          <span class="headline">{{ editingType ? "Edit" : "Add" }} Type</span>
-        </v-card-title>
-        <v-card-text>
-          <v-form ref="formType" v-model="validType">
-            <v-container>
-              <v-row>
-                <v-col cols="12">
-                  <v-text-field
-                    variant="outlined"
-                    label="Name"
-                    v-model="newType.title"
-                    :rules="[rules.required, rules.maxNameLength]"
-                    maxlength="50"
-                    counter
-                    prepend-icon="mdi-rename"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12">
-                  <!-- Category Selection -->
-                  <v-autocomplete
-                    label="Category"
-                    variant="outlined"
-                    :items="assetCategories"
-                    v-model="selectedCategoryId"
-                    item-text="title"
-                    item-value="key"
-                    :rules="[rules.required]"
-                    clearable
-                    return-object
-                    prepend-icon="mdi-folder-multiple-outline"
-                  ></v-autocomplete>
-                </v-col>
-                <v-col cols="12">
-                  <v-textarea
-                    label="Description"
-                    variant="outlined"
-                    v-model="newType.desc"
-                    :rules="[rules.required, rules.maxDescLength]"
-                    maxlength="255"
-                    counter
-                    prepend-icon="mdi-note"
-                  ></v-textarea>
-                </v-col>
-              </v-row>
-              <v-row
-                v-for="(field, index) in newType.customFields"
-                :key="index"
-              >
-                <v-col cols="10">
-                  <v-text-field
-                    label="Field Name"
-                    variant="outlined"
-                    v-model="field.fieldName"
-                    :rules="[rules.required]"
-                    prepend-icon="fill space"
-                  ></v-text-field>
-                </v-col>
-                <!-- <v-col cols="4">
-                  <v-select
-                    label="Field Type"
-                    v-model="field.fieldType"
-                    :items="['text', 'number', 'date', 'boolean']"
-                  ></v-select>
-                </v-col> -->
-                <v-col cols="2">
-                  <v-btn icon @click="removeField(index)">
-                    <v-icon color="primary">mdi-delete</v-icon>
-                  </v-btn>
-                </v-col>
-              </v-row>
-              <!-- Button to add a new field with a tooltip -->
-              <v-row>
-                <v-col cols="12">
-                  <v-tooltip bottom>
-                    <template v-slot:activator="{ attrs }">
-                      <!-- Button with plus sign and tooltip on hover -->
-                      <v-btn
-                        color="primary"
-                        @click="addField"
-                        icon
-                        v-bind="attrs"
-                      >
-                        <v-icon left>mdi-plus</v-icon>
-                        <!-- Icon with left alignment -->
-                      </v-btn>
-                      Add Field
-                      <!-- Text label to the right of the icon -->
-                    </template>
-                    <!-- Tooltip text -->
-                    <span>Add a new field to the asset type</span>
-                  </v-tooltip>
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <!-- Use the validType model to control the disabled state -->
-          <v-btn color="cancelgrey" text @click="closeTypeDialog">Cancel</v-btn>
-          <v-btn color="saveblue" @click="saveType" :disabled="!validType"
-            >Save</v-btn
-          >
-        </v-card-actions>
-        <!-- :disabled="!validType || !hasTypeChanged" -->
-      </v-card>
+    <v-dialog v-model="showAddTypeDialog" max-width="900px">
+      <EditType 
+        :rules="rules"
+        :categories="assetCategories"
+        :type="newType"
+        @closeModal="closeTypeDialog"
+      />
     </v-dialog>
 
     <!-- Add/Edit Profile Dialog -->
