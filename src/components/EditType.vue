@@ -1,7 +1,9 @@
 <script setup>
 import {ref, onMounted} from 'vue';
 import customFieldServices from "../services/customFieldServices"
+import customFieldTypeServices from "../services/customFieldTypeServices"
 import assetTypeServices from '../services/assetTypeServices';
+import assetProfileServices from '../services/assetProfileServices';
 import assetCategoryServices from '../services/assetCategoryServices';
 
 const props = defineProps(['type', 'rules', 'categories']);
@@ -12,12 +14,11 @@ const typeFields = ref([]);
 const validType = ref(false);
 const selectedCategory = ref({});
 const editMode = ref(false);
-
 const fieldDataTypes = ref(['String', 'List','Decimal', 'Integer'])
+const emit = defineEmits(['saveType']);
 
 
 onMounted(async() => {
-    console.log(props.type)
     try{
         let response;
         if(props.type.title != ''){
@@ -25,6 +26,7 @@ onMounted(async() => {
             type.value = props.type;
             response = await assetCategoryServices.getById(type.value.categoryId);
             selectedCategory.value = response.data;
+            await retrieveFields();
         }
         else{
             type.value = {
@@ -35,18 +37,42 @@ onMounted(async() => {
         }
         response = await customFieldServices.getAll();
         fields.value = response.data;
-        console.log(fields.value)
     }
     catch(err) {console.error(err);}
 });
 
+const retrieveFields = async() => {
+    try{
+       let response = await customFieldTypeServices.getAllForType(type.value.typeId);
+        let customFields = response.data;
+        for (let field of customFields){
+            typeFields.value.push({
+                id: field.id,
+                customField: {
+                    id: field.customField.id,
+                    name: field.customField.name,
+                    type: field.customField.type,                
+                },
+                identifier: field.identifier,
+                required: field.required,
+            });
+        } 
+    }
+    catch(err){
+        console.error(err);
+    }
+};
+
 const addField = () => {
     typeFields.value.push({
         id: null,
-        name: '',
         identifier: false,
         required: false,
-        type: 'String'
+        customField: {
+            id: null,
+            name: null,
+            type: 'String',
+        },
     });
 };
 
@@ -55,31 +81,74 @@ const removeField = (index) => {
 };
 
 const updateFieldValue = (field) => {
-    field.type = fields.value.find((name) => name == field.name).type;
-    console.log(field);
+    if(!field.customField.id){
+        field.customField = {
+            id: null,
+            name: field.customField,
+            type: 'String'
+        }
+    }
 };
 
 const saveType = async() => {
     let data = {
-        type: type.value,
-        fields: typeFields.value
+        typeName: type.value.title,
+        desc: type.value.desc,
+        categoryId: selectedCategory.value.categoryName.categoryId
     };
+    console.log(selectedCategory.value)
+    let typeId;
     try{
+        console.log(data);
         let response;
         if(editMode.value){
             // Update type
             response = await assetTypeServices.update(props.type.typeId, data);
+            typeId = props.type.typeId;
         }
         else{
             // Create new type
             response = await assetTypeServices.create(data);
+            typeId = response.data.typeId;
         }
     }
     catch(err){
         console.error(err)
     }
-    
+    await saveFields(typeId);
+    emit('saveType');
 };
+
+const saveFields = async(typeId) => {
+    let response;
+    try{
+        for(let field of typeFields.value){
+            let customFieldType = {
+                required: field.required,
+                identifier: field.identifier,
+                typeId: typeId,
+                customFieldId: field.customField.id,
+            };
+            if(field.customField.id == null){
+                let customField = {
+                    name: field.customField.name,
+                    type: field.customField.type,
+                };
+                response = await customFieldServices.create(customField);
+                customFieldType.customFieldId = response.data.id;
+            }
+            if(field.id){
+                response = await customFieldTypeServices.update(field.id, customFieldType);
+            }
+            else{
+                response = await customFieldTypeServices.create(customFieldType);
+            }
+        }
+    }
+    catch(err){
+        console.error(err)
+    }
+}
 
 </script>
 
@@ -138,7 +207,7 @@ const saveType = async() => {
                     <v-combobox
                         label="Field"
                         variant="outlined"
-                        v-model="field.name"
+                        v-model="field.customField"
                         :items="fields"
                         :rules="[props.rules.required]"
                         item-title="name"
@@ -153,7 +222,7 @@ const saveType = async() => {
                     <v-radio-group
                     class="ma-2" 
                         inline 
-                        v-model="field.type"
+                        v-model="field.customField.type"
                     >
                         <v-radio
                             v-for="dataType in fieldDataTypes"
@@ -165,23 +234,23 @@ const saveType = async() => {
                 </v-col>
                 <v-row class="ma-n10">
                     <v-col cols="3">
-                    <v-checkbox
-                        prepend-icon="fill space"
-                        class="ml-7"
-                        label="Required"
-                        v-model="field.required"
-                        color="primary"
-                    ></v-checkbox>
-                </v-col>
-                <v-col cols="7">
-                    <v-checkbox
-                        label="Identifier"
-                        v-model="field.identifier"
-                        color="primary"
-                    ></v-checkbox>
-                </v-col>
+                        <v-checkbox
+                            prepend-icon="fill space"
+                            class="ml-7"
+                            label="Required"
+                            v-model="field.required"
+                            color="primary"
+                        ></v-checkbox>
+                    </v-col>
+                    <v-col cols="7">
+                        <v-checkbox
+                            label="Identifier"
+                            v-model="field.identifier"
+                            color="primary"
+                        ></v-checkbox>
+                    </v-col>
                     <v-col cols="2">
-                        <v-btn icon @click="removeField(index)">
+                        <v-btn icon @click="removeField(index)" >
                         <v-icon color="primary">mdi-delete</v-icon>
                         </v-btn>
                     </v-col>

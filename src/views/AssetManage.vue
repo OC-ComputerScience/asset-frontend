@@ -267,45 +267,8 @@ const editType = (type) => {
 };
 
 const saveType = async () => {
-  let categoryId = selectedCategoryId.value.key
-    ? selectedCategoryId.value.key
-    : selectedCategoryId.value;
-  console.log(categoryId);
-  if (!categoryId) {
-    console.error("Category not selected.");
-    message.value = "Category not found or not selected.";
-    return;
-  }
-
-  // Prepare the type data for saving
-  const typeData = {
-    typeName: newType.value.title,
-    desc: newType.value.desc,
-    categoryId: categoryId,
-    dynamicFields: JSON.stringify(newType.value.customFields), // Convert to JSON string
-  };
-
-  console.log(typeData);
-
-  try {
-    if (editingType.value) {
-      await AssetTypeServices.update(newType.value.typeId, typeData);
-      snackbarText.value = "Type updated successfully.";
-    } else {
-      await AssetTypeServices.create(typeData);
-      snackbarText.value = "Type added successfully.";
-    }
-    snackbar.value = true; // Show the snackbar
-    message.value = "Type saved successfully.";
-    await retrieveAssetTypes();
-  } catch (error) {
-    console.error("Error saving type:", error);
-    message.value = `Error saving type: ${error.message || "Unknown error"}`;
-  } finally {
-    resetForm(); // Ensure form is reset here
-    showAddTypeDialog.value = false; // Close dialog in finally to ensure it closes
-    originalType.value = {}; // Reset original values
-  }
+  retrieveAssetTypes();
+  showAddTypeDialog.value = false;
 };
 
 const deleteType = async (typeId) => {
@@ -1852,6 +1815,7 @@ onMounted(async () => {
         :categories="assetCategories"
         :type="newType"
         @closeModal="closeTypeDialog"
+        @saveType="saveType"
       />
     </v-dialog>
 
