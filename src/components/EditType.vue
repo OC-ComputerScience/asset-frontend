@@ -14,6 +14,7 @@ const typeFields = ref([]);
 const validType = ref(false);
 const selectedCategory = ref({});
 const editMode = ref(false);
+const hasBeenEdited = ref(false);
 const fieldDataTypes = ref(['String', 'List','Decimal', 'Integer'])
 const emit = defineEmits(['saveType']);
 
@@ -76,8 +77,11 @@ const addField = () => {
     });
 };
 
-const removeField = (index) => {
-    typeFields.value.splice(index, 1)
+const removeField = async(index, field) => {
+    typeFields.value.splice(index, 1);
+    if(field.id){
+        await customFieldTypeServices.delete(field.id);
+    }
 };
 
 const updateFieldValue = (field) => {
@@ -94,16 +98,16 @@ const saveType = async() => {
     let data = {
         typeName: type.value.title,
         desc: type.value.desc,
-        categoryId: selectedCategory.value.categoryName.categoryId
+        categoryId: selectedCategory.value.categoryId
     };
-    console.log(selectedCategory.value)
     let typeId;
     try{
-        console.log(data);
         let response;
         if(editMode.value){
             // Update type
-            response = await assetTypeServices.update(props.type.typeId, data);
+            if(hasBeenEdited.value == true) {
+                response = await assetTypeServices.update(props.type.typeId, data);
+            }   
             typeId = props.type.typeId;
         }
         else{
@@ -170,6 +174,7 @@ const saveFields = async(typeId) => {
                     maxlength="50"
                     counter
                     prepend-icon="mdi-rename"
+                    @update:modelValue="() => {hasBeenEdited = true}"
                 ></v-text-field>
             </v-col>
             <v-col cols="12">
@@ -178,13 +183,14 @@ const saveFields = async(typeId) => {
                     label="Category"
                     variant="outlined"
                     :items="props.categories"
-                    v-model="selectedCategory.categoryName"
-                    item-text="title"
+                    v-model="selectedCategory"
+                    item-title="categoryName"
                     item-value="key"
                     :rules="[props.rules.required]"
                     clearable
                     return-object
                     prepend-icon="mdi-folder-multiple-outline"
+                    @update:modelValue="() => {hasBeenEdited = true}"
                 ></v-autocomplete>
             </v-col>
             <v-col cols="12">
@@ -196,6 +202,7 @@ const saveFields = async(typeId) => {
                     maxlength="255"
                     counter
                     prepend-icon="mdi-note"
+                    @update:modelValue="() => {hasBeenEdited = true}"
                 ></v-textarea>
             </v-col>
             </v-row>
@@ -208,6 +215,7 @@ const saveFields = async(typeId) => {
                         label="Field"
                         variant="outlined"
                         v-model="field.customField"
+                        :disabled="field.id != null"
                         :items="fields"
                         :rules="[props.rules.required]"
                         item-title="name"
@@ -223,6 +231,7 @@ const saveFields = async(typeId) => {
                     class="ma-2" 
                         inline 
                         v-model="field.customField.type"
+                        :disabled="field.customField.id != null"
                     >
                         <v-radio
                             v-for="dataType in fieldDataTypes"
@@ -250,7 +259,7 @@ const saveFields = async(typeId) => {
                         ></v-checkbox>
                     </v-col>
                     <v-col cols="2">
-                        <v-btn icon @click="removeField(index)" >
+                        <v-btn icon @click="removeField(index, field)" >
                         <v-icon color="primary">mdi-delete</v-icon>
                         </v-btn>
                     </v-col>

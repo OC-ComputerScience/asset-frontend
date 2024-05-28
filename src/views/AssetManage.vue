@@ -219,51 +219,15 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-const addField = () => {
-  console.log("Current newType value:", newType.value);
-
-  newType.value.customFields.push({
-    fieldName: "",
-    fieldType: "text",
-    fieldValue: "",
-  });
-};
-
-const removeField = (index) => {
-  newType.value.customFields.splice(index, 1);
-};
-
-// Some error where sometimes dynamic fields are saved to the database as double encoded and sometime single.
-//  Not sure why, but this solves the issue
-function safelyParseJSON(jsonString) {
-  console.log("Attempting to parse:", jsonString); // Log the input to see what you are parsing
-  try {
-    var parsed = JSON.parse(jsonString);
-    if (typeof parsed === "string") {
-      // Parse again if the parsed result is still a string (double-encoded)
-      return JSON.parse(parsed);
-    }
-    return parsed; // Already an object or single-encoded
-  } catch (e) {
-    console.error("Failed to parse JSON", e);
-    return []; // Return a default if parsing fails
-  }
-}
-
 const editType = (type) => {
-  console.log("Type Data for Editing:", type);
-  selectedCategoryId.value = type.categoryId;
-  console.log(selectedCategoryId.value);
   newType.value = {
     title: type.title,
     desc: type.desc,
     categoryId: type.categoryId,
     typeId: type.typeId,
-    customFields: safelyParseJSON(type.dynamicFields),
   };
   editingType.value = true;
   showAddTypeDialog.value = true;
-  originalType.value = { ...type, categoryId: selectedCategoryId.value };
 };
 
 const saveType = async () => {
@@ -271,19 +235,6 @@ const saveType = async () => {
   showAddTypeDialog.value = false;
 };
 
-const deleteType = async (typeId) => {
-  try {
-    await AssetTypeServices.delete(typeId);
-    snackbarText.value = "Type deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of types after successful deletion
-    retrieveAssetTypes();
-    assetTypes.value = assetTypes.value.filter((t) => t.id !== typeId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting type.";
-  }
-};
 
 const resetForm = () => {
   newType.value = {
@@ -422,14 +373,6 @@ const archivedTypeHeaders = computed(() => {
   }
 
   return headers;
-});
-
-const hasTypeChanged = computed(() => {
-  return (
-    newType.value.title !== originalType.value.title ||
-    newType.value.desc !== originalType.value.desc ||
-    selectedCategoryId.value !== originalType.value.categoryId
-  );
 });
 
 // *** Profiles Section ***
