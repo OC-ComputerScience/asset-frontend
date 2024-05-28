@@ -3,7 +3,6 @@ import {ref, onMounted} from 'vue';
 import customFieldServices from "../services/customFieldServices"
 import customFieldTypeServices from "../services/customFieldTypeServices"
 import assetTypeServices from '../services/assetTypeServices';
-import assetProfileServices from '../services/assetProfileServices';
 import assetCategoryServices from '../services/assetCategoryServices';
 
 const props = defineProps(['type', 'rules', 'categories']);
