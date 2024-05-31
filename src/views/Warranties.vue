@@ -15,10 +15,8 @@ const selectedSerializedAssetId = ref("");
 const editingWarranty = ref(false);
 const originalWarranty = ref({});
 const validWarranty = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -179,22 +177,6 @@ const saveWarranty = async () => {
   }
 };
 
-const deleteWarranty = async (warrantyId) => {
-  try {
-    await WarrantyServices.delete(warrantyId);
-    snackbarText.value = "Warranty deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrieveWarranties();
-    warranties.value = warranties.value.filter(
-      (t) => t.warrantyId !== warrantyId
-    );
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting warranty.";
-  }
-};
-
 const archiveWarranty = async (warrantyId) => {
   const archiveData = {
     activeStatus: false, // The new value for the activeStatus field
@@ -287,10 +269,6 @@ const archivedWarrantyHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -360,18 +338,6 @@ const formatDate = (dateString) => {
 const formatLength = (length) => {
   if (!length) return "N/A"; // Handle cases where length might be undefined or null
   return `${length} mo.`;
-};
-
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  await deleteWarranty(itemToDelete.value.id);
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-  await retrieveWarranties();
 };
 
 const openArchiveDialog = (item) => {
@@ -583,19 +549,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -736,26 +689,6 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text
-          >Are you sure you want to delete this warranty?</v-card-text
-        >
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
     <!-- Confirm Archive Dialog -->
     <v-dialog v-model="showArchiveDialog" max-width="500px">
       <v-card class="pa-4 rounded-xl">

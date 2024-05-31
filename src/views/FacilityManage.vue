@@ -20,10 +20,8 @@ const selectedBuildingId = ref("");
 const selectedFilterBuildingId = ref("");
 const validBuilding = ref(false);
 const validRoom = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -129,22 +127,6 @@ const saveBuilding = async () => {
   }
 };
 
-const deleteBuilding = async (buildingId) => {
-  try {
-    await BuildingServices.delete(buildingId);
-    snackbarText.value = "Building deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of buildings after successful deletion
-    retrieveBuildings();
-    buildings.value = buildings.value.filter(
-      (t) => t.buildingId !== buildingId
-    );
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting building.";
-  }
-};
-
 const closeBuildingDialog = () => {
   showAddBuildingDialog.value = false;
   editingBuilding.value = false;
@@ -216,10 +198,6 @@ const archivedBuildingHeaders = computed(() => {
 
   if (store.getters.canActivate) {
     headers.push({ title: "Activate", key: "activate", sortable: false });
-  }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
   }
 
   return headers;
@@ -367,21 +345,6 @@ const saveRoom = async () => {
   console.log(roomData);
 };
 
-const deleteRoom = async (roomId) => {
-  try {
-    await RoomServices.delete(roomId);
-    snackbarText.value = "Room deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of rooms after successful deletion
-    retrieveRooms();
-    retrieveBuildings();
-    rooms.value = rooms.value.filter((t) => t.id !== roomId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting room.";
-  }
-};
-
 const resetForm = () => {
   newRoom.value = { roomNo: "", buildingId: "", id: null }; // Explicitly set `id` to `null`
   selectedBuildingId.value = "";
@@ -478,10 +441,6 @@ const archivedRoomHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -523,21 +482,6 @@ const hasRoomChanged = computed(() => {
 });
 
 // *** Misc Section ***
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "building") {
-    await deleteBuilding(itemToDelete.value.id);
-  } else if (itemToDelete.value.type === "room") {
-    await deleteRoom(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-};
-
 const openArchiveDialog = (item) => {
   itemToArchive.value = item;
   showArchiveDialog.value = true;
@@ -785,20 +729,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'building',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -912,20 +842,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'room',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -1036,25 +952,6 @@ onMounted(async () => {
             :disabled="!validRoom || !hasRoomChanged"
             >Save</v-btn
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this item?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
