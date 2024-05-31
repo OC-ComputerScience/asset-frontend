@@ -14,14 +14,8 @@ const logoURL = ref("");
 const router = useRouter();
 const store = useStore(); // Use the store
 
-const isAdmin = computed(() => store.getters.isAdmin);
-const isManager = computed(() => store.getters.isManager);
-const isRoleAssigned = computed(() => store.getters.isRoleAssigned);
 // Compute isDev from store
 const isDev = computed(() => store.getters.isDev);
-const canAdd = computed(() => {
-  return store.getters.canAdd;
-});
 
 const viewCheckOutIn = computed(() => store.getters.viewCheckOutIn);
 const viewServices = computed(() => store.getters.viewServices);
@@ -62,7 +56,6 @@ const manageActions = computed(() => {
       component: "userManage",
     });
   }
-
   return actions;
 });
 
@@ -82,7 +75,7 @@ const serviceActions = computed(() => {
   }
   if (viewLeases.value) {
     services.push({
-      title: "Leasing",
+      title: "Leases",
       component: "leasing",
     });
   }
