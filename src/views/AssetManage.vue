@@ -5,6 +5,7 @@ import AssetProfileServices from "../services/assetProfileServices";
 import SerializedAssetServices from "../services/serializedAssetServices";
 import UserRoleServices from "../services/userRoleServices";
 import ProfileDialog from "../components/ProfileDialog.vue";
+import EditType from "../components/EditType.vue";
 import { ref, onMounted, watch, computed, toRaw } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
@@ -218,112 +219,26 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-const addField = () => {
-  console.log("Current newType value:", newType.value);
-
-  newType.value.customFields.push({
-    fieldName: "",
-    fieldType: "text",
-    fieldValue: "",
-  });
-};
-
-const removeField = (index) => {
-  newType.value.customFields.splice(index, 1);
-};
-
-// Some error where sometimes dynamic fields are saved to the database as double encoded and sometime single.
-//  Not sure why, but this solves the issue
-function safelyParseJSON(jsonString) {
-  console.log("Attempting to parse:", jsonString); // Log the input to see what you are parsing
-  try {
-    var parsed = JSON.parse(jsonString);
-    if (typeof parsed === "string") {
-      // Parse again if the parsed result is still a string (double-encoded)
-      return JSON.parse(parsed);
-    }
-    return parsed; // Already an object or single-encoded
-  } catch (e) {
-    console.error("Failed to parse JSON", e);
-    return []; // Return a default if parsing fails
-  }
-}
-
 const editType = (type) => {
-  console.log("Type Data for Editing:", type);
-  selectedCategoryId.value = type.categoryId;
-  console.log(selectedCategoryId.value);
   newType.value = {
     title: type.title,
     desc: type.desc,
     categoryId: type.categoryId,
     typeId: type.typeId,
-    customFields: safelyParseJSON(type.dynamicFields),
   };
   editingType.value = true;
   showAddTypeDialog.value = true;
-  originalType.value = { ...type, categoryId: selectedCategoryId.value };
 };
 
 const saveType = async () => {
-  let categoryId = selectedCategoryId.value.key
-    ? selectedCategoryId.value.key
-    : selectedCategoryId.value;
-  console.log(categoryId);
-  if (!categoryId) {
-    console.error("Category not selected.");
-    message.value = "Category not found or not selected.";
-    return;
-  }
-
-  // Prepare the type data for saving
-  const typeData = {
-    typeName: newType.value.title,
-    desc: newType.value.desc,
-    categoryId: categoryId,
-    dynamicFields: JSON.stringify(newType.value.customFields), // Convert to JSON string
-  };
-
-  console.log(typeData);
-
-  try {
-    if (editingType.value) {
-      await AssetTypeServices.update(newType.value.typeId, typeData);
-      snackbarText.value = "Type updated successfully.";
-    } else {
-      await AssetTypeServices.create(typeData);
-      snackbarText.value = "Type added successfully.";
-    }
-    snackbar.value = true; // Show the snackbar
-    message.value = "Type saved successfully.";
-    await retrieveAssetTypes();
-  } catch (error) {
-    console.error("Error saving type:", error);
-    message.value = `Error saving type: ${error.message || "Unknown error"}`;
-  } finally {
-    resetForm(); // Ensure form is reset here
-    showAddTypeDialog.value = false; // Close dialog in finally to ensure it closes
-    originalType.value = {}; // Reset original values
-  }
+  retrieveAssetTypes();
+  showAddTypeDialog.value = false;
 };
 
-const deleteType = async (typeId) => {
-  try {
-    await AssetTypeServices.delete(typeId);
-    snackbarText.value = "Type deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of types after successful deletion
-    retrieveAssetTypes();
-    assetTypes.value = assetTypes.value.filter((t) => t.id !== typeId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting type.";
-  }
-};
 
 const resetForm = () => {
   newType.value = {
-    typeName: "",
+    title: "",
     desc: "",
     categoryId: "",
     id: null,
@@ -458,14 +373,6 @@ const archivedTypeHeaders = computed(() => {
   }
 
   return headers;
-});
-
-const hasTypeChanged = computed(() => {
-  return (
-    newType.value.title !== originalType.value.title ||
-    newType.value.desc !== originalType.value.desc ||
-    selectedCategoryId.value !== originalType.value.categoryId
-  );
 });
 
 // *** Profiles Section ***
@@ -1845,115 +1752,14 @@ onMounted(async () => {
     </v-container>
 
     <!-- Add/Edit Type Dialog -->
-    <v-dialog v-model="showAddTypeDialog" max-width="600px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between">
-          <span class="headline">{{ editingType ? "Edit" : "Add" }} Type</span>
-        </v-card-title>
-        <v-card-text>
-          <v-form ref="formType" v-model="validType">
-            <v-container>
-              <v-row>
-                <v-col cols="12">
-                  <v-text-field
-                    variant="outlined"
-                    label="Name"
-                    v-model="newType.title"
-                    :rules="[rules.required, rules.maxNameLength]"
-                    maxlength="50"
-                    counter
-                    prepend-icon="mdi-rename"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12">
-                  <!-- Category Selection -->
-                  <v-autocomplete
-                    label="Category"
-                    variant="outlined"
-                    :items="assetCategories"
-                    v-model="selectedCategoryId"
-                    item-text="title"
-                    item-value="key"
-                    :rules="[rules.required]"
-                    clearable
-                    return-object
-                    prepend-icon="mdi-folder-multiple-outline"
-                  ></v-autocomplete>
-                </v-col>
-                <v-col cols="12">
-                  <v-textarea
-                    label="Description"
-                    variant="outlined"
-                    v-model="newType.desc"
-                    :rules="[rules.required, rules.maxDescLength]"
-                    maxlength="255"
-                    counter
-                    prepend-icon="mdi-note"
-                  ></v-textarea>
-                </v-col>
-              </v-row>
-              <v-row
-                v-for="(field, index) in newType.customFields"
-                :key="index"
-              >
-                <v-col cols="10">
-                  <v-text-field
-                    label="Field Name"
-                    variant="outlined"
-                    v-model="field.fieldName"
-                    :rules="[rules.required]"
-                    prepend-icon="fill space"
-                  ></v-text-field>
-                </v-col>
-                <!-- <v-col cols="4">
-                  <v-select
-                    label="Field Type"
-                    v-model="field.fieldType"
-                    :items="['text', 'number', 'date', 'boolean']"
-                  ></v-select>
-                </v-col> -->
-                <v-col cols="2">
-                  <v-btn icon @click="removeField(index)">
-                    <v-icon color="primary">mdi-delete</v-icon>
-                  </v-btn>
-                </v-col>
-              </v-row>
-              <!-- Button to add a new field with a tooltip -->
-              <v-row>
-                <v-col cols="12">
-                  <v-tooltip bottom>
-                    <template v-slot:activator="{ attrs }">
-                      <!-- Button with plus sign and tooltip on hover -->
-                      <v-btn
-                        color="primary"
-                        @click="addField"
-                        icon
-                        v-bind="attrs"
-                      >
-                        <v-icon left>mdi-plus</v-icon>
-                        <!-- Icon with left alignment -->
-                      </v-btn>
-                      Add Field
-                      <!-- Text label to the right of the icon -->
-                    </template>
-                    <!-- Tooltip text -->
-                    <span>Add a new field to the asset type</span>
-                  </v-tooltip>
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <!-- Use the validType model to control the disabled state -->
-          <v-btn color="cancelgrey" text @click="closeTypeDialog">Cancel</v-btn>
-          <v-btn color="saveblue" @click="saveType" :disabled="!validType"
-            >Save</v-btn
-          >
-        </v-card-actions>
-        <!-- :disabled="!validType || !hasTypeChanged" -->
-      </v-card>
+    <v-dialog v-model="showAddTypeDialog" max-width="900px">
+      <EditType 
+        :rules="rules"
+        :categories="assetCategories"
+        :type="newType"
+        @closeModal="closeTypeDialog"
+        @saveType="saveType"
+      />
     </v-dialog>
 
     <!-- Add/Edit Profile Dialog -->

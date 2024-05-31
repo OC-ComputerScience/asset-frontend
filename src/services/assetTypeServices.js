@@ -16,7 +16,7 @@ export default {
     return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`);
   },
   update(typeId, data) {
-    return apiClient.put(baseURL + `${typeId}`, data);
+    return apiClient.put(baseURL + typeId, data);
   },
   delete(typeId) {
     return apiClient.delete(baseURL + `${typeId}`);
