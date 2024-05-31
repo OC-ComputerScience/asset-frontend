@@ -12,10 +12,8 @@ const showAddPersonDialog = ref(false);
 const editingPerson = ref(false);
 const originalPerson = ref({});
 const validPerson = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -113,20 +111,6 @@ const savePerson = async () => {
   }
 };
 
-const deletePerson = async (personId) => {
-  try {
-    await PersonServices.delete(personId);
-    snackbarText.value = "Person deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrievePeople();
-    people.value = people.value.filter((t) => t.personId !== personId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting person.";
-  }
-};
-
 const closePersonDialog = () => {
   showAddPersonDialog.value = false;
   editingPerson.value = false;
@@ -193,10 +177,6 @@ const archivedPersonHeaders = computed(() => {
 
   if (store.getters.canActivate) {
     headers.push({ title: "Activate", key: "activate", sortable: false });
-  }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
   }
 
   return headers;
@@ -278,19 +258,6 @@ const scrollToPerson = () => {
 function viewPerson(personId) {
   router.push({ name: "personView", params: { personId: personId } });
 }
-
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "person") {
-    await deletePerson(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-};
 
 const openArchiveDialog = (item) => {
   itemToArchive.value = item;
@@ -514,20 +481,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'person',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -612,28 +565,6 @@ onMounted(async () => {
             @click="savePerson"
             :disabled="!validPerson || !hasPersonChanged"
             >Save</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this person?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" class="ma-2" text @click="confirmDelete"
-            >Delete</v-btn
           >
         </v-card-actions>
       </v-card>
