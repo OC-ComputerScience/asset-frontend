@@ -410,7 +410,7 @@ onMounted(async () => {
           <v-tab value="Assignments" color="primary">Assignments</v-tab>
           <v-tab value="Maintenance" color="primary">Maintenance</v-tab>
           <v-tab value="Warranty" color="primary">Warranties</v-tab>
-          <v-tab value="Leasing" color="primary">Leasing</v-tab>
+          <v-tab value="Leasing" color="primary">Leases</v-tab>
         </v-tabs>
 
         <!-- Data Tables -->
