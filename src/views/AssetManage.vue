@@ -41,11 +41,9 @@ const validType = ref(false);
 const validProfile = ref(false);
 const validSerializedAsset = ref(false);
 const validSerializedAssetDisposal = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showCannotArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -373,10 +371,6 @@ const archivedTypeHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -491,20 +485,6 @@ const sendEditProfile = (profile) => {
   selectedProfile.value = profile;
   selectedTypeId.value = profile.typeId;
   showAddProfileDialog.value = true;
-};
-
-// Delete profile
-const deleteProfile = async (profileId) => {
-  try {
-    await AssetProfileServices.delete(profileId);
-    snackbarText.value = "Profile deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    retrieveAssetProfiles();
-    message.value = "Profile deleted successfully.";
-  } catch (error) {
-    console.error("Error deleting profile:", error);
-    message.value = "Error deleting profile.";
-  }
 };
 
 function viewProfile(profileId) {
@@ -627,10 +607,6 @@ const archivedProfileHeaders = computed(() => {
 
   if (store.getters.canActivate) {
     headers.push({ title: "Activate", key: "activate", sortable: false });
-  }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
   }
 
   return headers;
@@ -881,20 +857,6 @@ const editSerializedAsset = (serializedAsset) => {
   );
 };
 
-// Delete profile
-const deleteSerializedAsset = async (serializedAssetId) => {
-  try {
-    await SerializedAssetServices.delete(serializedAssetId);
-    snackbarText.value = "Asset deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    retrieveSerializedAssets();
-    message.value = "Asset deleted successfully.";
-  } catch (error) {
-    console.error("Error deleting asset:", error);
-    message.value = "Error deleting asset.";
-  }
-};
-
 const filteredSerializedAssets = computed(() => {
   return serializedAssets.value.filter((asset) => {
     let statusMatch =
@@ -1036,10 +998,6 @@ const archivedSerializedAssetHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -1060,25 +1018,6 @@ const hasSerializedAssetChanged = computed(() => {
 
 const translateStatus = (status) => {
   return status ? "Checked Out" : "Available";
-};
-
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "category") {
-    await deleteCategory(itemToDelete.value.id);
-  } else if (itemToDelete.value.type === "type") {
-    await deleteType(itemToDelete.value.id);
-  } else if (itemToDelete.value.type === "profile") {
-    await deleteProfile(itemToDelete.value.id);
-  } else if (itemToDelete.value.type === "serializedAsset") {
-    await deleteSerializedAsset(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
 };
 
 const openArchiveDialog = (item) => {
@@ -1529,20 +1468,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'type',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -1666,20 +1591,6 @@ onMounted(async () => {
                         "
                       >
                         <v-icon>mdi-arrow-up-box</v-icon>
-                      </v-btn>
-                    </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'profile',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
                       </v-btn>
                     </template>
                   </v-data-table>
@@ -1813,20 +1724,6 @@ onMounted(async () => {
                         "
                       >
                         <v-icon>mdi-arrow-up-box</v-icon>
-                      </v-btn>
-                    </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'serializedAsset',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
                       </v-btn>
                     </template>
                   </v-data-table>
@@ -2210,26 +2107,7 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this item?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
+ 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
     </v-snackbar>

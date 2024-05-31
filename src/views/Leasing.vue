@@ -15,10 +15,8 @@ const selectedSerializedAssetId = ref("");
 const editingLease = ref(false);
 const originalLease = ref({});
 const validLease = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -172,20 +170,6 @@ const saveLease = async () => {
   }
 };
 
-const deleteLease = async (leaseId) => {
-  try {
-    await LeaseServices.delete(leaseId);
-    snackbarText.value = "Lease deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrieveLeases();
-    leases.value = leases.value.filter((t) => t.leaseId !== leaseId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting lease.";
-  }
-};
-
 const archiveLease = async (leaseId) => {
   const archiveData = {
     activeStatus: false, // The new value for the activeStatus field
@@ -279,10 +263,6 @@ const archivedLeaseHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -366,18 +346,6 @@ const formatDate = (dateString) => {
 const formatLength = (length) => {
   if (!length) return "N/A"; // Handle cases where length might be undefined or null
   return `${length} mo.`;
-};
-
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  await deleteLease(itemToDelete.value.id);
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-  await retrieveLeases();
 };
 
 const openArchiveDialog = (item) => {
@@ -581,19 +549,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -727,25 +682,6 @@ onMounted(async () => {
           <v-btn color="saveblue" @click="saveLease" :disabled="!validLease"
             >Save</v-btn
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this lease?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
