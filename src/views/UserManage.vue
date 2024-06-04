@@ -1,6 +1,5 @@
 <script setup>
 import { ref, watch, computed, onMounted } from "vue";
-import { useStore } from "vuex";
 import Utils from "../config/utils";
 import userServices from "../services/userServices";
 import userRoleServices from "../services/userRoleServices";
@@ -10,8 +9,6 @@ import assetCategoryServices from "../services/assetCategoryServices";
 // Refs for current user
 const currentUser = ref([]);
 currentUser.value = Utils.getStore("user");
-const store = useStore();
-const userIsAdmin = computed(() => store.getters.isAdmin);
 
 
 // Refs for Users tab
@@ -84,9 +81,13 @@ const fetchUsersAndRoles = async () => {
     users.value = usersResponse.data;
     userRoles.value = rolesResponse.data;
 
+    if (currentUser.value.categoryId != 4) {
+      users.value = users.value.filter(user => user.userRole.categoryId === currentUser.value.categoryId || user.userRole.name === 'Unassigned');
+    }
+
     const rolesFiltered = ref([]);
     rolesFiltered.value = rolesResponse.data;
-    if (!userIsAdmin.value) {
+    if (currentUser.value.categoryId != 4) {
       rolesFiltered.value = rolesFiltered.value.filter(role => role.categoryId === currentUser.value.categoryId || role.name === 'Unassigned');
     }
 
@@ -601,14 +602,12 @@ onMounted(async () => {
                 <v-checkbox label="View Users" v-model="newUserRole.viewUsers"></v-checkbox>
               </v-col>
             </v-col>
-            <div v-if="!editingUserRole">
               <v-card-text class="font-weight-bold text-primary text-h6 mr-0 mb-0 pb-1">Position</v-card-text>
               <v-col>
                 <v-checkbox label="Administrator" v-model="newUserRole.isAdmin"></v-checkbox>
                 <v-checkbox label="Manager" v-model="newUserRole.isManager"></v-checkbox>
                 <v-checkbox label="Student Worker" v-model="newUserRole.isWorker"></v-checkbox>
               </v-col>
-            </div>
           </v-form>
         </v-card-text>
         <v-card-actions>
