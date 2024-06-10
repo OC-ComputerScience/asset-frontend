@@ -6,12 +6,15 @@ import moment from "moment-timezone";
 import ProfileDataServices from "../services/profileDataServices";
 import AssetProfileServices from "../services/assetProfileServices";
 import AssetTypeServices from "../services/assetTypeServices";
+import assetTypeServices from "../services/assetTypeServices";
+import customFieldServices from "../services/customFieldServices";
+import customFieldTypeServices from "../services/customFieldTypeServices";
 
 const message = ref("");
 const validProfile = ref(false);
 const assetTypes = ref([]);
 const selectedTypeId = ref("");
-const generateDynamicFields = ref([]);
+const customFields = ref([]);
 const originalProfile = ref({});
 const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
@@ -56,13 +59,6 @@ const newProfile = ref({
   purchasePrice: "",
   acquisitionDate: "",
   notes: "",
-});
-
-// The naming is confusing however newData is meant for the backend ProfileData object
-const newData = ref({
-  field: "",
-  data: "",
-  profileId: "",
 });
 
 // When you load the profile for editing, store the initial state
@@ -115,17 +111,7 @@ const retrieveAssetTypes = async () => {
 };
 
 const retrieveFields = async() => {
-  try{
-    if(editMode.value){
-      // Retrieve fields based on profile data
-    }
-    else{
-      // Retrieve fields based on types
-    }
-  } 
-  catch(err){
-    console.error(err);
-  }
+   
 };
 
 // Save profile (add or edit)
@@ -255,33 +241,21 @@ const emitUpdateSnackbar = () => {
 
 // Watchers
 
-watch(selectedTypeId, (newVal) => {
+watch(selectedTypeId, async (newVal) => {
   const typeId = newVal?.typeId || newVal;
-  const selectedType = assetTypes.value.find((type) => type.key === typeId);
-
-  if (selectedType) {
-    let dynamicFields = selectedType.dynamicFields;
-
-    if (typeof dynamicFields === "string") {
-      try {
-        dynamicFields = JSON.parse(dynamicFields); // Parse if needed
-      } catch (error) {
-        console.error("Error parsing dynamicFields:", error);
-        dynamicFields = []; // Default to empty array if parsing fails
-      }
-    }
-
-    if (Array.isArray(dynamicFields)) {
-      generateDynamicFields.value = dynamicFields.map((field) => ({
-        fieldName: field.fieldName || "Unnamed Field",
-        fieldValue: field.fieldValue || "",
-        fieldType: field.fieldType || "text",
-      }));
-    } else {
-      console.error("dynamicFields is not an array:", dynamicFields);
-    }
-  } else {
-    generateDynamicFields.value = [];
+  try{
+    let response = await customFieldTypeServices.getAllForType(typeId);
+    customFields.value = response.data.map((field) => ({
+      customFieldId: field.customFieldId,
+        name: field.customField.name,
+        type: field.customField.type,
+        required: field.required,
+        identifier: field.identifier,
+        value: ''
+    }));
+  }
+  catch(err){
+    console.error(err);
   }
 });
 
@@ -426,21 +400,21 @@ onMounted(async () => {
               </v-row>
             </v-col>
             <template
-              v-for="(field, index) in generateDynamicFields"
+              v-for="(field, index) in customFields"
               :key="index"
             >
-              <v-col cols="4" v-if="field.fieldType === 'boolean'">
-                <v-switch
-                  v-model="field.fieldValue"
-                  :label="field.fieldName"
+              <v-col cols="4" v-if="field.type === 'List'">
+                <v-combobox
+                  v-model="field.value"
+                  :label="field.name"
                   variant="outlined"
                   prepend-icon="field"
-                ></v-switch>
+                ></v-combobox>
               </v-col>
               <v-col cols="4" v-else>
                 <v-text-field
-                  v-model="field.fieldValue"
-                  :label="field.fieldName"
+                  v-model="field.value"
+                  :label="field.name"
                   variant="outlined"
                   prepend-icon="field"
                 ></v-text-field>
