@@ -339,7 +339,6 @@ onMounted(async () => {
     console.error("Error during initialization:", error);
     message.value = "Failed to load profile data.";
   }
-  console.log(editMode.value)
 });
 </script>
 
