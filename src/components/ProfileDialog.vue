@@ -7,13 +7,18 @@ import ProfileDataServices from "../services/profileDataServices";
 import AssetProfileServices from "../services/assetProfileServices";
 import AssetTypeServices from "../services/assetTypeServices";
 import assetTypeServices from "../services/assetTypeServices";
-import customFieldServices from "../services/customFieldServices";
+import customFieldValueServices from "../services/customFieldValueServices";
 import customFieldTypeServices from "../services/customFieldTypeServices";
+import profileDataServices from "../services/profileDataServices";
 
 const message = ref("");
 const validProfile = ref(false);
 const assetTypes = ref([]);
 const selectedTypeId = ref("");
+const titleArray = ref([]);
+const title = computed(() => {
+  return titleArray.value.join(" ");
+});
 const customFields = ref([]);
 const originalProfile = ref({});
 const initialTypeId = ref("");
@@ -110,15 +115,8 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-const retrieveFields = async () => {
-  try {
-    if (editMode.value) {
-      // Retrieve fields based on profile data
-    } else {
-      // Retrieve fields based on types
-    }
-  } catch (err) {
-    console.error(err);
+const updateTitle = (value, sequence) => {
+  if (sequence > 0) {
   }
 };
 
@@ -155,7 +153,7 @@ const saveProfile = async () => {
       );
 
       // Update the profile data
-      await saveProfileData(newProfile.value.id);
+      await saveFieldValues(newProfile.value.id);
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
@@ -163,7 +161,7 @@ const saveProfile = async () => {
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
         newProfile.value.id = createResponse.data.profileId;
-        await saveProfileData(newProfile.value.id);
+        await saveFieldValues(newProfile.value.id);
         emitSaveSnackbar();
       }
     }
@@ -175,24 +173,29 @@ const saveProfile = async () => {
   }
 };
 
-// Save profileData
-const saveProfileData = async (profileId) => {
-  for (const field of generateDynamicFields.value) {
-    const payload = {
-      field: field.fieldName,
-      data: field.fieldValue,
-      profileId: profileId,
+const saveFieldValues = async (profileId) => {
+  for (let field in customFields.value) {
+    console.log(field);
+    let fieldValueId;
+    let data = {
+      customFieldId: field.customFieldId,
+      value: field.value,
     };
-
     try {
-      if (field.fieldId) {
-        await ProfileDataServices.update(field.fieldId, payload);
+      if (field.fieldValueId) {
+        fieldValueId = field.fieldValueId;
+        await customFieldValueServices.update(fieldValueId, data);
       } else {
-        const response = await ProfileDataServices.create(payload);
-        field.fieldId = response.data.profileDataId; // Ensure this matches the response structure
+        response = await customFieldValueServices.create(data);
+        fieldValueId = response.data.id;
+        let profileData = {
+          profileId: profileId,
+          fieldValueId: fieldValueId,
+        };
+        await profileDataServices.create(profileData);
       }
-    } catch (error) {
-      console.error("Error updating/creating field:", field.fieldName, error);
+    } catch (err) {
+      console.error(err);
     }
   }
 };
@@ -240,14 +243,32 @@ watch(selectedTypeId, async (newVal) => {
   const typeId = newVal?.typeId || newVal;
   try {
     let response = await customFieldTypeServices.getAllForType(typeId);
-    customFields.value = response.data.map((field) => ({
-      customFieldId: field.customFieldId,
-      name: field.customField.name,
-      type: field.customField.type,
-      required: field.required,
-      identifier: field.identifier,
-      value: "",
-    }));
+    let customFieldPromises = response.data.map(async (field) => {
+      let newField = {
+        fieldTypeId: field.id,
+        customFieldId: field.customFieldId,
+        name: field.customField.name,
+        type: field.customField.type,
+        required: field.required,
+        identifier: field.identifier,
+        fieldValueId: null,
+        value: "",
+        listValues: {},
+      };
+
+      if (newField.type === "List") {
+        let data = await customFieldValueServices.getAllForField(
+          newField.customFieldId
+        );
+        newField.listValues = data.data;
+      }
+
+      return newField;
+    });
+
+    let customFieldsArray = await Promise.all(customFieldPromises);
+    customFields.value.push(...customFieldsArray);
+    console.log(customFields.value);
   } catch (err) {
     console.error(err);
   }
@@ -295,7 +316,6 @@ onMounted(async () => {
 
     if (selectedProfile.value?.profileId) {
       editMode.value = true;
-      await fetchDynamicFields(selectedProfile.value.profileId); // Ensure dynamic fields are fetched
     }
 
     if (editMode.value) {
@@ -393,6 +413,10 @@ onMounted(async () => {
                 <v-combobox
                   v-model="field.value"
                   :label="field.name"
+                  :items="field.listValues"
+                  item-title="value"
+                  item-value="value"
+                  :rules="field.required ? [rules.required] : []"
                   variant="outlined"
                   prepend-icon="field"
                 ></v-combobox>
@@ -401,8 +425,10 @@ onMounted(async () => {
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
+                  :rules="field.required ? [rules.required] : []"
                   variant="outlined"
                   prepend-icon="field"
+                  @update:modelValue="updateTitle(field.value, field.sequence)"
                 ></v-text-field>
               </v-col>
             </template>
