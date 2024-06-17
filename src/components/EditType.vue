@@ -1,5 +1,5 @@
 <script setup>
-import {ref, onMounted} from 'vue';
+import {ref, onMounted, computed} from 'vue';
 import customFieldServices from "../services/customFieldServices"
 import customFieldTypeServices from "../services/customFieldTypeServices"
 import assetTypeServices from '../services/assetTypeServices';
@@ -14,7 +14,8 @@ const validType = ref(false);
 const selectedCategory = ref({});
 const editMode = ref(false);
 const hasBeenEdited = ref(false);
-const fieldDataTypes = ref(['String', 'List','Decimal', 'Integer'])
+const fieldDataTypes = ref(['String', 'List','Decimal', 'Integer']);
+const fieldSequence = ref([1, 2, 3, 4, 5]);
 const emit = defineEmits(['saveType']);
 
 
@@ -55,6 +56,8 @@ const retrieveFields = async() => {
                 },
                 identifier: field.identifier,
                 required: field.required,
+                sequence: field.sequence,
+                backupSequence: field.sequence,
             });
         } 
     }
@@ -68,6 +71,8 @@ const addField = () => {
         id: null,
         identifier: false,
         required: false,
+        sequence: null,
+        backupSequence: null,
         customField: {
             id: null,
             name: null,
@@ -92,6 +97,18 @@ const updateFieldValue = (field) => {
         }
     }
 };
+
+const updateSequenceCount = (field) => {
+    if(field.sequence >= 1){
+        fieldSequence.value = fieldSequence.value.filter(num => num !== field.sequence);
+    }
+    if(field.backupSequence >= 1){
+        fieldSequence.value.push(field.backupSequence);
+        fieldSequence.value.sort((a,b) => {return a-b});
+        console.log(fieldSequence.value)
+    }
+    field.backupSequence = field.sequence;
+}
 
 const saveType = async() => {
     let data = {
@@ -131,6 +148,7 @@ const saveFields = async(typeId) => {
                 identifier: field.identifier,
                 typeId: typeId,
                 customFieldId: field.customField.id,
+                sequence: field.sequence
             };
             if(field.customField.id == null){
                 let customField = {
@@ -170,6 +188,7 @@ const saveFields = async(typeId) => {
                     label="Name"
                     v-model="type.title"
                     :rules="[props.rules.required, props.rules.maxNameLength]"
+                    :disabled="editMode"
                     maxlength="50"
                     counter
                     prepend-icon="mdi-rename"
@@ -250,13 +269,27 @@ const saveFields = async(typeId) => {
                             color="primary"
                         ></v-checkbox>
                     </v-col>
-                    <v-col cols="7">
+                    <v-col cols="2">
                         <v-checkbox
                             label="Identifier"
+                            :disabled="fieldSequence.length < 1"
                             v-model="field.identifier"
                             color="primary"
                         ></v-checkbox>
                     </v-col>
+                    <v-cols cols="5">
+                        <v-combobox
+                            v-if="field.identifier"
+                            label="Sequence"
+                            variant="outlined"
+                            v-model="field.sequence"
+                            :rules="[props.rules.required]"
+                            :items="fieldSequence"
+                            class="mt-3"
+                            width="30px"
+                            @update:modelValue="updateSequenceCount(field)"
+                        ></v-combobox>
+                    </v-cols>
                     <v-col cols="2">
                         <v-btn icon @click="removeField(index, field)" >
                         <v-icon color="primary">mdi-delete</v-icon>
