@@ -1194,10 +1194,10 @@ watch(
             : new Date();
           rawWarrStartDate.value = !isNaN(tempWarrStartDate.getTime())
             ? tempWarrStartDate
-            : new Date();
+            : null;
           rawWarrEndDate.value = !isNaN(tempWarrEndDate.getTime())
             ? tempWarrEndDate
-            : new Date();
+            : null;
         }
       }
     }
