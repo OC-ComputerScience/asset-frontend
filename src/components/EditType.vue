@@ -2,6 +2,7 @@
 import {ref, onMounted} from 'vue';
 import customFieldServices from "../services/customFieldServices"
 import customFieldTypeServices from "../services/customFieldTypeServices"
+import assetProfileServices from '../services/assetProfileServices';
 import assetTypeServices from '../services/assetTypeServices';
 import assetCategoryServices from '../services/assetCategoryServices';
 
@@ -14,6 +15,8 @@ const validType = ref(false);
 const selectedCategory = ref({});
 const editMode = ref(false);
 const hasBeenEdited = ref(false);
+const canDeleteFields = ref(false);
+const numProfiles = ref();
 const fieldDataTypes = ref(['String', 'List','Decimal', 'Integer'])
 const emit = defineEmits(['saveType']);
 
@@ -27,6 +30,7 @@ onMounted(async() => {
             response = await assetCategoryServices.getById(type.value.categoryId);
             selectedCategory.value = response.data;
             await retrieveFields();
+            await findNumProfiles();
         }
         else{
             type.value = {
@@ -75,6 +79,20 @@ const addField = () => {
         },
     });
 };
+
+const findNumProfiles = async() => {
+    try{
+        let response = await assetProfileServices.getByType(type.value.typeId);
+        numProfiles.value = response.data.length;
+    }
+    catch(err){
+        console.error(err);
+    }
+}
+
+const checkCanDeleteField = (field) => {
+    return field.id == null || numProfiles.value < 1;
+}
 
 const removeField = async(index, field) => {
     typeFields.value.splice(index, 1);
@@ -258,7 +276,7 @@ const saveFields = async(typeId) => {
                         ></v-checkbox>
                     </v-col>
                     <v-col cols="2">
-                        <v-btn icon @click="removeField(index, field)" >
+                        <v-btn icon @click="removeField(index, field)" v-if="checkCanDeleteField(field)">
                         <v-icon color="primary">mdi-delete</v-icon>
                         </v-btn>
                     </v-col>

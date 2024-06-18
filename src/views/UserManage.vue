@@ -53,6 +53,13 @@ const newUserRole = ref({
 });
 const originalUserRole = ref({});
 
+const pickRole = ref([]);
+watch(pickRole, (newRole) => {
+  newUserRole.value.isAdmin = newRole === 'isAdmin';
+  newUserRole.value.isManager = newRole === 'isManager';
+  newUserRole.value.isWorker = newRole === 'isWorker';
+});
+
 const editingUserRole = ref(false);
 const showAddUserRoleDialog = ref(false);
 const validUserRole = ref(false);
@@ -214,6 +221,16 @@ const editUserRole = (role) => {
   originalUserRole.value = { ...role };
   editingUserRole.value = true;
   showAddUserRoleDialog.value = true;
+
+  if (newUserRole.value.isAdmin) {
+    pickRole.value = 'isAdmin';
+  } else if (newUserRole.value.isManager) {
+    pickRole.value = 'isManager';
+  } else if (newUserRole.value.isWorker) {
+    pickRole.value = 'isWorker';
+  } else {
+    pickRole.value = '';
+  }
 };
 
 const saveUserRole = async () => {
@@ -415,38 +432,43 @@ watch(isUserRolesTabActive, async (isActive) => {
   }
 });
 
-// Watcher for radio button variables in User Roles tab
+// Watcher for checkboxes variables in User Roles tab
 watch(newUserRole, (newRole) => {
 
+  //Checkbox related to Services
+  //Check Services if at least one of its subcategories are checked
   if (newRole.viewMaintenance || newRole.viewLeases || newRole.viewWarranties) {
     newRole.viewServices = true;
   }
+  //Uncheck Services if all its subcategories are unchecked
   if (!newRole.viewMaintenance & !newRole.viewLeases & !newRole.viewWarranties) {
     newRole.viewServices = false;
   }
 
+  //Checkbox related to Manage
+  //Check Manage if at least one of its subcategories are checked
   if (newRole.viewAssets || newRole.viewFacilities || newRole.viewPeople || newRole.viewUsers) {
     newRole.viewManage = true;
   }
-
+  //Uncheck Manage if all its subcategories are unchecked
   if (!newRole.viewAssets & !newRole.viewFacilities & !newRole.viewPeople & !newRole.viewUsers) {
     newRole.viewManage = false;
   }
 
-  if (newRole.isAdmin) {
-    newRole.isManager = false;
-    newRole.isWorker = false;
-  }
+  // if (newRole.isAdmin) {
+  //   newRole.isManager = false;
+  //   newRole.isWorker = false;
+  // }
 
-  if (newRole.isManager) {
-    newRole.isAdmin = false;
-    newRole.isWorker = false;
-  }
+  // if (newRole.isManager) {
+  //   newRole.isAdmin = false;
+  //   newRole.isWorker = false;
+  // }
 
-  if (newRole.isWorker) {
-    newRole.isAdmin = false;
-    newRole.isManager = false;
-  }
+  // if (newRole.isWorker) {
+  //   newRole.isAdmin = false;
+  //   newRole.isManager = false;
+  // }
 
 }, { deep: true });
 
@@ -568,6 +590,15 @@ onMounted(async () => {
               v-model="newUserRole.categoryId" item-text="title" item-value="categoryId" :rules="[rules.required]"
               clearable></v-autocomplete>
 
+            <v-card-text class="font-weight-bold text-primary text-h6 mr-0 mb-1 pb-1">Position</v-card-text>
+            <v-col>
+              <v-radio-group v-model="pickRole" inline>
+                  <v-radio label="Administrator" value="isAdmin" class="mr-2"></v-radio>
+                  <v-radio label="Manager" value="isManager" class="mr-2
+                  "></v-radio>
+                  <v-radio label="Student Worker" value="isWorker"></v-radio>
+              </v-radio-group>
+            </v-col>
             <v-card-text class="font-weight-bold text-primary text-h6 mr-0 mb-0 pb-0">Functionalities</v-card-text>
             <v-col>
               <v-checkbox class="font-weight-semi-bold" label="Add" v-model="newUserRole.canAdd"></v-checkbox>
@@ -602,12 +633,6 @@ onMounted(async () => {
                 <v-checkbox label="View Users" v-model="newUserRole.viewUsers"></v-checkbox>
               </v-col>
             </v-col>
-              <v-card-text class="font-weight-bold text-primary text-h6 mr-0 mb-0 pb-1">Position</v-card-text>
-              <v-col>
-                <v-checkbox label="Administrator" v-model="newUserRole.isAdmin"></v-checkbox>
-                <v-checkbox label="Manager" v-model="newUserRole.isManager"></v-checkbox>
-                <v-checkbox label="Student Worker" v-model="newUserRole.isWorker"></v-checkbox>
-              </v-col>
           </v-form>
         </v-card-text>
         <v-card-actions>

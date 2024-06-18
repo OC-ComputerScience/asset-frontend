@@ -9,19 +9,21 @@ import AssetTypeServices from "../services/assetTypeServices";
 
 const message = ref("");
 const validProfile = ref(false);
-const assetCategories = ref([]);
 const assetTypes = ref([]);
 const selectedTypeId = ref("");
 const generateDynamicFields = ref([]);
 const originalProfile = ref({});
-const originalDynamicFields = ref([]);
 const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
 const rawWarrStartDate = ref(null);
 const rawWarrEndDate = ref(null);
 const menu = ref(false);
+
 const menu1 = ref(false);
 const menu2 = ref(false);
+
+const editMode = ref(false);
+
 
 // maska options
 const options = {
@@ -40,45 +42,20 @@ const options = {
   },
 };
 
-// Validation Rules
-const rules = {
-  required: (value) => !!value || "Required.",
-  maxNotesLength: (value) => {
-    if (!value) return true; // If value is undefined or null, consider this validation as passed
-    return value.length <= 255 || "Max length of 255 characters";
-  },
-  maxFieldLength: (value) => {
-    if (!value) return true; // Similar check for other validations
-    return value.length <= 50 || "Max length of 50 characters";
-  },
-  serialNumberLength: (value) => {
-    if (!value) return true;
-    return value.length <= 20 || "Max length of 20 characters";
-  },
-  validPrice: (value) => {
-    value.value > 0 || "Enter a valid price";
-  },
-};
-
 const emit = defineEmits(["closeDialog", "updateSnackbar", "saveSnackbar"]);
 
 // Receive props from AssetManage
 const props = defineProps({
-  editingProfile: {
-    required: false,
-    default: false,
-  },
-  sendEditProfile: {
-    type: Function,
-    required: true,
-  },
   selectedProfile: {
     required: false,
+  },
+  rules: {
+    required: true
   },
 });
 
 // Deconstruct props => refs
-const { editingProfile, selectedProfile } = toRefs(props);
+const { selectedProfile, rules } = toRefs(props);
 
 const newProfile = ref({
   profileName: "",
@@ -168,10 +145,6 @@ const retrieveAssetTypes = async () => {
       key: type.typeId,
       title: type.typeName,
       description: type.desc,
-      categoryName:
-        assetCategories.value.find((c) => c.key === type.categoryId)?.title ||
-        "Unknown Category",
-      dynamicFields: JSON.parse(type.dynamicFields || "[]"), // Ensure correct parsing here
     }));
   } catch (error) {
     console.error("Error loading types:", error);
@@ -179,49 +152,17 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-// Retrieve ProfileData from Database
-const retrieveProfileData = async () => {
-  try {
-    const response = await ProfileDataServices.getAll();
-    if (response.data.length == 0) {
-      newData.value = [];
-      message.value = "No profile data";
-    } else {
-      newData.value = response.data.map((data) => {
-        return {
-          ...data,
-          key: data.profileDataId,
-          title: data.field,
-        };
-      });
+const retrieveFields = async() => {
+  try{
+    if(editMode.value){
+      // Retrieve fields based on profile data
     }
-  } catch (error) {
-    console.error("Error loading profile data:", error);
-    message.value = "Failed to load profile data.";
-  }
-};
-
-const fetchDynamicFields = async (profileId) => {
-  try {
-    const response = await ProfileDataServices.getByProfileId(profileId);
-    console.log("fetchDynamicFields response:", JSON.stringify(response.data));
-    if (response.data && response.data.length > 0) {
-      generateDynamicFields.value = response.data.map((df) => ({
-        fieldName: df.field || "Undefined Field",
-        fieldValue: df.data || "",
-        fieldId: df.profileDataId, // Check if this is correct
-        fieldType: df.fieldType || "text",
-      }));
-      console.log(
-        "Dynamic fields set:",
-        JSON.stringify(generateDynamicFields.value)
-      );
-    } else {
-      console.error("No dynamic fields found for the profile.");
-      generateDynamicFields.value = []; // Clear if no fields are found
+    else{
+      // Retrieve fields based on types
     }
-  } catch (error) {
-    console.error("Error fetching dynamic fields:", error);
+  } 
+  catch(err){
+    console.error(err);
   }
 };
 
@@ -338,32 +279,6 @@ const editProfile = async () => {
   }
 };
 
-const editProfileData = async () => {
-  if (selectedProfile.value) {
-    try {
-      await retrieveProfileData();
-
-      const profileDataForProfile = newData.value.filter(
-        (data) => data.profileId === selectedProfile.value.profileId
-      );
-
-      // Reset generateDynamicFields before re-populating
-      generateDynamicFields.value = profileDataForProfile.map((dataItem) => {
-        return {
-          ...dataItem,
-          fieldName: dataItem.field, // Assuming 'field' is the correct property name
-          fieldValue: dataItem.data,
-          fieldType: "text", // Default type or determine from data
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching profileData", error);
-      message.value = `Error fetching profileData: ${
-        error.message || "unknown error"
-      }`;
-    }
-  }
-};
 
 // Computed property for display
 const formattedAcquisitionDate = computed(() => {
@@ -386,58 +301,6 @@ const formattedWarrEndDate = computed(() => {
     return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
   }
   return "";
-});
-
-// const hasProfileChanged = () => {
-//   if (editingProfile.value) {
-//     // Assuming selectedTypeId.value holds the currently selected type object
-//     const currentTypeId = selectedTypeId.value?.key || selectedTypeId.value;
-//     // Strip out white space and $ for comparison
-//     const newPurchasePrice = newProfile.value.purchasePrice.replace(
-//       /[$,]/g,
-//       ""
-//     );
-//     return (
-//       newProfile.value.profileName !== originalProfile.value.profileName ||
-//       currentTypeId !== originalProfile.value.typeId || // Adjust this line
-//       newPurchasePrice !== originalProfile.value.purchasePrice ||
-//       newProfile.value.acquisitionDate !==
-//         originalProfile.value.acquisitionDate ||
-//       newProfile.value.notes !== originalProfile.value.notes
-//     );
-//   }
-// };
-
-// Utility function to check if a dynamic field has changed
-const hasDynamicFieldChanged = (field) => {
-  // Find the original field with the same name
-  const originalField = originalDynamicFields.value.find(
-    (original) => original.fieldName === field.fieldName
-  );
-  // If there is no original field (which means it's a new field), or if the data has changed, return true
-  return !originalField || originalField.fieldValue !== field.fieldValue;
-};
-
-// const canSave = computed(() => {
-//   // Check if the profile itself has changed
-//   const profileChanged = hasProfileChanged();
-
-//   // Check if any of the dynamic fields have changed
-//   const dynamicFieldChanged = generateDynamicFields.value.some((field) =>
-//     hasDynamicFieldChanged(field)
-//   );
-
-//   // Enable Save button if there are changes to save
-//   return !(validProfile.value && (profileChanged || dynamicFieldChanged));
-// });
-
-// Groups the text fields into row with 3 columns
-const groupFields = computed(() => {
-  const rowOfFields = [];
-  for (let i = 0; i < generateDynamicFields.value.length; i += 3) {
-    rowOfFields.push(generateDynamicFields.value.slice(i, i + 3));
-  }
-  return rowOfFields;
 });
 
 const emitCloseDialog = () => {
@@ -545,10 +408,11 @@ onMounted(async () => {
     await retrieveAssetTypes(); // Ensure asset types are loaded
 
     if (selectedProfile.value?.profileId) {
+      editMode.value = true;
       await fetchDynamicFields(selectedProfile.value.profileId); // Ensure dynamic fields are fetched
     }
 
-    if (editingProfile.value) {
+    if (editMode.value) {
       loadProfileForEditing(selectedProfile.value); // Load the profile for editing
     }
   } catch (error) {
@@ -562,7 +426,7 @@ onMounted(async () => {
   <v-card class="pa-4 rounded-xl">
     <v-card-title>
       <span class="headline"
-        >{{ editingProfile ? "Edit" : "Add" }} Profile</span
+        >{{ editMode ? "Edit" : "Add" }} Profile</span
       >
     </v-card-title>
     <v-card-text>
@@ -571,6 +435,20 @@ onMounted(async () => {
           <v-row>
             <v-col cols="12">
               <v-row>
+                <v-col cols="12">
+                  <v-autocomplete
+                    label="Type"
+                    variant="outlined"
+                    :items="assetTypes"
+                    item-text="typeName"
+                    item-value="typeId"
+                    v-model="selectedTypeId"
+                    :rules="[rules.required]"
+                    clearable
+                    return-object
+                    prepend-icon="mdi-devices"
+                  ></v-autocomplete>
+                </v-col>
                 <v-col cols="12">
                   <v-text-field
                     label="Profile Name"
@@ -581,21 +459,6 @@ onMounted(async () => {
                     counter
                     prepend-icon="mdi-rename"
                   ></v-text-field>
-                </v-col>
-                <v-col cols="12">
-                  <!-- Asset Type Selection -->
-                  <v-autocomplete
-                    label="Type"
-                    variant="outlined"
-                    :items="assetTypes"
-                    item-text="title"
-                    item-value="key"
-                    v-model="selectedTypeId"
-                    :rules="[rules.required]"
-                    clearable
-                    return-object
-                    prepend-icon="mdi-devices"
-                  ></v-autocomplete>
                 </v-col>
                 <v-col cols="6">
                   <v-text-field

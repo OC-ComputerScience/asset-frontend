@@ -28,7 +28,6 @@ const showAddTypeDialog = ref(false);
 const showAddProfileDialog = ref(false);
 const showAddSerializedAssetDialog = ref(false);
 const editingType = ref(false);
-const editingProfile = ref(false);
 const editingSerializedAsset = ref(false);
 const originalType = ref({});
 const originalSerializedAsset = ref({});
@@ -482,7 +481,6 @@ const resetProfileForm = () => {
   };
   selectedTypeId.value = "";
   validProfile.value = false;
-  editingProfile.value = false;
   selectedProfile.value = "";
 };
 
@@ -490,7 +488,6 @@ const resetProfileForm = () => {
 const sendEditProfile = (profile) => {
   selectedProfile.value = profile;
   selectedTypeId.value = profile.typeId;
-  editingProfile.value = true;
   showAddProfileDialog.value = true;
 };
 
@@ -1856,8 +1853,7 @@ onMounted(async () => {
     <!-- Add/Edit Profile Dialog -->
     <v-dialog v-model="showAddProfileDialog" max-width="800px">
       <ProfileDialog
-        :editing-profile="editingProfile"
-        :send-edit-profile="sendEditProfile"
+        :rules="rules"
         :selected-profile="selectedProfile"
         @closeDialog="handleCloseProfileDialog"
         @updateSnackbar="handleUpdatedProfile"
