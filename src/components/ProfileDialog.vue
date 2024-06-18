@@ -289,6 +289,72 @@ const formattedWarrEndDate = computed(() => {
   }
   return "";
 });
+const formattedWarrStartDate = computed(() => {
+  if (rawWarrStartDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+const formattedWarrEndDate = computed(() => {
+  if (rawWarrEndDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+
+// const hasProfileChanged = () => {
+//   if (editingProfile.value) {
+//     // Assuming selectedTypeId.value holds the currently selected type object
+//     const currentTypeId = selectedTypeId.value?.key || selectedTypeId.value;
+//     // Strip out white space and $ for comparison
+//     const newPurchasePrice = newProfile.value.purchasePrice.replace(
+//       /[$,]/g,
+//       ""
+//     );
+//     return (
+//       newProfile.value.profileName !== originalProfile.value.profileName ||
+//       currentTypeId !== originalProfile.value.typeId || // Adjust this line
+//       newPurchasePrice !== originalProfile.value.purchasePrice ||
+//       newProfile.value.acquisitionDate !==
+//         originalProfile.value.acquisitionDate ||
+//       newProfile.value.notes !== originalProfile.value.notes
+//     );
+//   }
+// };
+
+// Utility function to check if a dynamic field has changed
+const hasDynamicFieldChanged = (field) => {
+  // Find the original field with the same name
+  const originalField = originalDynamicFields.value.find(
+    (original) => original.fieldName === field.fieldName
+  );
+  // If there is no original field (which means it's a new field), or if the data has changed, return true
+  return !originalField || originalField.fieldValue !== field.fieldValue;
+};
+
+// const canSave = computed(() => {
+//   // Check if the profile itself has changed
+//   const profileChanged = hasProfileChanged();
+
+//   // Check if any of the dynamic fields have changed
+//   const dynamicFieldChanged = generateDynamicFields.value.some((field) =>
+//     hasDynamicFieldChanged(field)
+//   );
+
+//   // Enable Save button if there are changes to save
+//   return !(validProfile.value && (profileChanged || dynamicFieldChanged));
+// });
+
+// Groups the text fields into row with 3 columns
+const groupFields = computed(() => {
+  const rowOfFields = [];
+  for (let i = 0; i < generateDynamicFields.value.length; i += 3) {
+    rowOfFields.push(generateDynamicFields.value.slice(i, i + 3));
+  }
+  return rowOfFields;
+});
 
 const emitCloseDialog = () => {
   emit("closeDialog");

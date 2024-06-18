@@ -2107,7 +2107,6 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
- 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
     </v-snackbar>
