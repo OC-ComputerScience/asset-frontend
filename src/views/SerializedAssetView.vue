@@ -158,7 +158,7 @@ const retrieveWarrantiesBySerializedAssetId = async () => {
 };
 
 const warrantyHeaders = ref([
-  { title: "Warranty Type", key: "warrantyType" },
+  { title: "Warranty Desc", key: "warrantyDescription" },
   { title: "Length", key: "length" },
   { title: "Start Date", key: "startDate" },
   { title: "End Date", key: "endDate" },
@@ -314,7 +314,9 @@ onMounted(async () => {
           <v-btn icon @click="goBack">
             <v-icon>mdi-arrow-left</v-icon>
           </v-btn>
-          <v-toolbar-title>{{ assetDetails.serializedAssetName }}</v-toolbar-title>
+          <v-toolbar-title>{{
+            assetDetails.serializedAssetName
+          }}</v-toolbar-title>
         </v-toolbar>
         <v-divider class="my-4"></v-divider>
 
@@ -337,53 +339,69 @@ onMounted(async () => {
           <v-col cols="12" sm="6" md="4">
             <div class="notes-section">
               <strong>Notes</strong>
-              <div class="notes-data">{{ assetDetails.notes || "No notes available" }}</div>
+              <div class="notes-data">
+                {{ assetDetails.notes || "No notes available" }}
+              </div>
             </div>
           </v-col>
         </v-row>
 
         <!-- Profile Details -->
         <v-row>
-          <v-col v-for="(profile, index) in profileDetails" :key="index" cols="12" sm="6" md="4">
+          <v-col
+            v-for="(profile, index) in profileDetails"
+            :key="index"
+            cols="12"
+            sm="6"
+            md="4"
+          >
             <div class="profile-detail">
-              <div class="profile-field">{{ fixProfileField(profile.field) }}</div>
+              <div class="profile-field">
+                {{ fixProfileField(profile.field) }}
+              </div>
               <div class="profile-data">{{ profile.data }}</div>
             </div>
           </v-col>
         </v-row>
 
-
-
         <div v-if="!assetDetails.activeStatus">
           <!-- Disposal Information if activeStatus is 0 -->
           <v-col cols="12" sm="6" md="3"></v-col>
           <v-toolbar color="background">
-            <v-toolbar-title>{{ 'Disposal Information' }}</v-toolbar-title>
+            <v-toolbar-title>{{ "Disposal Information" }}</v-toolbar-title>
           </v-toolbar>
           <v-divider class="my-4"></v-divider>
           <v-row>
             <v-col cols="12" sm="6" md="3">
               <div class="disposal-detail">
                 <strong>Disposal Date:</strong>
-                <div class="disposal-data">{{ formatDate(assetDetails.disposalDate) || "N/A" }}</div>
+                <div class="disposal-data">
+                  {{ formatDate(assetDetails.disposalDate) || "N/A" }}
+                </div>
               </div>
             </v-col>
             <v-col cols="12" sm="6" md="3">
               <div class="disposal-detail">
                 <strong>Disposal Method:</strong>
-                <div class="disposal-data">{{ assetDetails.disposalMethod || "N/A" }}</div>
+                <div class="disposal-data">
+                  {{ assetDetails.disposalMethod || "N/A" }}
+                </div>
               </div>
             </v-col>
             <v-col cols="12" sm="6" md="3">
               <div class="disposal-detail">
                 <strong>Disposal Price:</strong>
-                <div class="disposal-data">{{ formatCurrency(assetDetails.disposalPrice) || "N/A" }}</div>
+                <div class="disposal-data">
+                  {{ formatCurrency(assetDetails.disposalPrice) || "N/A" }}
+                </div>
               </div>
             </v-col>
             <v-col cols="12" sm="6" md="3">
               <div class="disposal-detail">
                 <strong>Disposal Notes:</strong>
-                <div class="disposal-data">{{ assetDetails.disposalNotes || "No additional notes" }}</div>
+                <div class="disposal-data">
+                  {{ assetDetails.disposalNotes || "No additional notes" }}
+                </div>
               </div>
             </v-col>
           </v-row>
@@ -414,9 +432,16 @@ onMounted(async () => {
         </v-tabs>
 
         <!-- Data Tables -->
-        <v-data-table v-if="selectedTab === 'Assignments'" :headers="assetHistoryHeaders" :items="fullAssetHistory"
-          item-key="key" class="elevation-1" :items-per-page="5" :items-per-page-options="[5, 10, 20, 50, -1]"
-          v-model:sort-by="assignmentSortBy">
+        <v-data-table
+          v-if="selectedTab === 'Assignments'"
+          :headers="assetHistoryHeaders"
+          :items="fullAssetHistory"
+          item-key="key"
+          class="elevation-1"
+          :items-per-page="5"
+          :items-per-page-options="[5, 10, 20, 50, -1]"
+          v-model:sort-by="assignmentSortBy"
+        >
           <template v-slot:item.checkoutDate="{ item }">
             <td>{{ formatDateTime(item.checkoutDate) }}</td>
           </template>
@@ -433,35 +458,54 @@ onMounted(async () => {
         </v-data-table>
 
         <!-- Maintenance, Warranty, and Lease Data Tables -->
-        <v-data-table v-if="selectedTab === 'Maintenance'" :headers="maintenanceLogHeaders" :items="maintenanceLogs"
-          item-key="key" class="elevation-1" :items-per-page="5" :items-per-page-options="[5, 10, 20, 50, -1]"
-          v-model:sort-by="maintenanceSortBy">
+        <v-data-table
+          v-if="selectedTab === 'Maintenance'"
+          :headers="maintenanceLogHeaders"
+          :items="maintenanceLogs"
+          item-key="key"
+          class="elevation-1"
+          :items-per-page="5"
+          :items-per-page-options="[5, 10, 20, 50, -1]"
+          v-model:sort-by="maintenanceSortBy"
+        >
           <template v-slot:item.serviceDate="{ item }">
             <td>{{ formatDateTime(item.serviceDate) }}</td>
           </template>
           <template v-slot:item.type="{ item }">
-    <td>
-      <span v-if="item.isPreventative">Preventative</span>
-      <span v-else-if="item.isRepair">Repair</span>
-      <span v-else-if="item.isUpgrade">Upgrade</span>
-    </td>
-  </template>
-  <template v-slot:item.view="{ item }">
-                      <v-btn icon class="table-icons" 
-                      @click="openShowNotesDialog({
-                            id: item.key,
-                            type: 'log',
-                            notes: item.notes,
-                            serializedAssetName: item.serializedAssetName,
-                            serviceDate: item.serviceDate
-                      })">
-                        <v-icon>mdi-note-text</v-icon>
-                      </v-btn>
-                    </template>
+            <td>
+              <span v-if="item.isPreventative">Preventative</span>
+              <span v-else-if="item.isRepair">Repair</span>
+              <span v-else-if="item.isUpgrade">Upgrade</span>
+            </td>
+          </template>
+          <template v-slot:item.view="{ item }">
+            <v-btn
+              icon
+              class="table-icons"
+              @click="
+                openShowNotesDialog({
+                  id: item.key,
+                  type: 'log',
+                  notes: item.notes,
+                  serializedAssetName: item.serializedAssetName,
+                  serviceDate: item.serviceDate,
+                })
+              "
+            >
+              <v-icon>mdi-note-text</v-icon>
+            </v-btn>
+          </template>
         </v-data-table>
-        <v-data-table v-if="selectedTab === 'Warranty'" :headers="warrantyHeaders" :items="warranties" item-key="key"
-          class="elevation-1" :items-per-page="5" :items-per-page-options="[5, 10, 20, 50, -1]"
-          v-model:sort-by="warrantiesSortBy">
+        <v-data-table
+          v-if="selectedTab === 'Warranty'"
+          :headers="warrantyHeaders"
+          :items="warranties"
+          item-key="key"
+          class="elevation-1"
+          :items-per-page="5"
+          :items-per-page-options="[5, 10, 20, 50, -1]"
+          v-model:sort-by="warrantiesSortBy"
+        >
           <template v-slot:item.length="{ item }">
             <td>{{ formatLength(item.length) }}</td>
           </template>
@@ -475,9 +519,16 @@ onMounted(async () => {
             <td>{{ formatStatus(item.activeStatus) }}</td>
           </template>
         </v-data-table>
-        <v-data-table v-if="selectedTab === 'Leasing'" :headers="leaseHeaders" :items="leases" item-key="key"
-          class="elevation-1" :items-per-page="5" :items-per-page-options="[5, 10, 20, 50, -1]" 
-          v-model:sort-by="leasesSortBy">
+        <v-data-table
+          v-if="selectedTab === 'Leasing'"
+          :headers="leaseHeaders"
+          :items="leases"
+          item-key="key"
+          class="elevation-1"
+          :items-per-page="5"
+          :items-per-page-options="[5, 10, 20, 50, -1]"
+          v-model:sort-by="leasesSortBy"
+        >
           <template v-slot:item.length="{ item }">
             <td>{{ formatLength(item.length) }}</td>
           </template>
@@ -496,25 +547,21 @@ onMounted(async () => {
   </v-container>
 
   <v-dialog v-model="showNotesDialog" max-width="500px">
-  <v-card class="pa-4 rounded-xl">
-    <v-card-title class="justify-space-between">
-      Notes for {{ itemToDisplay.serializedAssetName }}
-    </v-card-title>
-    <v-card-text>
-      {{ itemToDisplay.notes }}
-    </v-card-text>
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn
-        color="cancelgrey"
-        text
-        @click="showNotesDialog = false"
-      >
-        Close
-      </v-btn>
-    </v-card-actions>
-  </v-card>
-</v-dialog>
+    <v-card class="pa-4 rounded-xl">
+      <v-card-title class="justify-space-between">
+        Notes for {{ itemToDisplay.serializedAssetName }}
+      </v-card-title>
+      <v-card-text>
+        {{ itemToDisplay.notes }}
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="cancelgrey" text @click="showNotesDialog = false">
+          Close
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 
   <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
     {{ snackbarText }}

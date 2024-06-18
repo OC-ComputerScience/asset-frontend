@@ -17,7 +17,11 @@ const originalProfile = ref({});
 const originalDynamicFields = ref([]);
 const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
+const rawWarrStartDate = ref(null);
+const rawWarrEndDate = ref(null);
 const menu = ref(false);
+const menu1 = ref(false);
+const menu2 = ref(false);
 
 // maska options
 const options = {
@@ -82,6 +86,9 @@ const newProfile = ref({
   purchasePrice: "",
   acquisitionDate: "",
   notes: "",
+  warrantyStartDate: "",
+  warrantyEndDate: "",
+  warrantyDescription: "",
 });
 
 // The naming is confusing however newData is meant for the backend ProfileData object
@@ -99,9 +106,34 @@ const loadProfileForEditing = async (profile) => {
 
   // Correctly assign `rawAcquisitionDate`
   if (profile.acquisitionDate) {
-    rawAcquisitionDate.value = parseISO(profile.acquisitionDate);
+    //rawAcquisitionDate.value = parseISO(profile.acquisitionDate);
+    let targetTime = parseISO(profile.acquisitionDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawAcquisitionDate.value = offsetTime;
   } else {
     rawAcquisitionDate.value = null; // Fallback if there's no acquisition date
+  }
+
+  // Correctly assign `rawWarrStartDate`
+  if (profile.warrantyStartDate) {
+    //rawWarrStartDate.value = parseISO(profile.warrantyStartDate);
+    let targetTime = parseISO(profile.warrantyStartDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawWarrStartDate.value = offsetTime;
+  } else {
+    rawWarrStartDate.value = null; // Fallback if there's no acquisition date
+  }
+  // Correctly assign `rawWarrEndDate`
+  if (profile.warrantyEndDate) {
+    //rawWarrEndDate.value = parseISO(profile.warrantyEndDate);
+    let targetTime = parseISO(profile.warrantyEndDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawWarrEndDate.value = offsetTime;
+  } else {
+    rawWarrEndDate.value = null; // Fallback if there's no acquisition date
   }
 
   // Correctly set `selectedTypeId`
@@ -119,6 +151,9 @@ const loadProfileForEditing = async (profile) => {
     purchasePrice: profile.purchasePrice,
     acquisitionDate: profile.acquisitionDate,
     notes: profile.notes,
+    warrantyStartDate: profile.warrantyStartDate,
+    warrantyEndDate: profile.warrantyEndDate,
+    warrantyDescription: profile.warrantyDescription,
   };
 
   initialTypeId.value = profile.typeId; // Store initial typeId
@@ -200,17 +235,28 @@ const saveProfile = async () => {
     "yyyy-MM-dd"
   );
 
+  let formattedWarrStartDate = null;
+  formattedWarrStartDate = format(
+    new Date(rawWarrStartDate.value),
+    "yyyy-MM-dd"
+  );
+
+  let formattedWarrEndDate = null;
+  formattedWarrEndDate = format(new Date(rawWarrEndDate.value), "yyyy-MM-dd");
+
   const profilePayload = {
     profileName: newProfile.value.profileName,
     notes: newProfile.value.notes,
     purchasePrice: purchasePrice,
     acquisitionDate: formattedAcquisitionDate,
     typeId: selectedTypeId.value.typeId,
+    warrantyStartDate: formattedWarrStartDate,
+    warrantyEndDate: formattedWarrEndDate,
+    warrantyDescription: newProfile.value.warrantyDescription,
   };
 
   try {
     if (newProfile.value.id && selectedTypeId.value !== initialTypeId.value) {
-
       // Delete existing profile data first
       await ProfileDataServices.deleteByProfileId(newProfile.value.id);
     }
@@ -228,7 +274,6 @@ const saveProfile = async () => {
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
-
       // Create new profile
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
@@ -325,6 +370,20 @@ const formattedAcquisitionDate = computed(() => {
   if (rawAcquisitionDate.value) {
     // Display the date in a readable format
     return moment.utc(rawAcquisitionDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+const formattedWarrStartDate = computed(() => {
+  if (rawWarrStartDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+const formattedWarrEndDate = computed(() => {
+  if (rawWarrEndDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
   }
   return "";
 });
@@ -438,13 +497,31 @@ watch(
       newProfile.value.purchasePrice = newValue.purchasePrice || "";
       newProfile.value.acquisitionDate = newValue.acquisitionDate || "";
       newProfile.value.notes = newValue.notes || "";
+      newProfile.value.warrantyStartDate = newValue.warrantyStartDate || "";
+      newProfile.value.warrantyEndDate = newValue.warrantyEndDate || "";
+      newProfile.value.warrantyDescription = newValue.warrantyDescription || "";
 
       if (newValue.typeId) {
         selectedTypeId.value = newValue.typeId; // Update `selectedTypeId`
       }
 
       if (newValue.acquisitionDate) {
-        rawAcquisitionDate.value = parseISO(newValue.acquisitionDate); // Update date
+        let targetTime = parseISO(newValue.acquisitionDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawAcquisitionDate.value = offsetTime;
+        //rawAcquisitionDate.value = parseISO(newValue.acquisitionDate);
+        //convert the offset to milliseconds, add to targetTime, and make a new Date
+
+        console.log("rawAq " + rawAcquisitionDate.value); // Update date
+      }
+      if (newValue.warrentyStartDate) {
+        rawWarrStartDate.value = parseISO(newValue.warrentyStartDate); // Update date
+      }
+      if (newValue.warrentyEndDate) {
+        rawWarrEndDate.value = parseISO(newValue.warrentyEndDate); // Update date
       }
     } else {
       console.error("Selected profile is undefined or null");
@@ -555,9 +632,73 @@ onMounted(async () => {
                         @click="menu = !menu"
                       ></v-text-field>
                     </template>
+
                     <v-date-picker
                       v-model="rawAcquisitionDate"
+                      timezone="UTC"
                       @input="menu = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    label="Warranty Description"
+                    prepend-icon="mdi-note"
+                    variant="outlined"
+                    v-model="newProfile.warrantyDescription"
+                  ></v-text-field>
+                </v-col>
+                <v-col>
+                  <v-menu
+                    v-model="menu1"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    min-width="auto"
+                  >
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-text-field
+                        v-model="formattedWarrStartDate"
+                        label="Warranty Start Date"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        :rules="[rules.required]"
+                        readonly
+                        v-bind="attrs"
+                        @click="menu1 = !menu1"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      v-model="rawWarrStartDate"
+                      @input="menu1 = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu>
+                </v-col>
+                <v-col>
+                  <v-menu
+                    v-model="menu2"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    min-width="auto"
+                  >
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-text-field
+                        v-model="formattedWarrEndDate"
+                        label="Warranty End Date"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        :rules="[rules.required]"
+                        readonly
+                        v-bind="attrs"
+                        @click="menu2 = !menu2"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      v-model="rawWarrEndDate"
+                      @input="menu2 = false"
                       color="primary"
                     ></v-date-picker>
                   </v-menu>

@@ -4,6 +4,7 @@ import AssetTypeServices from "../services/assetTypeServices";
 import AssetProfileServices from "../services/assetProfileServices";
 import SerializedAssetServices from "../services/serializedAssetServices";
 import UserRoleServices from "../services/userRoleServices";
+import WarrantyServices from "../services/warrantyServices";
 import ProfileDialog from "../components/ProfileDialog.vue";
 import EditType from "../components/EditType.vue";
 import { ref, onMounted, watch, computed, toRaw } from "vue";
@@ -12,6 +13,7 @@ import { useStore } from "vuex";
 import { vMaska } from "maska";
 import { format } from "date-fns";
 import moment from "moment-timezone";
+import { parseISO } from "date-fns";
 
 const userRole = ref({});
 const message = ref("");
@@ -54,8 +56,12 @@ const typesSortBy = ref([{ key: "title", order: "asc" }]);
 const profilesSortBy = ref([{ key: "profileName", order: "asc" }]);
 const assetsSortBy = ref([{ key: "serializedAssetName", order: "asc" }]);
 const rawAcquisitionDate = ref(null);
+const rawWarrStartDate = ref(null);
+const rawWarrEndDate = ref(null);
 const rawDisposalDate = ref(null);
 const acquisitionDateMenu = ref(false);
+const warrStartDateMenu = ref(false);
+const warrEndDateMenu = ref(false);
 const disposalDateMenu = ref(false);
 const disposalValueLabel = ref("Disposal Value"); // Default label
 const serialNumberLabel = ref("Serial Number"); // Default label
@@ -235,7 +241,6 @@ const saveType = async () => {
   showAddTypeDialog.value = false;
 };
 
-
 const resetForm = () => {
   newType.value = {
     title: "",
@@ -257,7 +262,7 @@ const closeTypeDialog = () => {
 
 const openAddTypeDialog = () => {
   resetForm(); // Ensure form is reset when dialog is opened
-  console.log("After resetForm, newType.value:", newType.value);
+
   showAddTypeDialog.value = true;
 };
 
@@ -469,6 +474,9 @@ const resetProfileForm = () => {
     notes: "",
     purchasePrice: "",
     acquisitionDate: null,
+    warrantyStartDate: null,
+    warrantyEndDate: null,
+    warrantyDescription: "",
     typeId: "",
     dynamicFields: [],
   };
@@ -637,14 +645,9 @@ const retrieveSerializedAssets = async () => {
     let response;
     if (userRole.value.data.categoryId === 4) {
       response = await SerializedAssetServices.getAll(); // Method to get all serialized assets
-      console.log("Getting all serializedAssets");
     } else {
       response = await SerializedAssetServices.getSerializedAssetsByCategoryId(
         userRole.value.data.categoryId
-      );
-      console.log(
-        "Getting serializedAssets for categroyId: " +
-          userRole.value.data.categoryId
       );
     }
 
@@ -694,6 +697,21 @@ const formattedAcquisitionDate = computed(() => {
   }
   return "";
 });
+const formattedWarrStartDate = computed(() => {
+  if (rawWarrStartDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+
+const formattedWarrEndDate = computed(() => {
+  if (rawWarrEndDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
 
 // Computed property for display
 const formattedDisposalDate = computed(() => {
@@ -715,6 +733,7 @@ const resetSerializedAssetForm = () => {
   newSerializedAsset.value = {
     serialNumber: "",
     notes: "",
+    warrantyDescription: "",
     profileId: "",
     acquisitionDate: null,
     purchasePrice: "",
@@ -723,6 +742,8 @@ const resetSerializedAssetForm = () => {
   validSerializedAsset.value = false;
   editingSerializedAsset.value = false;
   rawAcquisitionDate.value = null;
+  rawWarrStartDate.value = null;
+  rawWarrEndDate.value = null;
   serialNumberLabel.value = "Serial Number"; // Reset label to default
 };
 
@@ -736,7 +757,13 @@ const resetSerializedAssetArchive = () => {
   validSerializedAssetDisposal.value = false; // Reset validation state if used
   rawDisposalDate.value = null; // Reset the internal date value if used
 };
-
+function monthDiff(d1, d2) {
+  var months;
+  months = (d2.getFullYear() - d1.getFullYear()) * 12;
+  months -= d1.getMonth();
+  months += d2.getMonth();
+  return months <= 0 ? 0 : months;
+}
 // Save asset (add or edit)
 const saveSerializedAsset = async () => {
   let formattedAcquisitionDate = null;
@@ -747,7 +774,22 @@ const saveSerializedAsset = async () => {
       "MMM dd, yyyy"
     );
   }
-
+  let formattedWarrStartDate = null;
+  if (rawWarrStartDate.value) {
+    // Convert local date to UTC before storing
+    formattedWarrStartDate = format(
+      new Date(rawWarrStartDate.value),
+      "MMM dd, yyyy"
+    );
+  }
+  let formattedWarrEndDate = null;
+  if (rawWarrEndDate.value) {
+    // Convert local date to UTC before storing
+    formattedWarrEndDate = format(
+      new Date(rawWarrEndDate.value),
+      "MMM dd, yyyy"
+    );
+  }
   const serializedAssetData = {
     serialNumber: newSerializedAsset.value.serialNumber,
     profileId: selectedProfileId.value.key,
@@ -769,10 +811,25 @@ const saveSerializedAsset = async () => {
       );
       snackbarText.value = "Asset updated successfully.";
     } else {
-      console.log("Adding new serialized asset");
       // Call create service if adding a new profile
-      await SerializedAssetServices.create(serializedAssetData);
-      snackbarText.value = "Asset added successfully.";
+      await SerializedAssetServices.create(serializedAssetData).then((data) => {
+        newSerializedAsset.value.id = data.data.serializedAssetId;
+        let lengthMonth = monthDiff(
+          new Date(rawWarrStartDate.value),
+          new Date(rawWarrEndDate.value)
+        );
+
+        let newWarranty = {
+          serializedAssetId: newSerializedAsset.value.id,
+          startDate: formattedWarrStartDate,
+          endDate: formattedWarrEndDate,
+          warrantyDescription: newSerializedAsset.value.warrantyDescription,
+          length: lengthMonth,
+        };
+
+        WarrantyServices.create(newWarranty);
+        snackbarText.value = "Asset added successfully.";
+      });
     }
     snackbar.value = true; // Show the snackbar
     message.value = "Asset saved successfully.";
@@ -815,7 +872,12 @@ const editSerializedAsset = (serializedAsset) => {
   };
 
   // Ensure that the raw acquisition date is correctly formatted for the picker
-  rawAcquisitionDate.value = new Date(serializedAsset.acquisitionDate);
+  //rawAcquisitionDate.value = new Date(serializedAsset.acquisitionDate);
+  let targetTime = parseISO(serializedAsset.acquisitionDate);
+  let tzDifference = targetTime.getTimezoneOffset();
+  rawAcquisitionDate.value = new Date(
+    targetTime.getTime() + tzDifference * 60 * 1000
+  );
 };
 
 // Delete profile
@@ -1027,8 +1089,6 @@ const confirmDelete = async () => {
 };
 
 const openArchiveDialog = (item) => {
-  console.log(item);
-  console.log("Assets checkout status: " + item.checkoutStatus);
   if (item && item.type === "serializedAsset" && item.checkoutStatus === true) {
     // If the item is a serialized asset and it is checked out
     showCannotArchiveDialog.value = true;
@@ -1090,6 +1150,9 @@ watch(
       // If no profile is selected, reset the fields
       newSerializedAsset.value.purchasePrice = "";
       rawAcquisitionDate.value = null;
+      rawWarrStartDate.value = null;
+      rawWarrEndDate.value = null;
+      newSerializedAsset.value.warrantyDescription = "";
     } else {
       // Apply changes if adding a new asset or if the profile actually changes during edit
       if (
@@ -1102,9 +1165,38 @@ watch(
         );
         if (profile) {
           newSerializedAsset.value.purchasePrice = profile.purchasePrice || "";
-          const tempDate = new Date(profile.acquisitionDate);
-          rawAcquisitionDate.value = !isNaN(tempDate.getTime())
-            ? tempDate
+          newSerializedAsset.value.warrantyDescription =
+            profile.warrantyDescription || "";
+
+          //const tempDate = new Date(profile.acquisitionDate);
+          let targetTime1 = parseISO(profile.acquisitionDate);
+          let tzDifference1 = targetTime1.getTimezoneOffset();
+          const acquisitionDate = new Date(
+            targetTime1.getTime() + tzDifference1 * 60 * 1000
+          );
+
+          // const tempWarrStartDate = new Date(profile.warrantyStartDate);
+          targetTime1 = parseISO(profile.warrantyStartDate);
+          tzDifference1 = targetTime1.getTimezoneOffset();
+          const tempWarrStartDate = new Date(
+            targetTime1.getTime() + tzDifference1 * 60 * 1000
+          );
+
+          //const tempWarrEndDate = new Date(profile.warrantyEndDate);
+          targetTime1 = parseISO(profile.warrantyEndDate);
+          tzDifference1 = targetTime1.getTimezoneOffset();
+          const tempWarrEndDate = new Date(
+            targetTime1.getTime() + tzDifference1 * 60 * 1000
+          );
+
+          rawAcquisitionDate.value = !isNaN(acquisitionDate.getTime())
+            ? acquisitionDate
+            : new Date();
+          rawWarrStartDate.value = !isNaN(tempWarrStartDate.getTime())
+            ? tempWarrStartDate
+            : new Date();
+          rawWarrEndDate.value = !isNaN(tempWarrEndDate.getTime())
+            ? tempWarrEndDate
             : new Date();
         }
       }
@@ -1155,7 +1247,6 @@ watch(selectedStatus, (newValue) => {
 
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
-  console.log("User has role id: " + userRoleId.value);
   await getUserRole();
   const savedTab = localStorage.getItem("selectedTab");
   const savedStatus = localStorage.getItem("selectedStatus");
@@ -1753,7 +1844,7 @@ onMounted(async () => {
 
     <!-- Add/Edit Type Dialog -->
     <v-dialog v-model="showAddTypeDialog" max-width="900px">
-      <EditType 
+      <EditType
         :rules="rules"
         :categories="assetCategories"
         :type="newType"
@@ -1852,6 +1943,70 @@ onMounted(async () => {
                     ></v-date-picker>
                   </v-menu>
                 </v-col>
+                <v-col cols="12" v-if="!editingSerializedAsset">
+                  <v-text-field
+                    label="Warranty Description"
+                    variant="outlined"
+                    v-model="newSerializedAsset.warrantyDescription"
+                    maxlength="255"
+                    :counter="255"
+                    prepend-icon="mdi-note"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6" v-if="!editingSerializedAsset">
+                  <v-menu
+                    v-model="warrStartDateMenu"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    min-width="auto"
+                  >
+                    <template v-slot:activator="{ attrs }">
+                      <v-text-field
+                        v-model="formattedWarrStartDate"
+                        label="Warranty Start Date"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        :rules="[rules.required]"
+                        readonly
+                        v-bind="attrs"
+                        @click="warrStartDateMenu = !warrStartDateMenu"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      v-model="rawWarrStartDate"
+                      @input="warrStartDateMenu = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu>
+                </v-col>
+                <v-col cols="6" v-if="!editingSerializedAsset">
+                  <v-menu
+                    v-model="warrEndDateMenu"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    min-width="auto"
+                  >
+                    <template v-slot:activator="{ attrs }">
+                      <v-text-field
+                        v-model="formattedWarrEndDate"
+                        label="Warranty Start Date"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        readonly
+                        v-bind="attrs"
+                        @click="warrEndDateMenu = !warrEndDateMenu"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      v-model="rawWarrEndDate"
+                      @input="warrEndDateMenu = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu>
+                </v-col>
+
                 <v-col cols="12">
                   <v-textarea
                     label="Notes"
