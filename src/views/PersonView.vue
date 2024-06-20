@@ -139,6 +139,16 @@ onMounted(async () => {
                 <div class="profile-data">{{ personDetails.idNumber }}</div>
               </div>
             </v-col>
+            <v-col v-if="personDetails.roomId != null" cols="12" sm="6">
+              <div class="profile-detail">
+                <div class="profile-field">Office</div>
+                <div class="profile-data">
+                  {{ personDetails.room.building.abbreviation }}-{{
+                    personDetails.room.roomNo
+                  }}
+                </div>
+              </div>
+            </v-col>
           </v-row>
         </v-col>
 
