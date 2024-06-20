@@ -1,8 +1,10 @@
 <script setup>
 import PersonServices from "../services/personServices";
+import RoomServices from "../services/roomServices";
 import { ref, onMounted, watch, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
+import { formatInTimeZone } from "date-fns-tz";
 
 const message = ref("");
 const selectedTab = ref("People");
@@ -20,7 +22,7 @@ const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
-const personSortBy = ref([{ key: "title", order: "asc" }]);
+const personSortBy = ref([{ key: "fName", order: "asc" }]);
 const searchQuery = ref("");
 const store = useStore();
 const canAdd = computed(() => {
@@ -41,20 +43,22 @@ const rules = {
   },
 };
 const newPerson = ref({
-  title: "",
+  formatInTimeZone: "",
   lName: "",
   email: "",
   idNumber: "",
+  roomId: null,
 });
 
 // People Section
 
 // Retrieve People from Database
+
 const retrievePeople = async () => {
   try {
     const response = await PersonServices.getAll();
     people.value = response.data.map((person) => ({
-      title: person.fName,
+      fName: person.fName,
       key: person.personId,
       lName: person.lName,
       email: person.email,
@@ -66,9 +70,52 @@ const retrievePeople = async () => {
   }
 };
 
+const getOCPerson = async () => {
+  let roomNumber = "";
+  console.log(newPerson.value);
+  if (newPerson.value.idNumber != null && newPerson.value.idNumber != "") {
+    let idNumber = newPerson.value.idNumber;
+    let roomNumber = newPerson.value.roomNo;
+    try {
+      const response = await PersonServices.getOCPersonById(idNumber);
+      roomNumber = response.data.OfficeNumber;
+      const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomNo: roomResponse.data.roomId,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      message.value = "Failed to load OC person data.";
+    }
+  } else if (newPerson.value.email != null && newPerson.value.email != "") {
+    let email = newPerson.value.email;
+    try {
+      const response = await PersonServices.getOCPersonByEmail(email);
+      roomNumber = response.data.OfficeNumber;
+      const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomNo: roomResponse.data.roomId,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      message.value = "Failed to load OC person data.";
+    }
+  }
+};
+
 const editPerson = async (person) => {
   newPerson.value = {
-    title: person.title,
+    fullName: `${person.fName} ${person.lName}`,
+    fName: person.fName,
     lName: person.lName,
     email: person.email,
     idNumber: person.idNumber,
@@ -81,7 +128,7 @@ const editPerson = async (person) => {
 
 const savePerson = async () => {
   const personData = {
-    fName: newPerson.value.title,
+    fName: newPerson.value.fName,
     lName: newPerson.value.lName,
     email: newPerson.value.email,
     idNumber: newPerson.value.idNumber,
@@ -109,7 +156,7 @@ const savePerson = async () => {
   } finally {
     editingPerson.value = false;
     showAddPersonDialog.value = false;
-    newPerson.value = { title: "", lName: "", email: "", idNumber: "" }; // Reset the form
+    newPerson.value = { fName: "", lName: "", email: "", idNumber: "" }; // Reset the form
   }
 };
 
@@ -218,7 +265,7 @@ const filteredPeople = computed(() => {
 
     result = result.filter(
       (person) =>
-        `${person.title} ${person.lName}`
+        `${person.fName} ${person.lName}`
           .toLowerCase()
           .includes(lowerSearchQuery) ||
         person.idNumber.toLowerCase().includes(lowerSearchQuery) // Include ID in the search
@@ -246,13 +293,13 @@ const highlightedPeople = computed(() => {
     : ""; // Handle null/empty cases
 
   return filteredPeople.value.map((person) => {
-    const title = person.title || ""; // Default to empty string if null
+    const fName = person.fName || ""; // Default to empty string if null
     const lName = person.lName || "";
     const idNumber = person.idNumber || "";
 
     return {
       ...person,
-      fullName: `${highlightText(title)} ${highlightText(lName)}`, // Ensure null-safe operation
+      fullName: `${highlightText(fName)} ${highlightText(lName)}`, // Ensure null-safe operation
       idNumber: highlightText(idNumber),
     };
   });
@@ -261,7 +308,7 @@ const highlightedPeople = computed(() => {
 const scrollToPerson = () => {
   const searchLower = searchQuery.value.toLowerCase();
   const matchedPerson = filteredPeople.value.find((person) =>
-    `${person.title} ${person.lName}`.toLowerCase().includes(searchLower)
+    `${person.fName} ${person.lName}`.toLowerCase().includes(searchLower)
   );
 
   if (matchedPerson) {
@@ -545,6 +592,10 @@ onMounted(async () => {
             >{{ editingPerson ? "Edit" : "Add" }} Person</span
           >
         </v-card-title>
+        <v-card-subtitle v-if="!editingPerson"
+          >Enter Email or Id and click GET OC DATA to load current
+          info</v-card-subtitle
+        >
         <v-card-text>
           <v-form ref="formPerson" v-model="validPerson">
             <v-container>
@@ -553,7 +604,7 @@ onMounted(async () => {
                   <v-text-field
                     label="First Name"
                     variant="outlined"
-                    v-model="newPerson.title"
+                    v-model="newPerson.fName"
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
@@ -604,6 +655,7 @@ onMounted(async () => {
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <v-btn color="green" @click="getOCPerson">Get OC Data</v-btn>
           <v-btn color="cancelgrey" text @click="closePersonDialog"
             >Cancel</v-btn
           >
