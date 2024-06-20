@@ -1,6 +1,7 @@
 <script setup>
 import PersonServices from "../services/personServices";
 import RoomServices from "../services/roomServices";
+import RoomServices from "../services/roomServices";
 import { ref, onMounted, watch, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
@@ -11,6 +12,7 @@ const messageText = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Active");
 const people = ref([]);
+const rooms = ref([]);
 const rooms = ref([]);
 const showAddPersonDialog = ref(false);
 const editingPerson = ref(false);
@@ -49,6 +51,7 @@ const newPerson = ref({
   email: "",
   idNumber: "",
   roomId: null,
+  roomId: null,
 });
 
 // People Section
@@ -64,6 +67,7 @@ const retrievePeople = async () => {
       lName: person.lName,
       email: person.email,
       idNumber: person.idNumber,
+      roomId: person.roomId,
       roomId: person.roomId,
       activeStatus: person.activeStatus,
     }));
@@ -156,6 +160,7 @@ const editPerson = async (person) => {
     idNumber: person.idNumber,
     personId: person.key,
     roomId: person.roomId,
+    roomId: person.roomId,
   };
   editingPerson.value = true;
   showAddPersonDialog.value = true;
@@ -168,6 +173,7 @@ const savePerson = async () => {
     lName: newPerson.value.lName,
     email: newPerson.value.email,
     idNumber: newPerson.value.idNumber,
+    roomId: newPerson.value.roomId,
     roomId: newPerson.value.roomId,
   };
 
