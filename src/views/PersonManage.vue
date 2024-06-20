@@ -126,6 +126,45 @@ const retrieveRooms = async () => {
     });
   } catch (error) {
     console.error("Error loading rooms:", error);
+const getOCPerson = async () => {
+  let roomNumber = "";
+  console.log(newPerson.value);
+  if (newPerson.value.idNumber != null && newPerson.value.idNumber != "") {
+    let idNumber = newPerson.value.idNumber;
+    let roomNumber = newPerson.value.roomNo;
+    try {
+      const response = await PersonServices.getOCPersonById(idNumber);
+      roomNumber = response.data.OfficeNumber;
+      const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomNo: roomResponse.data.roomId,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      message.value = "Failed to load OC person data.";
+    }
+  } else if (newPerson.value.email != null && newPerson.value.email != "") {
+    let email = newPerson.value.email;
+    try {
+      const response = await PersonServices.getOCPersonByEmail(email);
+      roomNumber = response.data.OfficeNumber;
+      const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomNo: roomResponse.data.roomId,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      message.value = "Failed to load OC person data.";
+    }
   }
 };
 
