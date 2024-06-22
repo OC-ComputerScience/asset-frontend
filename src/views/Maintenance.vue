@@ -228,6 +228,7 @@ const baseMaintenanceHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
   { title: "Scheuled Date", key: "scheduledDate" },
   { title: "Date Performed", key: "serviceDate" },
+  { title: "Description", key: "description" },
   { title: "Performed By", key: "performedBy" },
   { title: "Type", key: "type" },
   { title: "View Notes", key: "view" },
