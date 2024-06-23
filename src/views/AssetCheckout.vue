@@ -62,7 +62,7 @@ const userRoleId = computed(() => {
 });
 const getUserRole = async () => {
   userRole.value = await UserRoleServices.get(userRoleId.value);
-  console.log(userRole.value.data.categoryId);
+
   return userRole.value;
 };
 const newPersonAsset = ref({
@@ -170,7 +170,6 @@ const saveNewPerson = async () => {
       closeAddNewPersonDialog();
       await retrievePeople();
       newPersonAsset.value.personId = response.data.personId;
-      console.log("new person id: ", newPersonAsset.value.personId);
       idNumber.value = "";
       email.value = "";
       newPerson.value = {
@@ -276,12 +275,6 @@ const savePersonCheckout = async () => {
       expectedCheckinDate: checkinDate,
       checkedOutBy: checkedOutInByFullName,
     };
-    console.log(
-      "details going to email: ",
-      newPersonAsset.value.personId.email,
-      newPersonAsset.value.serializedAssetId.title,
-      newPersonAsset.value.personId.title
-    );
 
     try {
       // Create new PersonAsset record
@@ -348,13 +341,6 @@ const savePersonCheckin = async () => {
       if (!selectedPersonAsset) {
         throw new Error("Selected asset not found.");
       }
-      console.log(
-        "details going to email: ",
-        selectedPersonAsset.person.email,
-        selectedPersonAsset.person.fullNameWithId,
-        // formattedCheckinDate,
-        selectedPersonAsset.serializedAsset.serializedAssetName
-      );
 
       // Update the checkout status for both the PersonAsset and the SerializedAsset
       await PersonAssetServices.updateCheckoutStatusAndDate(
@@ -494,7 +480,6 @@ const retrieveBuildings = async () => {
       .sort((a, b) => a.title.localeCompare(b.title)); // Sort buildings by name
 
     buildings.value = sortedBuildings;
-    console.log(buildings.value); // Optional: log to console to verify sorted list
   } catch (error) {
     console.error("Error loading buildings:", error);
   }
@@ -753,7 +738,6 @@ const retrieveRooms = async () => {
       .sort((a, b) => a.title.localeCompare(b.title)); // Sort rooms by roomName
 
     rooms.value = sortedRooms;
-    console.log(rooms.value); // Optional: log to console to verify sorted list
   } catch (error) {
     console.error("Error loading rooms:", error);
   }
@@ -793,7 +777,6 @@ const retrieveRoomAssets = async () => {
         title: combinedTitle, // Combined title
       };
     });
-    console.log(roomAssets.value);
   } catch (error) {
     console.error("Error loading room assets:", error);
     message.value = "Failed to load room assets.";

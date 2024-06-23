@@ -234,7 +234,6 @@ const saveType = async () => {
   showAddTypeDialog.value = false;
 };
 
-
 const resetForm = () => {
   newType.value = {
     title: "",
@@ -256,7 +255,7 @@ const closeTypeDialog = () => {
 
 const openAddTypeDialog = () => {
   resetForm(); // Ensure form is reset when dialog is opened
-  console.log("After resetForm, newType.value:", newType.value);
+
   showAddTypeDialog.value = true;
 };
 
@@ -634,14 +633,9 @@ const retrieveSerializedAssets = async () => {
     let response;
     if (userRole.value.data.categoryId === 4) {
       response = await SerializedAssetServices.getAll(); // Method to get all serialized assets
-      console.log("Getting all serializedAssets");
     } else {
       response = await SerializedAssetServices.getSerializedAssetsByCategoryId(
         userRole.value.data.categoryId
-      );
-      console.log(
-        "Getting serializedAssets for categroyId: " +
-          userRole.value.data.categoryId
       );
     }
 
@@ -766,7 +760,6 @@ const saveSerializedAsset = async () => {
       );
       snackbarText.value = "Asset updated successfully.";
     } else {
-      console.log("Adding new serialized asset");
       // Call create service if adding a new profile
       await SerializedAssetServices.create(serializedAssetData);
       snackbarText.value = "Asset added successfully.";
@@ -912,7 +905,6 @@ const updateDisposalValueLabel = () => {
 
 const updateSerialNumberLabel = () => {
   // Log the current value of selectedProfileId
-  // console.log("Selected Profile ID:", selectedProfileId.value);
 
   // Check if the selectedProfileId has a valid key and fetch the corresponding profile
   const profile = assetProfiles.value.find(
@@ -920,15 +912,12 @@ const updateSerialNumberLabel = () => {
   );
 
   // Log the found profile
-  // console.log("Found Profile:", profile);
 
   if (profile && (profile.typeId === 13 || profile.typeId === "13")) {
     // Check for both '13' as a string and 13 as a number
     serialNumberLabel.value = "Key Number";
-    // console.log("Label set to Key Number because typeId is 13");
   } else {
     serialNumberLabel.value = "Serial Number";
-    // console.log("Label set to Serial Number");
   }
 };
 
@@ -1024,8 +1013,6 @@ const confirmDelete = async () => {
 };
 
 const openArchiveDialog = (item) => {
-  console.log(item);
-  console.log("Assets checkout status: " + item.checkoutStatus);
   if (item && item.type === "serializedAsset" && item.checkoutStatus === true) {
     // If the item is a serialized asset and it is checked out
     showCannotArchiveDialog.value = true;
@@ -1152,7 +1139,6 @@ watch(selectedStatus, (newValue) => {
 
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
-  console.log("User has role id: " + userRoleId.value);
   await getUserRole();
   const savedTab = localStorage.getItem("selectedTab");
   const savedStatus = localStorage.getItem("selectedStatus");
@@ -1750,7 +1736,7 @@ onMounted(async () => {
 
     <!-- Add/Edit Type Dialog -->
     <v-dialog v-model="showAddTypeDialog" max-width="900px">
-      <EditType 
+      <EditType
         :rules="rules"
         :categories="assetCategories"
         :type="newType"

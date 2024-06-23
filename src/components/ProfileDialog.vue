@@ -43,7 +43,7 @@ const props = defineProps({
     required: false,
   },
   rules: {
-    required: true
+    required: true,
   },
 });
 
@@ -114,16 +114,14 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-const retrieveFields = async() => {
-  try{
-    if(editMode.value){
+const retrieveFields = async () => {
+  try {
+    if (editMode.value) {
       // Retrieve fields based on profile data
-    }
-    else{
+    } else {
       // Retrieve fields based on types
     }
-  } 
-  catch(err){
+  } catch (err) {
     console.error(err);
   }
 };
@@ -148,7 +146,6 @@ const saveProfile = async () => {
 
   try {
     if (newProfile.value.id && selectedTypeId.value !== initialTypeId.value) {
-
       // Delete existing profile data first
       await ProfileDataServices.deleteByProfileId(newProfile.value.id);
     }
@@ -166,7 +163,6 @@ const saveProfile = async () => {
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
-
       // Create new profile
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
@@ -185,11 +181,6 @@ const saveProfile = async () => {
 
 // Save profileData
 const saveProfileData = async (profileId) => {
-  console.log(
-    "Saving Profile Data",
-    JSON.stringify(generateDynamicFields.value)
-  );
-
   for (const field of generateDynamicFields.value) {
     const payload = {
       field: field.fieldName,
@@ -199,13 +190,8 @@ const saveProfileData = async (profileId) => {
 
     try {
       if (field.fieldId) {
-        console.log(
-          "Updating existing field data with fieldId:",
-          field.fieldId
-        );
         await ProfileDataServices.update(field.fieldId, payload);
       } else {
-        console.log("Field ID missing, creating new field data.");
         const response = await ProfileDataServices.create(payload);
         field.fieldId = response.data.profileDataId; // Ensure this matches the response structure
       }
@@ -230,7 +216,6 @@ const editProfile = async () => {
     }
   }
 };
-
 
 // Computed property for display
 const formattedAcquisitionDate = computed(() => {
@@ -289,8 +274,6 @@ watch(selectedTypeId, (newVal) => {
 watch(
   selectedProfile,
   (newValue, oldValue) => {
-    console.log("selectedProfile changed from", oldValue, "to", newValue);
-
     if (newValue) {
       // Ensure all fields are assigned correctly
       newProfile.value.profileName = newValue.profileName || "";
@@ -345,9 +328,7 @@ onMounted(async () => {
 <template>
   <v-card class="pa-4 rounded-xl">
     <v-card-title>
-      <span class="headline"
-        >{{ editMode ? "Edit" : "Add" }} Profile</span
-      >
+      <span class="headline">{{ editMode ? "Edit" : "Add" }} Profile</span>
     </v-card-title>
     <v-card-text>
       <v-form ref="formProfile" v-model="validProfile">
