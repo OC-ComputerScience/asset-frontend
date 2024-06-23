@@ -35,13 +35,15 @@ const decRegex = /^-?\d+(\.\d+)?$/;
 const decTest = (value) => decRegex.test(value) || "Enter only decimals";
 const filterIntegerInput = (event) => {
   const value = event.target.value;
-  event.target.value = value.replace(/[^\d-]/g, '');
+  event.target.value = value.replace(/[^\d-]/g, "");
 };
 const filterDecimalInput = (event) => {
   const value = event.target.value;
-  event.target.value = value.replace(/[^0-9.-]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/(\-.*?)-.*/g, '$1');
+  event.target.value = value
+    .replace(/[^0-9.-]/g, "")
+    .replace(/(\..*?)\..*/g, "$1")
+    .replace(/(\-.*?)-.*/g, "$1");
 };
-
 
 // maska options
 const options = {
@@ -512,7 +514,9 @@ onMounted(async () => {
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
-                  :rules="field.required ? [rules.required, intTest] : [intTest]"
+                  :rules="
+                    field.required ? [rules.required, intTest] : [intTest]
+                  "
                   variant="outlined"
                   prepend-icon="field"
                   :return-object="false"
@@ -524,7 +528,9 @@ onMounted(async () => {
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
-                  :rules="field.required ? [rules.required, decTest] : [decTest]"
+                  :rules="
+                    field.required ? [rules.required, decTest] : [decTest]
+                  "
                   variant="outlined"
                   prepend-icon="field"
                   :return-object="false"
@@ -553,7 +559,9 @@ onMounted(async () => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="cancelgrey" text @click="emitCloseDialog">Cancel</v-btn>
-      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile">Save</v-btn>
+      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile"
+        >Save</v-btn
+      >
     </v-card-actions>
   </v-card>
 </template>
