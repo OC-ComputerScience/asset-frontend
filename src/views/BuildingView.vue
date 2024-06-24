@@ -20,10 +20,8 @@ const originalRoom = ref({});
 const selectedBuildingId = ref("");
 const validBuilding = ref(false);
 const validRoom = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -115,9 +113,7 @@ const retrieveBuildingDetails = async () => {
   try {
     const response = await BuildingServices.getById(props.buildingId);
     buildingDetails.value = response.data;
-    console.log("retrieved building details successfully");
   } catch (error) {
-    console.error("Error loading \building details:", error);
     message.value = "Failed to load building details.";
   }
 };
@@ -148,7 +144,6 @@ function viewRoom(roomId) {
     params: { roomId: roomId },
     query: { sourcePage: sourcePage },
   });
-  console.log("Building view passed sourcePage " + sourcePage);
 }
 
 const retrieveRooms = async () => {
@@ -168,7 +163,6 @@ const retrieveRooms = async () => {
     });
     rooms.value = enrichedRooms;
   } catch (error) {
-    console.error("Error loading rooms:", error);
     message.value = "Failed to load rooms.";
   }
 };
@@ -198,10 +192,8 @@ const editRoom = (room) => {
 
 const saveRoom = async () => {
   let buildingId = props.buildingId; // Directly use the selected category ID
-  console.log(buildingId);
 
   if (!buildingId) {
-    console.error("Building not selected.");
     message.value = "Building not found or not selected.";
     return;
   }
@@ -214,38 +206,20 @@ const saveRoom = async () => {
 
   try {
     if (editingRoom.value) {
-      console.log(newRoom.value.roomId);
       await RoomServices.update(newRoom.value.roomId, roomData);
       snackbarText.value = "Room updated successfully.";
     } else {
       await RoomServices.create(roomData);
       snackbarText.value = "Room added successfully.";
-      console.log(roomData);
     }
     snackbar.value = true; // Show the snackbar
     message.value = "Room saved successfully.";
     await retrieveRooms();
   } catch (error) {
-    console.error("Error saving room:", error);
     message.value = `Error saving room: ${error.message || "Unknown error"}`;
   } finally {
     resetForm(); // Ensure form is reset here
     showAddRoomDialog.value = false; // Close dialog in finally to ensure it closes
-  }
-  console.log(roomData);
-};
-
-const deleteRoom = async (roomId) => {
-  try {
-    await RoomServices.delete(roomId);
-    snackbarText.value = "Room deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of rooms after successful deletion
-    retrieveRooms();
-    rooms.value = rooms.value.filter((t) => t.id !== roomId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting room.";
   }
 };
 
@@ -280,7 +254,6 @@ const archiveRoom = async (roomId) => {
     retrieveRooms();
     rooms.value = rooms.value.filter((c) => c.id !== roomId);
   } catch (error) {
-    console.error(error);
     message.value = "Error archiving room.";
   }
 };
@@ -297,7 +270,6 @@ const activateRoom = async (roomId) => {
     retrieveRooms();
     rooms.value = rooms.value.filter((c) => c.id !== roomId);
   } catch (error) {
-    console.error(error);
     message.value = "Error activating room.";
   }
 };
@@ -333,10 +305,6 @@ const archivedRoomHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -365,20 +333,6 @@ const formatExpectedDate = (dateString) => {
   if (!dateString) return "Indefinite";
   // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY");
-};
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "building") {
-    await deleteBuilding(itemToDelete.value.id);
-  } else if (itemToDelete.value.type === "room") {
-    await deleteRoom(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
 };
 
 const openArchiveDialog = (item) => {
@@ -595,20 +549,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'room',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                     <template v-slot:item.view="{ item }">
                       <div
                         class="d-flex align-center justify-start"
@@ -728,24 +668,6 @@ onMounted(async () => {
             :disabled="!validRoom || !hasRoomChanged"
             >Save</v-btn
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card>
-        <v-card-title class="text-h5">Confirm Deletion</v-card-title>
-        <v-card-text>Are you sure you want to delete this item?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

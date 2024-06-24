@@ -15,9 +15,7 @@ const selectedSerializedAssetId = ref("");
 const editingLog = ref(false);
 const originalLog = ref({});
 const validLog = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showNotesDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToDisplay = ref(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
@@ -165,20 +163,6 @@ const saveLog = async () => {
   }
 };
 
-const deleteLog = async (logId) => {
-  try {
-    await LogServices.delete(logId);
-    snackbarText.value = "Maintenance Log deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrieveLogs();
-    logs.value = logs.value.filter((t) => t.logId !== logId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting log.";
-  }
-};
-
 function resetLogForm() {
   newLog.value = {
     serializedAssetId: "",
@@ -218,10 +202,6 @@ const dynamicHeaders = computed(() => {
 
   if (store.getters.canEdit) {
     headers.push({ title: "Edit", key: "edit", sortable: false });
-  }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
   }
 
   return headers;
@@ -272,33 +252,10 @@ const highlightedLogs = computed(() => {
   }));
 });
 
-const hasLogChanged = computed(() => {
-  const isNewLogChanged = Object.keys(newLog.value).some(
-    (key) => newLog.value[key] !== originalLog.value[key]
-  );
-  const isSerializedAssetChanged =
-    selectedSerializedAssetId.value.key !== originalLog.value.serializedAssetId;
-  return isNewLogChanged || isSerializedAssetChanged;
-});
-
 // Misc Section
 
 const formatDate = (dateString) => {
   return moment.utc(dateString).format("MMM DD, YYYY");
-};
-
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "log") {
-    await deleteLog(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-  await retrieveLogs();
 };
 
 const openShowNotesDialog = (item) => {
@@ -411,20 +368,6 @@ onMounted(async () => {
                         <v-icon>mdi-pencil</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'log',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -531,27 +474,6 @@ onMounted(async () => {
           <v-btn color="saveblue" @click="saveLog" :disabled="!validLog"
             >Save</v-btn
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text
-          >Are you sure you want to delete this maintenance log?</v-card-text
-        >
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

@@ -14,66 +14,68 @@ const logoURL = ref("");
 const router = useRouter();
 const store = useStore(); // Use the store
 
-const isAdmin = computed(() => store.getters.isAdmin);
-const isManager = computed(() => store.getters.isManager);
-const isRoleAssigned = computed(() => store.getters.isRoleAssigned);
 // Compute isDev from store
 const isDev = computed(() => store.getters.isDev);
-const canAdd = computed(() => {
-  return store.getters.canAdd;
-});
 
-const canEdit = computed(() => store.getters.canEdit);
-const canDelete = computed(() => store.getters.canDelete);
-const canArchive = computed(() => store.getters.canArchive);
-const canActivate = computed(() => store.getters.canActivate);
-const canManageMaintenance = computed(() => store.getters.canManageMaintenance);
-const canManageLeases = computed(() => store.getters.canManageLeases);
-const canManageWarranties = computed(() => store.getters.canManageWarranties);
+const viewCheckOutIn = computed(() => store.getters.viewCheckOutIn);
+const viewServices = computed(() => store.getters.viewServices);
+const viewMaintenance = computed(() => store.getters.viewMaintenance);
+const viewLeases = computed(() => store.getters.viewLeases);
+const viewWarranties = computed(() => store.getters.viewWarranties);
+const viewReports = computed(() => store.getters.viewReports);
+const viewManage = computed(() => store.getters.viewManage);
+const viewAssets = computed(() => store.getters.viewAssets);
+const viewFacilities = computed(() => store.getters.viewFacilities);
+const viewPeople = computed(() => store.getters.viewPeople);
+const viewUsers = computed(() => store.getters.viewUsers);
 
 const manageActions = computed(() => {
-  let actions = [
-    {
+  let actions = [];
+
+  if (viewAssets.value) {
+    actions.push({
       title: "Assets",
       component: "assetManage",
-    },
-    {
+    });
+  }
+  if (viewFacilities.value) {
+    actions.push({
       title: "Facilities",
       component: "facilityManage",
-    },
-    {
+    });
+  }
+  if (viewPeople.value) {
+    actions.push({
       title: "People",
       component: "personManage",
-    },
-  ];
-
-  if (isAdmin.value) {
+    });
+  }
+  if (viewUsers.value) {
     actions.push({
       title: "Users",
       component: "userManage",
     });
   }
-
   return actions;
 });
 
 const serviceActions = computed(() => {
   let services = []
-  if (canManageMaintenance.value) {
+  if (viewMaintenance.value) {
     services.push({
       title: "Maintenance",
       component: "maintenance",
     });
   }
-  if (canManageWarranties.value) {
+  if (viewWarranties.value) {
     services.push({
       title: "Warranties",
       component: "warranties",
     });
   }
-  if (canManageLeases.value) {
+  if (viewLeases.value) {
     services.push({
-      title: "Leasing",
+      title: "Leases",
       component: "leasing",
     });
   }
@@ -133,12 +135,12 @@ logoURL.value = ocLogo;
       <template v-if="user">
         
         <!-- Conditional rendering based on user role -->
-        <template v-if="isRoleAssigned">
+        <template v-if="viewCheckOutIn">
           <v-btn text :to="{ name: 'assetCheckout' }">Check-Out/In</v-btn>
         </template>
 
         <template
-          v-if="isRoleAssigned"
+          v-if="viewServices"
         >
           <v-btn>
             Services
@@ -157,12 +159,12 @@ logoURL.value = ocLogo;
           </v-btn>
         </template>
 
-        <template v-if="isAdmin">
+        <template v-if="viewReports">
           <v-btn text :to="{ name: 'reports' }">Reports</v-btn>
         </template>
 
         <template
-          v-if="canAdd || canDelete || canEdit || canArchive || canActivate"
+          v-if="viewManage"
         >
           <v-btn>
             Manage

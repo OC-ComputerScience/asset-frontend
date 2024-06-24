@@ -1,5 +1,6 @@
 <script setup>
 import PersonServices from "../services/personServices";
+import RoomServices from "../services/roomServices";
 import { ref, onMounted, watch, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
@@ -8,14 +9,13 @@ const message = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Active");
 const people = ref([]);
+const rooms = ref([]);
 const showAddPersonDialog = ref(false);
 const editingPerson = ref(false);
 const originalPerson = ref({});
 const validPerson = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -45,6 +45,7 @@ const newPerson = ref({
   lName: "",
   email: "",
   idNumber: "",
+  roomId: null,
 });
 
 // People Section
@@ -59,10 +60,28 @@ const retrievePeople = async () => {
       lName: person.lName,
       email: person.email,
       idNumber: person.idNumber,
+      roomId: person.roomId,
       activeStatus: person.activeStatus,
     }));
   } catch (error) {
     console.error("Error loading people:", error);
+  }
+};
+
+const retrieveRooms = async () => {
+  try {
+    const response = await RoomServices.getAll();
+    rooms.value = response.data || [];
+    rooms.value.forEach((room) => {
+      room.roomName =
+        room.building.abbreviation +
+        "-" +
+        room.roomNo +
+        " " +
+        room.building.name;
+    });
+  } catch (error) {
+    console.error("Error loading rooms:", error);
   }
 };
 
@@ -73,6 +92,7 @@ const editPerson = async (person) => {
     email: person.email,
     idNumber: person.idNumber,
     personId: person.key,
+    roomId: person.roomId,
   };
   editingPerson.value = true;
   showAddPersonDialog.value = true;
@@ -85,6 +105,7 @@ const savePerson = async () => {
     lName: newPerson.value.lName,
     email: newPerson.value.email,
     idNumber: newPerson.value.idNumber,
+    roomId: newPerson.value.roomId,
   };
 
   try {
@@ -110,20 +131,6 @@ const savePerson = async () => {
     editingPerson.value = false;
     showAddPersonDialog.value = false;
     newPerson.value = { title: "", lName: "", email: "", idNumber: "" }; // Reset the form
-  }
-};
-
-const deletePerson = async (personId) => {
-  try {
-    await PersonServices.delete(personId);
-    snackbarText.value = "Person deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrievePeople();
-    people.value = people.value.filter((t) => t.personId !== personId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting person.";
   }
 };
 
@@ -195,10 +202,6 @@ const archivedPersonHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -240,6 +243,15 @@ const highlightText = (text) => {
   return text.replace(regex, '<mark class="custom-highlight">$1</mark>'); // Apply custom highlight
 };
 
+const hasPersonChanged = computed(() => {
+  return (
+    newPerson.value.title !== originalPerson.value.title ||
+    newPerson.value.lName !== originalPerson.value.lName ||
+    newPerson.value.email !== originalPerson.value.email ||
+    newPerson.value.idNumber !== originalPerson.value.idNumber ||
+    newPerson.value.roomId !== originalPerson.value.roomId
+  );
+});
 const highlightedPeople = computed(() => {
   const lowerSearchQuery = searchQuery.value
     ? searchQuery.value.toLowerCase()
@@ -279,19 +291,6 @@ function viewPerson(personId) {
   router.push({ name: "personView", params: { personId: personId } });
 }
 
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "person") {
-    await deletePerson(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-};
-
 const openArchiveDialog = (item) => {
   itemToArchive.value = item;
   showArchiveDialog.value = true;
@@ -328,6 +327,7 @@ watch(selectedTab, (newValue) => {
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await retrievePeople();
+  await retrieveRooms();
 });
 </script>
 
@@ -514,20 +514,6 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'person',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -598,6 +584,18 @@ onMounted(async () => {
                     prepend-icon="mdi-pound"
                   ></v-text-field>
                 </v-col>
+                <v-col cols="12">
+                  <v-select
+                    label="Office/Room"
+                    variant="outlined"
+                    v-model="newPerson.roomId"
+                    item-title="roomName"
+                    item-value="roomId"
+                    :return-object="false"
+                    :items="rooms"
+                    prepend-icon="mdi-office-building"
+                  ></v-select>
+                </v-col>
               </v-row>
             </v-container>
           </v-form>
@@ -612,28 +610,6 @@ onMounted(async () => {
             @click="savePerson"
             :disabled="!validPerson || !hasPersonChanged"
             >Save</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this person?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" class="ma-2" text @click="confirmDelete"
-            >Delete</v-btn
           >
         </v-card-actions>
       </v-card>
