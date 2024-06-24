@@ -92,18 +92,12 @@ const newRoomAsset = ref({
 
 const idNumber = ref("");
 const email = ref("");
-const newPerson = ref({
-  fName: "",
-  lName: "",
-  email: "",
-  idNumber: "",
-  roomId: null,
-  activeStatus: true,
-});
+const newPerson = ref(null);
 
 // *** People Section ***
 const getOCPerson = async () => {
   message.value = "";
+  newPerson.value = null;
   let roomNumber = "";
 
   if (idNumber.value != null && idNumber.value != "") {
@@ -183,7 +177,7 @@ const saveNewPerson = async () => {
     })
     .catch((error) => {
       console.error("Error saving new person:", error);
-      snackbarText.value = "Failed to add the person.";
+      snackbarText.value = "Failed to add the person. Already exists.";
       snackbar.value = true;
     });
 };
@@ -265,6 +259,12 @@ const savePersonCheckout = async () => {
     if (!indefiniteCheckout.value && expectedCheckinDate.value) {
       // Since you're already using local time for checkout, ensure that expected check-in date handling is consistent
       checkinDate = format(new Date(expectedCheckinDate.value), "MMM dd, yyyy");
+    }
+
+    if (newPersonAsset.value.personId.key === undefined) {
+      newPersonAsset.value.personId = people.value.find(
+        (person) => person.personId === newPersonAsset.value.personId
+      );
     }
 
     const personAssetData = {
@@ -1514,7 +1514,7 @@ onMounted(async () => {
                 ></v-text-field>
               </v-col>
             </v-row>
-            <div v-if="newPerson.idNumber != ''">
+            <div v-if="newPerson != null">
               <v-row class="ml-10"> Found: </v-row>
               <v-row class="ml-16">
                 {{ newPerson.idNumber }}
@@ -1547,7 +1547,7 @@ onMounted(async () => {
               class="ma-2"
               text
               @click="saveNewPerson"
-              :disabled="newPerson.idNumber == null"
+              :disabled="newPerson == null"
               >Save New Person</v-btn
             >
           </v-card-actions>
