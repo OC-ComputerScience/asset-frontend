@@ -137,8 +137,11 @@ const getOCPerson = async () => {
 
       let roomId = null;
       if (roomNumber != null) {
-        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
-        roomId = roomResponse.data.roomId;
+        await RoomServices.getByBldRoomNumber(roomNumber).then(
+          (roomResponse) => {
+            roomId = roomResponse.data[0].roomId;
+          }
+        );
       }
 
       newPerson.value = {
@@ -149,6 +152,7 @@ const getOCPerson = async () => {
         roomId: roomId,
         roomNumber: roomNumber === null ? "No Room Assigned" : roomNumber,
       };
+      console.log(newPerson.value);
     } catch (error) {
       console.error("Error loading OC person data:", error);
       message.value = "Failed to load OC person data.";

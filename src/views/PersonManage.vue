@@ -72,21 +72,24 @@ const retrievePeople = async () => {
 
 const getOCPerson = async () => {
   let roomNumber = "";
-  console.log(newPerson.value);
+
   if (newPerson.value.idNumber != null && newPerson.value.idNumber != "") {
     let idNumber = newPerson.value.idNumber;
     let roomNumber = newPerson.value.roomNo;
+    let roomId = null;
     try {
       const response = await PersonServices.getOCPersonById(idNumber);
       roomNumber = response.data.OfficeNumber;
-      const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
-
+      if (roomNumber != null && roomNumber != "") {
+        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        roomId = roomResponse.data.roomId;
+      }
       newPerson.value = {
         fName: response.data.FirstName,
         lName: response.data.LastName,
         email: response.data.Email,
         idNumber: response.data.UserID,
-        roomNo: roomResponse.data.roomId,
+        roomNo: roomId,
       };
     } catch (error) {
       console.error("Error loading OC person data:", error);
