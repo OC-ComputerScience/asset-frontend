@@ -56,6 +56,7 @@ const rules = {
 const newWarranty = ref({
   serializedAssetId: "",
   warrantyDescription: "",
+  warrantyNotes: "",
   length: "",
   startDate: null,
   endDate: null,
@@ -71,6 +72,7 @@ const retrieveWarranties = async () => {
       key: warranty.warrantyId,
       serializedAssetId: warranty.serializedAssetId,
       warrantyDescription: warranty.warrantyDescription,
+      warrantyNotes: warranty.warrantyNotes,
       startDate: warranty.startDate,
       endDate: warranty.endDate,
       length: warranty.length,
@@ -110,6 +112,7 @@ const editWarranty = async (warranty) => {
     key: warranty.key,
     serializedAssetId: warranty.serializedAssetId,
     warrantyDescription: warranty.warrantyDescription,
+    warrantyNotes: warranty.warrantyNotes,
     startDate: warranty.startDate,
     endDate: warranty.endDate,
     length: warranty.length,
@@ -149,6 +152,7 @@ const saveWarranty = async () => {
     length: newWarranty.value.length,
     warrantyDescription: newWarranty.value.warrantyDescription,
     serializedAssetId: selectedSerializedAssetId.value.key,
+    warrantyNotes: newWarranty.value.warrantyNotes,
   };
 
   try {
@@ -235,6 +239,7 @@ function resetWarrantyForm() {
     endDate: null,
     length: "",
     warrantyDescription: "",
+    warrantyNotes: "",
   };
   selectedSerializedAssetId.value = "";
   startDate.value = null;
@@ -642,6 +647,16 @@ onMounted(async () => {
                     maxlength="40"
                     counter
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-textarea
+                    label="Warranty Notes"
+                    variant="outlined"
+                    prepend-icon="mdi-account"
+                    v-model="newWarranty.warrantyNotes"
+                    maxlength="255"
+                    counter
+                  ></v-textarea>
                 </v-col>
 
                 <!-- Start Date Picker -->

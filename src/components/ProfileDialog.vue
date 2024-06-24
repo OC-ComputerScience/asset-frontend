@@ -24,7 +24,6 @@ const menu2 = ref(false);
 
 const editMode = ref(false);
 
-
 // maska options
 const options = {
   preProcess: (val) => val.replace(/[$,]/g, ""),
@@ -50,7 +49,7 @@ const props = defineProps({
     required: false,
   },
   rules: {
-    required: true
+    required: true,
   },
 });
 
@@ -66,6 +65,7 @@ const newProfile = ref({
   warrantyStartDate: "",
   warrantyEndDate: "",
   warrantyDescription: "",
+  warrantyNotes: "",
 });
 
 // The naming is confusing however newData is meant for the backend ProfileData object
@@ -131,6 +131,7 @@ const loadProfileForEditing = async (profile) => {
     warrantyStartDate: profile.warrantyStartDate,
     warrantyEndDate: profile.warrantyEndDate,
     warrantyDescription: profile.warrantyDescription,
+    warrantyNotes: profile.warrantyNotes,
   };
 
   initialTypeId.value = profile.typeId; // Store initial typeId
@@ -152,16 +153,14 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-const retrieveFields = async() => {
-  try{
-    if(editMode.value){
+const retrieveFields = async () => {
+  try {
+    if (editMode.value) {
       // Retrieve fields based on profile data
-    }
-    else{
+    } else {
       // Retrieve fields based on types
     }
-  } 
-  catch(err){
+  } catch (err) {
     console.error(err);
   }
 };
@@ -194,13 +193,14 @@ const saveProfile = async () => {
     warrantyStartDate: formattedWarrStartDate,
     warrantyEndDate: formattedWarrEndDate,
     warrantyDescription: newProfile.value.warrantyDescription,
+    warrantyNotes: newProfile.value.warrantyNotes,
   };
 
   try {
-    if (newProfile.value.id && selectedTypeId.value !== initialTypeId.value) {
-      // Delete existing profile data first
-      await ProfileDataServices.deleteByProfileId(newProfile.value.id);
-    }
+    // if (newProfile.value.id && selectedTypeId.value !== initialTypeId.value) {
+    //   // Delete existing profile data first
+    //   await ProfileDataServices.deleteByProfileId(newProfile.value.id);
+    // }
 
     // Check if editing profile
     if (newProfile.value.id) {
@@ -211,7 +211,7 @@ const saveProfile = async () => {
       );
 
       // Update the profile data
-      await saveProfileData(newProfile.value.id);
+      //await saveProfileData(newProfile.value.id);
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
@@ -219,7 +219,7 @@ const saveProfile = async () => {
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
         newProfile.value.id = createResponse.data.profileId;
-        await saveProfileData(newProfile.value.id);
+        //       await saveProfileData(newProfile.value.id);
         emitSaveSnackbar();
       }
     }
@@ -233,11 +233,6 @@ const saveProfile = async () => {
 
 // Save profileData
 const saveProfileData = async (profileId) => {
-  console.log(
-    "Saving Profile Data",
-    JSON.stringify(generateDynamicFields.value)
-  );
-
   for (const field of generateDynamicFields.value) {
     const payload = {
       field: field.fieldName,
@@ -247,13 +242,8 @@ const saveProfileData = async (profileId) => {
 
     try {
       if (field.fieldId) {
-        console.log(
-          "Updating existing field data with fieldId:",
-          field.fieldId
-        );
         await ProfileDataServices.update(field.fieldId, payload);
       } else {
-        console.log("Field ID missing, creating new field data.");
         const response = await ProfileDataServices.create(payload);
         field.fieldId = response.data.profileDataId; // Ensure this matches the response structure
       }
@@ -278,7 +268,6 @@ const editProfile = async () => {
     }
   }
 };
-
 
 // Computed property for display
 const formattedAcquisitionDate = computed(() => {
@@ -351,8 +340,6 @@ watch(selectedTypeId, (newVal) => {
 watch(
   selectedProfile,
   (newValue, oldValue) => {
-    console.log("selectedProfile changed from", oldValue, "to", newValue);
-
     if (newValue) {
       // Ensure all fields are assigned correctly
       newProfile.value.profileName = newValue.profileName || "";
@@ -363,7 +350,7 @@ watch(
       newProfile.value.warrantyStartDate = newValue.warrantyStartDate || "";
       newProfile.value.warrantyEndDate = newValue.warrantyEndDate || "";
       newProfile.value.warrantyDescription = newValue.warrantyDescription || "";
-
+      newProfile.value.warrantyNotes = newValue.warrantyNotes || "";
       if (newValue.typeId) {
         selectedTypeId.value = newValue.typeId; // Update `selectedTypeId`
       }
@@ -377,14 +364,22 @@ watch(
         rawAcquisitionDate.value = offsetTime;
         //rawAcquisitionDate.value = parseISO(newValue.acquisitionDate);
         //convert the offset to milliseconds, add to targetTime, and make a new Date
-
-        console.log("rawAq " + rawAcquisitionDate.value); // Update date
       }
-      if (newValue.warrentyStartDate) {
-        rawWarrStartDate.value = parseISO(newValue.warrentyStartDate); // Update date
+      if (newValue.warrantyStartDate) {
+        let targetTime = parseISO(newValue.warrantyStartDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawWarrStartDate.value = offsetTime;
       }
-      if (newValue.warrentyEndDate) {
-        rawWarrEndDate.value = parseISO(newValue.warrentyEndDate); // Update date
+      if (newValue.warrantyEndDate) {
+        let targetTime = parseISO(newValue.warrantyEndDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawWarrEndDate.value = offsetTime;
       }
     } else {
       console.error("Selected profile is undefined or null");
@@ -425,9 +420,7 @@ onMounted(async () => {
 <template>
   <v-card class="pa-4 rounded-xl">
     <v-card-title>
-      <span class="headline"
-        >{{ editMode ? "Edit" : "Add" }} Profile</span
-      >
+      <span class="headline">{{ editMode ? "Edit" : "Add" }} Profile</span>
     </v-card-title>
     <v-card-text>
       <v-form ref="formProfile" v-model="validProfile">
@@ -511,6 +504,15 @@ onMounted(async () => {
                     variant="outlined"
                     v-model="newProfile.warrantyDescription"
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-textarea
+                    label="Warrany Notes"
+                    prepend-icon="mdi-note"
+                    variant="outlined"
+                    v-model="newProfile.warrantyNotes"
+                    :rules="[rules.maxNotesLength]"
+                  ></v-textarea>
                 </v-col>
                 <v-col>
                   <v-menu

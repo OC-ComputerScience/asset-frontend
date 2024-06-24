@@ -476,6 +476,7 @@ const resetProfileForm = () => {
     warrantyStartDate: null,
     warrantyEndDate: null,
     warrantyDescription: "",
+    warrantyNotes: "",
     typeId: "",
     dynamicFields: [],
   };
@@ -731,6 +732,7 @@ const resetSerializedAssetForm = () => {
     serialNumber: "",
     notes: "",
     warrantyDescription: "",
+    warrantyNotes: "",
     profileId: "",
     acquisitionDate: null,
     purchasePrice: "",
@@ -822,6 +824,7 @@ const saveSerializedAsset = async () => {
           endDate: formattedWarrEndDate,
           warrantyDescription: newSerializedAsset.value.warrantyDescription,
           length: lengthMonth,
+          warrantyNotes: newSerializedAsset.value.warrantyNotes,
         };
 
         WarrantyServices.create(newWarranty);
@@ -1150,6 +1153,8 @@ watch(
       rawWarrStartDate.value = null;
       rawWarrEndDate.value = null;
       newSerializedAsset.value.warrantyDescription = "";
+      newSerializedAsset.value.warrantyNotes = "";
+      newSerializedAsset.value.notes = "";
     } else {
       // Apply changes if adding a new asset or if the profile actually changes during edit
       if (
@@ -1164,6 +1169,7 @@ watch(
           newSerializedAsset.value.purchasePrice = profile.purchasePrice || "";
           newSerializedAsset.value.warrantyDescription =
             profile.warrantyDescription || "";
+          newSerializedAsset.value.warrantyNotes = profile.warrantyNotes || "";
 
           //const tempDate = new Date(profile.acquisitionDate);
           let targetTime1 = parseISO(profile.acquisitionDate);
@@ -1944,6 +1950,16 @@ onMounted(async () => {
                     label="Warranty Description"
                     variant="outlined"
                     v-model="newSerializedAsset.warrantyDescription"
+                    maxlength="255"
+                    :counter="255"
+                    prepend-icon="mdi-note"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" v-if="!editingSerializedAsset">
+                  <v-text-field
+                    label="Warranty Notes"
+                    variant="outlined"
+                    v-model="newSerializedAsset.warrantyNotes"
                     maxlength="255"
                     :counter="255"
                     prepend-icon="mdi-note"
