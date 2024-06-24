@@ -27,6 +27,7 @@ const store = useStore();
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
+const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) =>
@@ -37,7 +38,6 @@ const rules = {
   idNumber: (value) =>
     /^[0-9]{7}$/.test(value) || "ID number must contain only numbers",
   email: (value) => {
-    const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
     return pattern.test(value) || "e-mail must be eagles.oc.edu or oc.edu.";
   },
 };
@@ -106,7 +106,7 @@ const getOCPerson = async () => {
         lName: response.data.LastName,
         email: response.data.Email,
         idNumber: response.data.UserID,
-        roomNo: roomId,
+        roomId: roomId,
       };
     } catch (error) {
       console.error("Error loading OC person data:", error);
@@ -114,22 +114,28 @@ const getOCPerson = async () => {
     }
   } else if (newPerson.value.email != null && newPerson.value.email != "") {
     let email = newPerson.value.email;
+    let roomId = null;
     try {
       const response = await PersonServices.getOCPersonByEmail(email);
       roomNumber = response.data.OfficeNumber;
-      const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+      if (roomNumber != null && roomNumber != "") {
+        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        roomId = roomResponse.data[0].roomId;
+      }
+
       newPerson.value = {
         fName: response.data.FirstName,
         lName: response.data.LastName,
         email: response.data.Email,
         idNumber: response.data.UserID,
-        roomNo: roomResponse.data.roomId,
+        roomId: roomId,
       };
     } catch (error) {
       console.error("Error loading OC person data:", error);
       message.value = "Failed to load OC person data.";
     }
   }
+  console.log(newPerson.value);
 };
 
 const editPerson = async (person) => {
