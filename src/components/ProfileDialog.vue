@@ -25,6 +25,9 @@ const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
 const menu = ref(false);
 const editMode = ref(false);
+const overrideTitle = ref(false);
+const dataLoaded = ref(false);
+const profileInfoChanged = ref(false);
 
 // maska options
 const options = {
@@ -66,10 +69,16 @@ const newProfile = ref({
   notes: "",
 });
 
+const changeProfileInfo = () => {
+  profileInfoChanged.value = true;
+};
+
 // When you load the profile for editing, store the initial state
 const loadProfileForEditing = async (profile) => {
+  selectedTypeId.value = profile.typeId;
+  await retrieveCustomFields(selectedTypeId.value);
   if (profile.profileId) {
-    await fetchDynamicFields(profile.profileId);
+    await retrieveFieldValues(profile.profileId);
   }
 
   // Correctly assign `rawAcquisitionDate`
@@ -80,12 +89,6 @@ const loadProfileForEditing = async (profile) => {
   }
 
   // Correctly set `selectedTypeId`
-  selectedTypeId.value = profile.typeId;
-
-  // Ensure `generateDynamicFields` is populated
-  if (generateDynamicFields.value.length === 0) {
-    console.error("Dynamic fields not populated correctly.");
-  }
 
   // Update `originalProfile` for comparison
   originalProfile.value = {
@@ -115,8 +118,74 @@ const retrieveAssetTypes = async () => {
   }
 };
 
+const retrieveCustomFields = async (typeId) => {
+  try {
+    let response = await customFieldTypeServices.getAllForType(typeId);
+    let customFieldPromises = response.data.map(async (field) => {
+      let newField = {
+        fieldTypeId: field.id,
+        customFieldId: field.customFieldId,
+        name: field.customField.name,
+        type: field.customField.type,
+        required: field.required,
+        identifier: field.identifier,
+        fieldValueId: null,
+        value: "",
+        profileDataId: null,
+        listValues: {},
+        sequence: field.sequence,
+        changed: false,
+      };
+
+      if (newField.type === "List") {
+        let data = await customFieldValueServices.getAllForField(
+          newField.customFieldId
+        );
+        newField.listValues = data.data;
+      }
+      return newField;
+    });
+
+    let customFieldsArray = await Promise.all(customFieldPromises);
+    customFields.value.push(...customFieldsArray);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const retrieveFieldValues = async (profileId) => {
+  let response = await profileDataServices.getByProfileId(profileId);
+  let profileData = response.data;
+  profileData.forEach((profile) => {
+    let customField = customFields.value.find(
+      (field) => field.customFieldId === profile.customFieldValue.customFieldId
+    );
+    customField.value = profile.customFieldValue.value;
+    customField.fieldValueId = profile.fieldValueId;
+    customField.profileDataId = profile.profileDataId;
+    if (customField.sequence) {
+      titleArray.value[customField.sequence - 1] = customField.value;
+    }
+  });
+};
+
+const changeFieldValue = (field) => {
+  field.changed = true;
+  if (field.type == "List") {
+    let newValue = field.listValues.find(
+      (listValue) => listValue.value === field.value
+    );
+    if (newValue) {
+      field.fieldValueId = newValue.id;
+    } else field.fieldValueId = null;
+  }
+  updateTitle(field.value, field.sequence);
+};
+
 const updateTitle = (value, sequence) => {
-  if (sequence > 0) {
+  if (sequence > 0 && !overrideTitle.value) {
+    titleArray.value[sequence - 1] = value;
+    newProfile.value.profileName = titleArray.value.join(" ");
   }
 };
 
@@ -145,7 +214,7 @@ const saveProfile = async () => {
     }
 
     // Check if editing profile
-    if (newProfile.value.id) {
+    if (newProfile.value.id && profileInfoChanged.value) {
       // Update the profile itself
       const response = await AssetProfileServices.update(
         newProfile.value.id,
@@ -174,28 +243,32 @@ const saveProfile = async () => {
 };
 
 const saveFieldValues = async (profileId) => {
-  for (let field in customFields.value) {
-    console.log(field);
-    let fieldValueId;
-    let data = {
-      customFieldId: field.customFieldId,
-      value: field.value,
-    };
-    try {
-      if (field.fieldValueId) {
-        fieldValueId = field.fieldValueId;
-        await customFieldValueServices.update(fieldValueId, data);
-      } else {
-        response = await customFieldValueServices.create(data);
-        fieldValueId = response.data.id;
-        let profileData = {
-          profileId: profileId,
-          fieldValueId: fieldValueId,
-        };
-        await profileDataServices.create(profileData);
+  for (let field of customFields.value) {
+    if (field.changed) {
+      let fieldValueId;
+      let data = {
+        customFieldId: field.customFieldId,
+        value: field.value,
+      };
+      try {
+        if (field.fieldValueId && field.type != "List") {
+          fieldValueId = field.fieldValueId;
+          await customFieldValueServices.update(fieldValueId, data);
+        } else if (field.fieldValueId && field.type == "List") {
+          let newFieldValue = { fieldValueId: field.fieldValueId };
+          await profileDataServices.update(field.profileDataId, newFieldValue);
+        } else {
+          let response = await customFieldValueServices.create(data);
+          fieldValueId = response.data.id;
+          let profileData = {
+            profileId: profileId,
+            fieldValueId: fieldValueId,
+          };
+          await profileDataServices.create(profileData);
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
     }
   }
 };
@@ -240,37 +313,9 @@ const emitUpdateSnackbar = () => {
 // Watchers
 
 watch(selectedTypeId, async (newVal) => {
-  const typeId = newVal?.typeId || newVal;
-  try {
-    let response = await customFieldTypeServices.getAllForType(typeId);
-    let customFieldPromises = response.data.map(async (field) => {
-      let newField = {
-        fieldTypeId: field.id,
-        customFieldId: field.customFieldId,
-        name: field.customField.name,
-        type: field.customField.type,
-        required: field.required,
-        identifier: field.identifier,
-        fieldValueId: null,
-        value: "",
-        listValues: {},
-      };
-
-      if (newField.type === "List") {
-        let data = await customFieldValueServices.getAllForField(
-          newField.customFieldId
-        );
-        newField.listValues = data.data;
-      }
-
-      return newField;
-    });
-
-    let customFieldsArray = await Promise.all(customFieldPromises);
-    customFields.value.push(...customFieldsArray);
-    console.log(customFields.value);
-  } catch (err) {
-    console.error(err);
+  if (dataLoaded.value) {
+    const typeId = newVal?.typeId || newVal;
+    await retrieveCustomFields(typeId);
   }
 });
 
@@ -325,6 +370,7 @@ onMounted(async () => {
     console.error("Error during initialization:", error);
     message.value = "Failed to load profile data.";
   }
+  dataLoaded.value = true;
 });
 </script>
 
@@ -351,9 +397,10 @@ onMounted(async () => {
                     clearable
                     return-object
                     prepend-icon="mdi-devices"
+                    @update:modelValue="changeProfileInfo"
                   ></v-autocomplete>
                 </v-col>
-                <v-col cols="12">
+                <v-col cols="7">
                   <v-text-field
                     label="Profile Name"
                     variant="outlined"
@@ -362,7 +409,16 @@ onMounted(async () => {
                     maxlength="50"
                     counter
                     prepend-icon="mdi-rename"
+                    :disabled="!overrideTitle"
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
+                </v-col>
+                <v-col cols="5">
+                  <v-checkbox
+                    v-model="overrideTitle"
+                    color="primary"
+                    label="Override Name Generation"
+                  ></v-checkbox>
                 </v-col>
                 <v-col cols="6">
                   <v-text-field
@@ -377,6 +433,7 @@ onMounted(async () => {
                     inputmode="numeric"
                     type="text"
                     prepend-icon="mdi-cash-multiple"
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
                 </v-col>
                 <v-col>
@@ -397,6 +454,7 @@ onMounted(async () => {
                         readonly
                         v-bind="attrs"
                         @click="menu = !menu"
+                        @update:modelValue="changeProfileInfo"
                       ></v-text-field>
                     </template>
                     <v-date-picker
@@ -419,6 +477,8 @@ onMounted(async () => {
                   :rules="field.required ? [rules.required] : []"
                   variant="outlined"
                   prepend-icon="field"
+                  :return-object="false"
+                  @update:modelValue="changeFieldValue(field)"
                 ></v-combobox>
               </v-col>
               <v-col cols="4" v-else>
@@ -428,7 +488,8 @@ onMounted(async () => {
                   :rules="field.required ? [rules.required] : []"
                   variant="outlined"
                   prepend-icon="field"
-                  @update:modelValue="updateTitle(field.value, field.sequence)"
+                  :return-object="false"
+                  @update:modelValue="changeFieldValue(field)"
                 ></v-text-field>
               </v-col>
             </template>
@@ -442,6 +503,7 @@ onMounted(async () => {
                 variant="outlined"
                 v-model="newProfile.notes"
                 :rules="[rules.maxNotesLength]"
+                @update:modelValue="changeProfileInfo"
               ></v-textarea>
             </v-col>
           </v-row>
