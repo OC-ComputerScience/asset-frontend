@@ -234,8 +234,7 @@ const openAddSerializedAssetDialog = () => {
   const acquisitionDate = new Date(
     targetTime1.getTime() + tzDifference1 * 60 * 1000
   );
-  console.log("profileDetails ", profileDetails.vaue);
-  console.log("warrantyStartDate ", profileDetails.value.warrantyStartDate);
+
   targetTime1 = parseISO(profileDetails.value.warrantyStartDate);
   tzDifference1 = targetTime1.getTimezoneOffset();
   const tempWarrStartDate = new Date(
@@ -257,11 +256,7 @@ const openAddSerializedAssetDialog = () => {
   rawWarrEndDate.value = !isNaN(tempWarrEndDate.getTime())
     ? tempWarrEndDate
     : null;
-  console.log("tempWarrStartDate", tempWarrStartDate);
-  console.log("rawwarrStartDate", rawWarrStartDate.value);
-  console.log("faquisitionDate", formattedAcquisitionDate);
-  console.log("fwarrStartDate", formattedWarrStartDate);
-  console.log("fwarrEndDate", formattedWarrEndDate);
+
   // Prefill the purchase price and acquisition date from the profileDetails
   newSerializedAsset.value.purchasePrice =
     profileDetails.value.purchasePrice || "";
@@ -364,24 +359,16 @@ const updateDisposalValueLabel = () => {
 };
 
 const updateSerialNumberLabel = () => {
-  // Log the current value of selectedProfileId
-  // console.log("Selected Profile ID:", selectedProfileId.value);
-
   // Check if the selectedProfileId has a valid key and fetch the corresponding profile
   const profile = assetProfiles.value.find(
     (p) => p.key === selectedProfileId.value?.key
   );
 
-  // Log the found profile
-  // console.log("Found Profile:", profile);
-
   if (profile && (profile.typeId === 13 || profile.typeId === "13")) {
     // Check for both '13' as a string and 13 as a number
     serialNumberLabel.value = "Key Number";
-    // console.log("Label set to Key Number because typeId is 13");
   } else {
     serialNumberLabel.value = "Serial Number";
-    // console.log("Label set to Serial Number");
   }
 };
 
