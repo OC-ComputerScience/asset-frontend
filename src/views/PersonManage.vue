@@ -601,6 +601,7 @@ onMounted(async () => {
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -611,6 +612,7 @@ onMounted(async () => {
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -623,6 +625,7 @@ onMounted(async () => {
                     maxlength="40"
                     counter
                     prepend-icon="mdi-email"
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -640,6 +643,7 @@ onMounted(async () => {
                     maxlength="7"
                     counter
                     prepend-icon="mdi-pound"
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -652,6 +656,7 @@ onMounted(async () => {
                     :return-object="false"
                     :items="rooms"
                     prepend-icon="mdi-office-building"
+                    clearable
                   ></v-select>
                 </v-col>
               </v-row>
