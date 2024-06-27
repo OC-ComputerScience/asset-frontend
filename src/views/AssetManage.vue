@@ -11,7 +11,7 @@ import { ref, onMounted, watch, computed, toRaw } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
 import { vMaska } from "maska";
-import { format } from "date-fns";
+import { format, max } from "date-fns";
 import moment from "moment-timezone";
 import { parseISO } from "date-fns";
 
@@ -79,11 +79,12 @@ const getUserRole = async () => {
 
 const rules = {
   required: (value) => !!value || "Required.",
-  maxDescLength: (value) => value.length <= 255,
-  maxNameLength: (value) => value.length <= 50,
-  serialNumberLength: (value) => value.length <= 20,
+  maxDescLength: (value) => value === null || value.length <= 255,
+  maxNameLength: (value) => value === null || value.length <= 50,
+  maxNotesLength: (value) => value === null || value.length <= 255,
+  serialNumberLength: (value) => value === null || value.length <= 20,
   validPrice: (value) => {
-    value.value > 0 || "Enter a valid price";
+    value === null || value.value > 0 || "Enter a valid price";
   },
 };
 
@@ -1971,7 +1972,6 @@ onMounted(async () => {
                         label="Warranty Start Date"
                         variant="outlined"
                         prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
                         readonly
                         v-bind="attrs"
                         @click="warrStartDateMenu = !warrStartDateMenu"

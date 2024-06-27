@@ -74,7 +74,10 @@ const newData = ref({
   data: "",
   profileId: "",
 });
-
+//
+function fetchDynamicFields(profileID) {
+  return;
+}
 // When you load the profile for editing, store the initial state
 const loadProfileForEditing = async (profile) => {
   if (profile.profileId) {
@@ -115,11 +118,6 @@ const loadProfileForEditing = async (profile) => {
 
   // Correctly set `selectedTypeId`
   selectedTypeId.value = profile.typeId;
-
-  // Ensure `generateDynamicFields` is populated
-  if (generateDynamicFields.value.length === 0) {
-    console.error("Dynamic fields not populated correctly.");
-  }
 
   // Update `originalProfile` for comparison
   originalProfile.value = {
@@ -381,8 +379,6 @@ watch(
         );
         rawWarrEndDate.value = offsetTime;
       }
-    } else {
-      console.error("Selected profile is undefined or null");
     }
   },
   { immediate: true, deep: true }
@@ -447,7 +443,7 @@ onMounted(async () => {
                     label="Profile Name"
                     variant="outlined"
                     v-model="newProfile.profileName"
-                    :rules="[rules.required, rules.maxFieldLength]"
+                    :rules="[rules.required, rules.maxNameLength]"
                     maxlength="50"
                     counter
                     prepend-icon="mdi-rename"
