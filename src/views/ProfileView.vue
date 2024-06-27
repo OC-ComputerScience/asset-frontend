@@ -660,7 +660,7 @@ onMounted(async () => {
             <v-col cols="12" sm="6" md="4">
               <div class="asset-detail">
                 <strong>Warranty Desc</strong>
-                <div>{{ profileDetails.warrantyDescription }}</div>
+                <div>{{ profileDetails.warrantyDescription || "N/A" }}</div>
               </div>
             </v-col>
             <v-col cols="12" sm="6" md="4">
@@ -675,7 +675,7 @@ onMounted(async () => {
               <div class="asset-detail">
                 <strong>Warranty End Date</strong>
                 <div>
-                  {{ formatDate(profileDetails.warrantyStartDate) || "N/A" }}
+                  {{ formatDate(profileDetails.warrantyEndDate) || "N/A" }}
                 </div>
               </div>
             </v-col>

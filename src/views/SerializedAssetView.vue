@@ -103,7 +103,6 @@ const getAllAssetHistories = async () => {
   try {
     const allAssetHistories = await retrieveAllAssetHistories();
     fullAssetHistory.value = allAssetHistories; // Set the data to fullAssetHistory
-    console.log("All asset histories:", allAssetHistories);
   } catch (error) {
     console.error("Error retrieving all asset histories:", error);
   }
@@ -295,7 +294,6 @@ const goBack = () => {
 
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
-  console.log("received " + sourcePage);
   await retrieveProfileData();
   await retrieveAssetDetails();
   await getAllAssetHistories();

@@ -976,24 +976,16 @@ const updateDisposalValueLabel = () => {
 };
 
 const updateSerialNumberLabel = () => {
-  // Log the current value of selectedProfileId
-  // console.log("Selected Profile ID:", selectedProfileId.value);
-
   // Check if the selectedProfileId has a valid key and fetch the corresponding profile
   const profile = assetProfiles.value.find(
     (p) => p.key === selectedProfileId.value?.key
   );
 
-  // Log the found profile
-  // console.log("Found Profile:", profile);
-
   if (profile && (profile.typeId === 13 || profile.typeId === "13")) {
     // Check for both '13' as a string and 13 as a number
     serialNumberLabel.value = "Key Number";
-    // console.log("Label set to Key Number because typeId is 13");
   } else {
     serialNumberLabel.value = "Serial Number";
-    // console.log("Label set to Serial Number");
   }
 };
 
