@@ -214,11 +214,7 @@ const saveFields = async (typeId) => {
                 maxlength="50"
                 counter
                 prepend-icon="mdi-rename"
-                @update:modelValue="
-                  () => {
-                    hasBeenEdited = true;
-                  }
-                "
+                @update:modelValue="() => { hasBeenEdited = true; }"
               ></v-text-field>
             </v-col>
             <v-col cols="12">
@@ -234,11 +230,7 @@ const saveFields = async (typeId) => {
                 clearable
                 return-object
                 prepend-icon="mdi-folder-multiple-outline"
-                @update:modelValue="
-                  () => {
-                    hasBeenEdited = true;
-                  }
-                "
+                @update:modelValue="() => { hasBeenEdited = true; }"
               ></v-autocomplete>
             </v-col>
             <v-col cols="12">
@@ -250,11 +242,7 @@ const saveFields = async (typeId) => {
                 maxlength="255"
                 counter
                 prepend-icon="mdi-note"
-                @update:modelValue="
-                  () => {
-                    hasBeenEdited = true;
-                  }
-                "
+                @update:modelValue="() => { hasBeenEdited = true; }"
               ></v-textarea>
             </v-col>
           </v-row>
@@ -308,7 +296,7 @@ const saveFields = async (typeId) => {
                   color="primary"
                 ></v-checkbox>
               </v-col>
-              <v-cols cols="5">
+              <v-col cols="5" class="ml-n6 mt-n1">
                 <v-combobox
                   v-if="field.identifier"
                   label="Sequence"
@@ -316,12 +304,12 @@ const saveFields = async (typeId) => {
                   v-model="field.sequence"
                   :rules="[props.rules.required]"
                   :items="fieldSequence"
-                  class="mt-3"
-                  width="30px"
+                  class="mt-3 w-25 h-50"
+                  density="compact"
                   @update:modelValue="updateSequenceCount(field)"
                 ></v-combobox>
-              </v-cols>
-              <v-col cols="2">
+              </v-col>
+              <v-col cols="1" align="right" class="ml-14">
                 <v-btn
                   icon
                   @click="removeField(index, field)"
