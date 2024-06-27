@@ -29,6 +29,20 @@ const overrideTitle = ref(false);
 const dataLoaded = ref(false);
 const profileInfoChanged = ref(false);
 
+const intRegex = /^-?\d+$/;
+const intTest = (value) => intRegex.test(value);
+const decRegex = /^-?\d+(\.\d+)?$/;
+const decTest = (value) => decRegex.test(value);
+const filterIntegerInput = (event) => {
+  const value = event.target.value;
+  event.target.value = value.replace(/[^\d-]/g, '');
+};
+const filterDecimalInput = (event) => {
+  const value = event.target.value;
+  event.target.value = value.replace(/[^0-9.-]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/(\-.*?)-.*/g, '$1');
+};
+
+
 // maska options
 const options = {
   preProcess: (val) => val.replace(/[$,]/g, ""),
@@ -315,6 +329,7 @@ const emitUpdateSnackbar = () => {
 watch(selectedTypeId, async (newVal) => {
   if (dataLoaded.value) {
     const typeId = newVal?.typeId || newVal;
+    customFields.value = [];
     await retrieveCustomFields(typeId);
   }
 });
@@ -365,6 +380,7 @@ onMounted(async () => {
 
     if (editMode.value) {
       loadProfileForEditing(selectedProfile.value); // Load the profile for editing
+      overrideTitle.value = !titleArray.value.length > 0;
     }
   } catch (error) {
     console.error("Error during initialization:", error);
@@ -481,7 +497,7 @@ onMounted(async () => {
                   @update:modelValue="changeFieldValue(field)"
                 ></v-combobox>
               </v-col>
-              <v-col cols="4" v-else>
+              <v-col cols="4" v-else-if="field.type === 'String'">
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
@@ -489,6 +505,30 @@ onMounted(async () => {
                   variant="outlined"
                   prepend-icon="field"
                   :return-object="false"
+                  @update:modelValue="changeFieldValue(field)"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="4" v-else-if="field.type === 'Integer'">
+                <v-text-field
+                  v-model="field.value"
+                  :label="field.name"
+                  :rules="field.required ? [rules.required, intTest] : [intTest]"
+                  variant="outlined"
+                  prepend-icon="field"
+                  :return-object="false"
+                  @input="filterIntegerInput"
+                  @update:modelValue="changeFieldValue(field)"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="4" v-else-if="field.type === 'Decimal'">
+                <v-text-field
+                  v-model="field.value"
+                  :label="field.name"
+                  :rules="field.required ? [rules.required, decTest] : [decTest]"
+                  variant="outlined"
+                  prepend-icon="field"
+                  :return-object="false"
+                  @input="filterDecimalInput"
                   @update:modelValue="changeFieldValue(field)"
                 ></v-text-field>
               </v-col>
