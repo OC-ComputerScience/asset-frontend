@@ -43,7 +43,7 @@ const canAdd = computed(() => {
 });
 const rules = {
   required: (value) => !!value || "Required.",
-  maxDescLength: (value) => value.length <= 255,
+  maxDescLength: (value) => value == null || value.length <= 255,
   validPrice: (value) => {
     return value > 0 || "Enter a valid price"; // Ensure the function returns a value
   },
@@ -74,7 +74,13 @@ const props = defineProps({
     required: true,
   },
 });
-
+function monthDiff(d1, d2) {
+  var months;
+  months = (d2.getFullYear() - d1.getFullYear()) * 12;
+  months -= d1.getMonth();
+  months += d2.getMonth();
+  return months <= 0 ? 0 : months;
+}
 const newSerializedAsset = ref({
   serialNumber: "",
   notes: "",
@@ -105,8 +111,8 @@ const retrieveAssetsForProfile = async () => {
         profileId: serializedAsset.profileId,
       };
     });
+    console.log(serializedAssets.value);
   } catch (error) {
-    console.error("Error loading serialized assets:", error);
     message.value = "Failed to load serializedAssets.";
   }
 };
@@ -199,7 +205,6 @@ const saveSerializedAsset = async () => {
       });
     }
     snackbar.value = true; // Show the snackbar
-
     await retrieveAssetsForProfile();
   } catch (error) {
     console.error("Error saving asset:", error);
