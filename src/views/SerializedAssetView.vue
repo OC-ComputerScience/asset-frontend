@@ -189,7 +189,7 @@ const leaseHeaders = ref([
 // Misc Section
 
 const fixProfileField = (profileField) => {
-  if (profileField === profileField.toUpperCase()) {
+  if (profileField != null && profileField === profileField.toUpperCase()) {
     return profileField;
   }
 
@@ -283,12 +283,12 @@ const formatStatus = (activeStatus) => {
 
 const goBack = () => {
   if (sourcePage === "profileView") {
-    router.replace({
+    router.push({
       name: "profileView",
       params: { profileId: assetDetails.value.profileId },
     });
   } else {
-    router.replace({ name: "assetManage" });
+    router.push({ name: "assetManage" });
   }
 };
 

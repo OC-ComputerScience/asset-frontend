@@ -9,6 +9,9 @@ export default {
   getAll() {
     return apiClient.get(baseURL);
   },
+  getAllForProfile(profileId) {
+    return apiClient.get(baseURL + "profile/" + `${profileId}`);
+  },
   getById(serializedAssetId) {
     return apiClient.get(baseURL + serializedAssetId);
   },

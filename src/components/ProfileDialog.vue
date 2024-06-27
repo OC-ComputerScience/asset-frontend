@@ -282,20 +282,7 @@ const formattedWarrStartDate = computed(() => {
   }
   return "";
 });
-const formattedWarrEndDate = computed(() => {
-  if (rawWarrEndDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-const formattedWarrStartDate = computed(() => {
-  if (rawWarrStartDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
+
 const formattedWarrEndDate = computed(() => {
   if (rawWarrEndDate.value) {
     // Display the date in a readable format

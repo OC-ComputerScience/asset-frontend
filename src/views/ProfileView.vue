@@ -99,7 +99,10 @@ const newSerializedAsset = ref({
 // Retrieve Buildings from Database
 const retrieveAssetsForProfile = async () => {
   try {
-    const response = await SerializedAssetServices.getAll();
+    const response = await SerializedAssetServices.getAllForProfile(
+      props.profileId
+    );
+
     serializedAssets.value = response.data.map((serializedAsset) => {
       const profile = assetProfiles.value.find(
         (t) => t.key === serializedAsset.profileId
@@ -111,7 +114,6 @@ const retrieveAssetsForProfile = async () => {
         profileId: serializedAsset.profileId,
       };
     });
-    console.log(serializedAssets.value);
   } catch (error) {
     message.value = "Failed to load serializedAssets.";
   }
@@ -980,7 +982,6 @@ onMounted(async () => {
                         label="Warranty Start Date"
                         variant="outlined"
                         prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
                         readonly
                         v-bind="attrs"
                         @click="warrStartDateMenu = !warrStartDateMenu"
