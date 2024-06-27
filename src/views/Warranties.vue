@@ -424,9 +424,6 @@ const formattedEndDate = computed(() => {
 onMounted(async () => {
   await retrieveWarranties();
   await retrieveSerializedAssets();
-  console.log(
-    "Known issues: Search by serialized Asset not working, edit function not 100%, warranties should be sorted by closes to end date (maybe)"
-  );
 });
 </script>
 
