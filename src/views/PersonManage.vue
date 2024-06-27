@@ -135,7 +135,6 @@ const getOCPerson = async () => {
       message.value = "Failed to load OC person data.";
     }
   }
-  console.log(newPerson.value);
 };
 
 const editPerson = async (person) => {

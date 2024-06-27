@@ -152,7 +152,6 @@ const getOCPerson = async () => {
         roomId: roomId,
         roomNumber: roomNumber === null ? "No Room Assigned" : roomNumber,
       };
-      console.log(newPerson.value);
     } catch (error) {
       console.error("Error loading OC person data:", error);
       message.value = "Failed to load OC person data.";

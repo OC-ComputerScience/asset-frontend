@@ -393,9 +393,6 @@ const formattedEndDate = computed(() => {
 onMounted(async () => {
   await retrieveLeases();
   await retrieveSerializedAssets();
-  console.log(
-    "Know Issues: When editing day shows a day before the DB date // Search by serialized asset not functioning // Leases need to be sorted by closest to end date (maybe)"
-  );
 });
 </script>
 

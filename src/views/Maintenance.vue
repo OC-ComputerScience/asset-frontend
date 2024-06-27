@@ -50,7 +50,6 @@ const newLog = ref({
   type: null, // "preventative", "repair", or "upgrade"
 });
 
-
 // LogsSection
 
 // Retrieve People from Database
@@ -67,7 +66,7 @@ const retrieveLogs = async () => {
       serialNumber: log.serializedAsset.serialNumber,
       isPreventative: log.isPreventative,
       isRepair: log.isRepair,
-      isUpgrade: log.isUpgrade
+      isUpgrade: log.isUpgrade,
     }));
   } catch (error) {
     console.error("Error loading Logs:", error);
@@ -104,7 +103,11 @@ const editLog = async (log) => {
     serviceDate: log.serviceDate,
     performedBy: log.performedBy,
     notes: log.notes,
-    type: log.isPreventative ? "preventative" : log.isRepair ? "repair" : "upgrade",
+    type: log.isPreventative
+      ? "preventative"
+      : log.isRepair
+      ? "repair"
+      : "upgrade",
   };
   editingLog.value = true;
 
@@ -248,7 +251,7 @@ const highlightText = (text) => {
 const highlightedLogs = computed(() => {
   return filteredLogs.value.map((log) => ({
     ...log,
-    serializedAssetName: highlightText(log.serializedAssetName)
+    serializedAssetName: highlightText(log.serializedAssetName),
   }));
 });
 
@@ -276,7 +279,6 @@ const formattedServiceDate = computed(() => {
 onMounted(async () => {
   await retrieveLogs();
   await retrieveSerializedAssets();
-  console.log("Known issues: editing not 100%");
 });
 </script>
 
@@ -345,21 +347,26 @@ onMounted(async () => {
                       <td>{{ formatDate(item.serviceDate) }}</td>
                     </template>
                     <template v-slot:item.type="{ item }">
-    <td>
-      <span v-if="item.isPreventative">Preventative</span>
-      <span v-else-if="item.isRepair">Repair</span>
-      <span v-else-if="item.isUpgrade">Upgrade</span>
-    </td>
-  </template>
+                      <td>
+                        <span v-if="item.isPreventative">Preventative</span>
+                        <span v-else-if="item.isRepair">Repair</span>
+                        <span v-else-if="item.isUpgrade">Upgrade</span>
+                      </td>
+                    </template>
                     <template v-slot:item.view="{ item }">
-                      <v-btn icon class="table-icons" 
-                      @click="openShowNotesDialog({
+                      <v-btn
+                        icon
+                        class="table-icons"
+                        @click="
+                          openShowNotesDialog({
                             id: item.key,
                             type: 'log',
                             notes: item.notes,
                             serializedAssetName: item.serializedAssetName,
-                            serviceDate: item.serviceDate
-                      })">
+                            serviceDate: item.serviceDate,
+                          })
+                        "
+                      >
                         <v-icon>mdi-note-text</v-icon>
                       </v-btn>
                     </template>
@@ -443,14 +450,17 @@ onMounted(async () => {
                   </v-menu>
                 </v-col>
                 <v-row>
-  <v-col cols="12">
-    <v-radio-group v-model="newLog.type" row>
-      <v-radio label="Preventative" value="preventative"></v-radio>
-      <v-radio label="Repair" value="repair"></v-radio>
-      <v-radio label="Upgrade" value="upgrade"></v-radio>
-    </v-radio-group>
-  </v-col>
-</v-row>
+                  <v-col cols="12">
+                    <v-radio-group v-model="newLog.type" row>
+                      <v-radio
+                        label="Preventative"
+                        value="preventative"
+                      ></v-radio>
+                      <v-radio label="Repair" value="repair"></v-radio>
+                      <v-radio label="Upgrade" value="upgrade"></v-radio>
+                    </v-radio-group>
+                  </v-col>
+                </v-row>
 
                 <v-col cols="12">
                   <v-textarea
@@ -479,25 +489,21 @@ onMounted(async () => {
     </v-dialog>
 
     <v-dialog v-model="showNotesDialog" max-width="500px">
-  <v-card class="pa-4 rounded-xl">
-    <v-card-title class="justify-space-between">
-      Notes for {{ itemToDisplay.serializedAssetName }}
-    </v-card-title>
-    <v-card-text>
-      {{ itemToDisplay.notes }}
-    </v-card-text>
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn
-        color="cancelgrey"
-        text
-        @click="showNotesDialog = false"
-      >
-        Close
-      </v-btn>
-    </v-card-actions>
-  </v-card>
-</v-dialog>
+      <v-card class="pa-4 rounded-xl">
+        <v-card-title class="justify-space-between">
+          Notes for {{ itemToDisplay.serializedAssetName }}
+        </v-card-title>
+        <v-card-text>
+          {{ itemToDisplay.notes }}
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="cancelgrey" text @click="showNotesDialog = false">
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
