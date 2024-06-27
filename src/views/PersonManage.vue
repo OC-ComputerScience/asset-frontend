@@ -7,6 +7,7 @@ import { useStore } from "vuex";
 import { formatInTimeZone } from "date-fns-tz";
 
 const message = ref("");
+const messageText = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Active");
 const people = ref([]);
@@ -31,10 +32,11 @@ const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) =>
-    value.length <= 40 || "Name cannot exceed 40 characters",
-  maxCounter: (value) => value.length <= 7,
+    value == null || value.length <= 40 || "Name cannot exceed 40 characters",
+  maxCounter: (value) =>
+    value == null || value.length <= 7 || "ID number must be 7 numbers long",
   minCounter: (value) =>
-    value.length >= 7 || "ID number must be 7 numbers long",
+    value == null || value.length >= 7 || "ID number must be 7 numbers long",
   idNumber: (value) =>
     /^[0-9]{7}$/.test(value) || "ID number must contain only numbers",
   email: (value) => {
@@ -90,6 +92,8 @@ const retrieveRooms = async () => {
 const getOCPerson = async () => {
   let roomNumber = "";
 
+  messageText.value = "";
+
   if (newPerson.value.idNumber != null && newPerson.value.idNumber != "") {
     let idNumber = newPerson.value.idNumber;
     let roomNumber = newPerson.value.roomNo;
@@ -109,8 +113,7 @@ const getOCPerson = async () => {
         roomId: roomId,
       };
     } catch (error) {
-      console.error("Error loading OC person data:", error);
-      message.value = "Failed to load OC person data.";
+      messageText.value = "OC Person data not found";
     }
   } else if (newPerson.value.email != null && newPerson.value.email != "") {
     let email = newPerson.value.email;
@@ -120,7 +123,9 @@ const getOCPerson = async () => {
       roomNumber = response.data.OfficeNumber;
       if (roomNumber != null && roomNumber != "") {
         const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
-        roomId = roomResponse.data[0].roomId;
+        if (roomResponse.data.length > 0) {
+          roomId = roomResponse.data[0].roomId;
+        }
       }
 
       newPerson.value = {
@@ -130,9 +135,14 @@ const getOCPerson = async () => {
         idNumber: response.data.UserID,
         roomId: roomId,
       };
+      if (roomNumber != null && roomId == null) {
+        messageText.value =
+          "Asset Sytem does not have  room number " +
+          roomNumber +
+          " in the database. Please add the room number first";
+      }
     } catch (error) {
-      console.error("Error loading OC person data:", error);
-      message.value = "Failed to load OC person data.";
+      messageText.value = "OC Person data not found";
     }
   }
 };
@@ -174,16 +184,17 @@ const savePerson = async () => {
       response = await PersonServices.create(personData);
       snackbarText.value = "Person added successfully.";
     }
+
     snackbar.value = true; // Show the snackbar
-    message.value = "Person saved successfully.";
-    retrievePeople(); // Refresh people list
-  } catch (error) {
-    console.error("Error saving person:", error);
-    message.value = `Error saving person: ${error.message || "Unknown error"}`;
-  } finally {
     editingPerson.value = false;
     showAddPersonDialog.value = false;
     newPerson.value = { fName: "", lName: "", email: "", idNumber: "" }; // Reset the form
+    await retrievePeople(); // Refresh people list
+  } catch (error) {
+    console.error("Error saving person:", error);
+    messageText.value = `Error saving person: ${
+      error.message || "Unknown error"
+    }`;
   }
 };
 
@@ -219,7 +230,7 @@ const activatePerson = async (personId) => {
     snackbarText.value = "Person activated successfully.";
     snackbar.value = true; // Show the snackbar
     // Refresh the list of people after successful deletion
-    retrievePeople();
+    await retrievePeople();
     people.value = people.value.filter((c) => c.id !== personId);
   } catch (error) {
     console.error(error);
@@ -588,6 +599,7 @@ onMounted(async () => {
           >Enter Email or Id and click GET OC DATA to load current
           info</v-card-subtitle
         >
+
         <v-card-text>
           <v-form ref="formPerson" v-model="validPerson">
             <v-container>
@@ -661,6 +673,9 @@ onMounted(async () => {
               </v-row>
             </v-container>
           </v-form>
+        </v-card-text>
+        <v-card-text class="text-red text-right ma-0">
+          {{ messageText }}
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
