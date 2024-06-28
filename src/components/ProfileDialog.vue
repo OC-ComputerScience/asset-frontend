@@ -30,9 +30,9 @@ const dataLoaded = ref(false);
 const profileInfoChanged = ref(false);
 
 const intRegex = /^-?\d+$/;
-const intTest = (value) => intRegex.test(value);
+const intTest = (value) => intRegex.test(value) || "Enter only integers";
 const decRegex = /^-?\d+(\.\d+)?$/;
-const decTest = (value) => decRegex.test(value);
+const decTest = (value) => decRegex.test(value) || "Enter only decimals";
 const filterIntegerInput = (event) => {
   const value = event.target.value;
   event.target.value = value.replace(/[^\d-]/g, '');
@@ -553,7 +553,7 @@ onMounted(async () => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="cancelgrey" text @click="emitCloseDialog">Cancel</v-btn>
-      <v-btn color="saveblue" @click="saveProfile">Save</v-btn>
+      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile">Save</v-btn>
     </v-card-actions>
   </v-card>
 </template>
