@@ -618,6 +618,7 @@ onMounted(async () => {
     </v-dialog>
 
     <v-dialog v-model="showNotesDialog" max-width="500px">
+
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between">
           Notes for {{ itemToDisplay.serializedAssetName }}
@@ -633,6 +634,7 @@ onMounted(async () => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
