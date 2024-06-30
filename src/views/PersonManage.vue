@@ -200,7 +200,9 @@ const savePerson = async () => {
   } finally {
     editingPerson.value = false;
     showAddPersonDialog.value = false;
+
     newPerson.value = { fName: "", lName: "", email: "", idNumber: "" }; // Reset the form
+
   }
 };
 

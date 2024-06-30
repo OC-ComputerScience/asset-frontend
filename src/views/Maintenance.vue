@@ -23,12 +23,22 @@ const logSortBy = ref([{ key: "serviceDate", order: "desc" }]);
 const searchQuery = ref("");
 const store = useStore();
 const menu = ref(false);
+const selectPrev = ref(false);
+const menuScheduled = ref(false);
 const rawServiceDate = ref(null);
+const rawScheduledDate = ref(null);
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
 const rules = {
-  required: (value) => !!value || "Required.",
+  requiredSelectedAsset: (value) => !!value || "Asset is required.",
+  required: (value) =>
+    (!!value && newLog.value.type != "preventative") ||
+    newLog.value.type == "preventative" ||
+    "Required.",
+  requiredScheudledDate: (value) =>
+    (!!value && newLog.value.type == "preventative") ||
+    "Scheduled Date is required.",
   maxNameLength: (value) =>
     value.length <= 40 || "Name cannot exceed 40 characters",
   maxDescLength: (value) => value.length <= 255,
@@ -45,11 +55,12 @@ const rules = {
 const newLog = ref({
   serializedAssetId: "",
   serviceDate: null,
+  scheduledDate: null,
   performedBy: "",
   notes: "",
+  description: "",
   type: null, // "preventative", "repair", or "upgrade"
 });
-
 
 // LogsSection
 
@@ -61,13 +72,15 @@ const retrieveLogs = async () => {
       key: log.logId,
       serializedAssetId: log.serializedAssetId,
       serviceDate: log.serviceDate,
+      scheduledDate: log.scheduledDate,
       notes: log.notes,
+      description: log.description,
       performedBy: log.performedBy,
       serializedAssetName: log.serializedAsset.serializedAssetName,
       serialNumber: log.serializedAsset.serialNumber,
       isPreventative: log.isPreventative,
       isRepair: log.isRepair,
-      isUpgrade: log.isUpgrade
+      isUpgrade: log.isUpgrade,
     }));
   } catch (error) {
     console.error("Error loading Logs:", error);
@@ -102,9 +115,15 @@ const editLog = async (log) => {
     key: log.key,
     serializedAssetId: log.serializedAssetId,
     serviceDate: log.serviceDate,
+    scheduledDate: log.scheduledDate,
     performedBy: log.performedBy,
     notes: log.notes,
-    type: log.isPreventative ? "preventative" : log.isRepair ? "repair" : "upgrade",
+    description: log.description,
+    type: log.isPreventative
+      ? "preventative"
+      : log.isRepair
+      ? "repair"
+      : "upgrade",
   };
   editingLog.value = true;
 
@@ -117,11 +136,15 @@ const editLog = async (log) => {
 
   showAddLogDialog.value = true;
   originalLog.value = { ...newLog.value }; // Store original log to check for changes
-  rawServiceDate.value = new Date(log.serviceDate);
+  rawServiceDate.value =
+    log.serviceDate == null ? null : new Date(log.serviceDate);
+  rawScheduledDate.value =
+    log.scheduledDate === null ? null : new Date(log.scheduledDate);
 };
 
 const saveLog = async () => {
   let formattedServiceDate = null;
+  let formattedScheduledDate = null;
   if (rawServiceDate.value) {
     // Convert local date to UTC before storing
     formattedServiceDate = format(
@@ -129,11 +152,20 @@ const saveLog = async () => {
       "MMM dd, yyyy"
     );
   }
+  if (rawScheduledDate.value) {
+    // Convert local date to UTC before storing
+    formattedScheduledDate = format(
+      new Date(rawScheduledDate.value),
+      "MMM dd, yyyy"
+    );
+  }
 
   const logData = {
     serviceDate: formattedServiceDate,
+    scheduledDate: formattedScheduledDate,
     performedBy: newLog.value.performedBy,
     notes: newLog.value.notes,
+    description: newLog.value.description,
     serializedAssetId: selectedSerializedAssetId.value.key,
     isPreventative: newLog.value.type === "preventative",
     isRepair: newLog.value.type === "repair",
@@ -167,14 +199,17 @@ function resetLogForm() {
   newLog.value = {
     serializedAssetId: "",
     serviceDate: null,
+    scheduledDate: null,
     performedBy: "",
     notes: "",
+    description: "",
     isPreventative: false,
     isRepair: false,
     isUpgrade: false,
   };
   selectedSerializedAssetId.value = "";
   rawServiceDate.value = null;
+  rawScheduledDate.value = null;
 }
 
 const openAddLogDialog = () => {
@@ -191,7 +226,9 @@ const closeLogDialog = () => {
 
 const baseMaintenanceHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
+  { title: "Scheuled Date", key: "scheduledDate" },
   { title: "Date Performed", key: "serviceDate" },
+  { title: "Description", key: "description" },
   { title: "Performed By", key: "performedBy" },
   { title: "Type", key: "type" },
   { title: "View Notes", key: "view" },
@@ -211,11 +248,13 @@ const filteredLogs = computed(() => {
   let result = logs.value;
 
   // Further filter by search query if present
-  if (searchQuery.value) {
-    result = result.filter((log) =>
-      `${log.serializedAssetName}`
-        .toLowerCase()
-        .includes(searchQuery.value.toLowerCase())
+  if (searchQuery.value || selectPrev.value) {
+    result = result.filter(
+      (log) =>
+        `${log.serializedAssetName}`
+          .toLowerCase()
+          .includes(searchQuery.value.toLowerCase()) &&
+        (!selectPrev.value || (log.isPreventative && log.serviceDate == null)) // Filter by preventative if selected
     );
   }
 
@@ -248,7 +287,7 @@ const highlightText = (text) => {
 const highlightedLogs = computed(() => {
   return filteredLogs.value.map((log) => ({
     ...log,
-    serializedAssetName: highlightText(log.serializedAssetName)
+    serializedAssetName: highlightText(log.serializedAssetName),
   }));
 });
 
@@ -271,12 +310,18 @@ const formattedServiceDate = computed(() => {
   }
   return "";
 });
+const formattedScheduledDate = computed(() => {
+  if (rawScheduledDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawScheduledDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
 
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await retrieveLogs();
   await retrieveSerializedAssets();
-  console.log("Known issues: editing not 100%");
 });
 </script>
 
@@ -295,7 +340,7 @@ onMounted(async () => {
 
       <v-row class="my-1"></v-row>
 
-      <v-row>
+      <v-row class="ma-0">
         <!-- Right align the search filter by using offset -->
         <v-col cols="12" md="8" offset-md="0">
           <v-text-field
@@ -306,13 +351,20 @@ onMounted(async () => {
             dense
             clearable
             @input="scrollToLog"
-            class="pt-0"
+            class="pa-0"
           ></v-text-field>
+          <v-checkbox
+            class="ml-5 mt-0 mb-0 pa-0"
+            v-model="selectPrev"
+            label="Only Preventative Not Done"
+            density="compact"
+          >
+          </v-checkbox>
         </v-col>
       </v-row>
 
-      <v-row>
-        <v-col cols="12">
+      <v-row class="ma-0">
+        <v-col class="ma-0" cols="12">
           <v-fade-transition mode="out-in">
             <div>
               <v-card>
@@ -342,24 +394,46 @@ onMounted(async () => {
                       <span v-html="item.serializedAssetName"></span>
                     </template>
                     <template v-slot:item.serviceDate="{ item }">
-                      <td>{{ formatDate(item.serviceDate) }}</td>
+                      <td>
+                        {{
+                          item.serviceDate == null
+                            ? null
+                            : formatDate(item.serviceDate)
+                        }}
+                      </td>
+                    </template>
+                    <template v-slot:item.scheduledDate="{ item }">
+                      <td>
+                        {{
+                          item.scheduledDate == null
+                            ? null
+                            : formatDate(item.scheduledDate)
+                        }}
+                      </td>
                     </template>
                     <template v-slot:item.type="{ item }">
-    <td>
-      <span v-if="item.isPreventative">Preventative</span>
-      <span v-else-if="item.isRepair">Repair</span>
-      <span v-else-if="item.isUpgrade">Upgrade</span>
-    </td>
-  </template>
+                      <td>
+                        <span v-if="item.isPreventative">Preventative</span>
+                        <span v-else-if="item.isRepair">Repair</span>
+                        <span v-else-if="item.isUpgrade">Upgrade</span>
+                      </td>
+                    </template>
                     <template v-slot:item.view="{ item }">
-                      <v-btn icon class="table-icons" 
-                      @click="openShowNotesDialog({
+                      <v-btn
+                        icon
+                        class="table-icons"
+                        @click="
+                          openShowNotesDialog({
                             id: item.key,
                             type: 'log',
                             notes: item.notes,
                             serializedAssetName: item.serializedAssetName,
-                            serviceDate: item.serviceDate
-                      })">
+                            serviceDate: item.serviceDate,
+                            scheduledDate: item.scheduledDate,
+                            description: item.description,
+                          })
+                        "
+                      >
                         <v-icon>mdi-note-text</v-icon>
                       </v-btn>
                     </template>
@@ -399,12 +473,71 @@ onMounted(async () => {
                     v-model="selectedSerializedAssetId"
                     item-text="title"
                     item-value="key"
-                    :rules="[rules.required]"
+                    :rules="[rules.requiredSelectedAsset]"
                     clearable
                     return-object
                   ></v-autocomplete>
                 </v-col>
                 <v-col cols="12">
+                  <v-textarea
+                    label="Description"
+                    variant="outlined"
+                    v-model="newLog.description"
+                    :rules="[rules.maxDescLength]"
+                    maxlength="255"
+                    :counter="255"
+                    prepend-icon="mdi-note"
+                  ></v-textarea>
+                </v-col>
+                <v-row>
+                  <v-col cols="12">
+                    <v-radio-group v-model="newLog.type" row>
+                      <v-radio
+                        label="Preventative"
+                        value="preventative"
+                      ></v-radio>
+                      <v-radio label="Repair" value="repair"></v-radio>
+                      <v-radio label="Upgrade" value="upgrade"></v-radio>
+                    </v-radio-group>
+                  </v-col>
+                </v-row>
+
+                <v-col v-if="newLog.type == 'preventative'" cols="12">
+                  <v-menu
+                    v-model="menuScheduled"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    min-width="auto"
+                  >
+                    <template v-slot:activator="{ attrs }">
+                      <v-text-field
+                        v-model="formattedScheduledDate"
+                        label="Scheduled Date (PM)"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        :rules="[rules.requiredScheduled]"
+                        readonly
+                        v-bind="attrs"
+                        @click="menuScheduled = !menuScheduled"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      v-model="rawScheduledDate"
+                      @input="menuScheduled = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu>
+                </v-col>
+                <v-col
+                  v-if="
+                    editingLog ||
+                    (!editingLog &&
+                      newLog.type != 'preventative' &&
+                      newLog.type != null)
+                  "
+                  cols="12"
+                >
                   <v-text-field
                     label="Performed By"
                     variant="outlined"
@@ -415,7 +548,15 @@ onMounted(async () => {
                     counter
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12">
+                <v-col
+                  v-if="
+                    editingLog ||
+                    (!editingLog &&
+                      newLog.type != 'preventative' &&
+                      newLog.type != null)
+                  "
+                  cols="12"
+                >
                   <v-menu
                     v-model="menu"
                     attach="#attach"
@@ -442,17 +583,15 @@ onMounted(async () => {
                     ></v-date-picker>
                   </v-menu>
                 </v-col>
-                <v-row>
-  <v-col cols="12">
-    <v-radio-group v-model="newLog.type" row>
-      <v-radio label="Preventative" value="preventative"></v-radio>
-      <v-radio label="Repair" value="repair"></v-radio>
-      <v-radio label="Upgrade" value="upgrade"></v-radio>
-    </v-radio-group>
-  </v-col>
-</v-row>
-
-                <v-col cols="12">
+                <v-col
+                  v-if="
+                    editingLog ||
+                    (!editingLog &&
+                      newLog.type != 'preventative' &&
+                      newLog.type != null)
+                  "
+                  cols="12"
+                >
                   <v-textarea
                     label="Notes"
                     variant="outlined"
@@ -479,25 +618,23 @@ onMounted(async () => {
     </v-dialog>
 
     <v-dialog v-model="showNotesDialog" max-width="500px">
-  <v-card class="pa-4 rounded-xl">
-    <v-card-title class="justify-space-between">
-      Notes for {{ itemToDisplay.serializedAssetName }}
-    </v-card-title>
-    <v-card-text>
-      {{ itemToDisplay.notes }}
-    </v-card-text>
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn
-        color="cancelgrey"
-        text
-        @click="showNotesDialog = false"
-      >
-        Close
-      </v-btn>
-    </v-card-actions>
-  </v-card>
-</v-dialog>
+
+      <v-card class="pa-4 rounded-xl">
+        <v-card-title class="justify-space-between">
+          Notes for {{ itemToDisplay.serializedAssetName }}
+        </v-card-title>
+        <v-card-text>
+          {{ itemToDisplay.notes }}
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="cancelgrey" text @click="showNotesDialog = false">
+            Close
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}

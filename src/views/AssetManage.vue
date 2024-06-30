@@ -40,6 +40,7 @@ const validProfile = ref(false);
 const validSerializedAsset = ref(false);
 const validSerializedAssetDisposal = ref(false);
 const showArchiveDialog = ref(false);
+const showSerialArchiveDialog = ref(false);
 const showCannotArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
 const itemToArchive = ref(null);
@@ -71,11 +72,11 @@ const getUserRole = async () => {
 
 const rules = {
   required: (value) => !!value || "Required.",
-  maxDescLength: (value) => value.length <= 255,
-  maxNameLength: (value) => value.length <= 50,
-  serialNumberLength: (value) => value.length <= 20,
-  validPrice: (value) => {
-    value.value > 0 || "Enter a valid price";
+  maxDescLength: (value) => value === null || value.length <= 255,
+  maxNameLength: (value) => value === null || value.length <= 50,
+  serialNumberLength: (value) => value === null || value.length <= 20,
+  validPrice: (value) => { 
+    value === null || value.value > 0 || "Enter a valid price";
   },
 };
 
@@ -961,13 +962,10 @@ const openArchiveDialog = (item) => {
       newSerializedAsset.disposalMethod = item.disposalMethod || "";
       newSerializedAsset.disposalDate = item.disposalDate || null;
       newSerializedAsset.disposalNotes = item.disposalNotes || "";
+      showSerialArchiveDialog.value = true;
     } else {
-      // Reset or provide default values for safety
-      newSerializedAsset.disposalMethod = "";
-      newSerializedAsset.disposalDate = null;
-      newSerializedAsset.disposalNotes = "";
+      showArchiveDialog.value = true;
     }
-    showArchiveDialog.value = true;
   }
 };
 
@@ -982,6 +980,7 @@ const confirmArchive = async () => {
     await archiveSerializedAsset(itemToArchive.value.id);
   }
   showArchiveDialog.value = false;
+  showSerialArchiveDialog.value = false;
   itemToArchive.value = null; // Reset after deletion
 };
 
@@ -1001,6 +1000,7 @@ const confirmActivate = async () => {
     await activateSerializedAsset(itemToActivate.value.id);
   }
   showActivateDialog.value = false;
+  showSerialArchiveDialog.value = false;
   itemToActivate.value = null; // Reset after deletion
 };
 
@@ -1762,7 +1762,7 @@ onMounted(async () => {
     </v-dialog>
 
     <!-- Confirm Archive Dialog -->
-    <v-dialog v-model="showArchiveDialog" max-width="600px">
+    <v-dialog v-model="showSerialArchiveDialog" max-width="600px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title>Confirm Archive</v-card-title>
         <v-card-text>
@@ -1858,7 +1858,7 @@ onMounted(async () => {
             text
             @click="
               resetSerializedAssetArchive();
-              showArchiveDialog = false;
+              showSerialArchiveDialog = false;
             "
           >
             Cancel
@@ -1874,19 +1874,19 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <!-- Confirm Activate Dialog -->
-    <v-dialog v-model="showActivateDialog" max-width="500px">
+    <!-- Confirm Archive Dialog -->
+    <v-dialog v-model="showArchiveDialog" max-width="500px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between"
-          >Confirm Activation</v-card-title
+          >Confirm Archive</v-card-title
         >
-        <v-card-text>Are you sure you want to activate this item? </v-card-text>
+        <v-card-text>Are you sure you want to Archive this item? </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="cancelgrey" text @click="showActivateDialog = false"
+          <v-btn color="cancelgrey" text @click="showArchiveDialog = false"
             >Cancel</v-btn
           >
-          <v-btn color="saveblue" text @click="confirmActivate">Activate</v-btn>
+          <v-btn color="saveblue" text @click="confirmArchive">Archive</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1895,7 +1895,7 @@ onMounted(async () => {
     <v-dialog v-model="showActivateDialog" max-width="500px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between"
-          >Cannot Archive</v-card-title
+          >Ok to Activate</v-card-title
         >
         <v-card-text>Are you sure you want to activate this item? </v-card-text>
         <v-card-actions>
@@ -1930,7 +1930,6 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
- 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
     </v-snackbar>
