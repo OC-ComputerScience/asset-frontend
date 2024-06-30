@@ -54,6 +54,7 @@ const checkedOutInByFullName = `${loginUser.value.fName} ${loginUser.value.lName
 const checkoutSortBy = ref([{ key: "checkoutDate", order: "desc" }]);
 const checkinSortBy = ref([{ key: "checkinDate", order: "desc" }]);
 const notificationSender = ref(null);
+const messageText = ref("");
 const rules = {
   required: (value) => !!value || "Required.",
 };
@@ -97,6 +98,7 @@ const newPerson = ref(null);
 // *** People Section ***
 const getOCPerson = async () => {
   message.value = "";
+  messageText.value = "";
   newPerson.value = null;
   let roomNumber = "";
 
@@ -104,13 +106,21 @@ const getOCPerson = async () => {
     try {
       const response = await PersonServices.getOCPersonById(idNumber.value);
       if (response.data.Success == "False") {
-        message.value = "No person found with that ID number.";
+        messageText.value = "No person found with that ID number.";
         return;
       }
       roomNumber = response.data.OfficeNumber;
       let roomId = null;
       if (roomNumber != null) {
         const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found with that room number " +
+            roomNumber +
+            ". Please add room first";
+          roomNumber = null;
+        }
         roomId = roomResponse.data.roomId;
       }
 
@@ -120,17 +130,16 @@ const getOCPerson = async () => {
         email: response.data.Email,
         idNumber: response.data.UserID,
         roomId: roomId,
-        roomNumber: roomNumber === null ? "No Room Assigned" : roomNumber,
       };
     } catch (error) {
       console.error("Error loading OC person data:", error);
-      message.value = "Failed to load OC person data.";
+      messageText.value = "Failed to load OC person data.";
     }
   } else if (email.value != null && email.value != "") {
     try {
       const response = await PersonServices.getOCPersonByEmail(email.value);
       if (response.data.Success == "False") {
-        message.value = "No person found with that email.";
+        messageText.value = "No person found with that email.";
         return;
       }
       roomNumber = response.data.OfficeNumber;
@@ -139,7 +148,15 @@ const getOCPerson = async () => {
       if (roomNumber != null) {
         await RoomServices.getByBldRoomNumber(roomNumber).then(
           (roomResponse) => {
-            roomId = roomResponse.data[0].roomId;
+            if (roomResponse.data.length > 0)
+              roomId = roomResponse.data[0].roomId;
+            else {
+              messageText.value =
+                "No room found with that room number " +
+                roomNumber +
+                ". Please add room first";
+              roomNumber = null;
+            }
           }
         );
       }
@@ -150,12 +167,12 @@ const getOCPerson = async () => {
         email: response.data.Email,
         idNumber: response.data.UserID,
         roomId: roomId,
-        roomNumber: roomNumber === null ? "No Room Assigned" : roomNumber,
+        roomNumber: roomNumber,
       };
       console.log(newPerson.value);
     } catch (error) {
       console.error("Error loading OC person data:", error);
-      message.value = "Failed to load OC person data.";
+      messageText.value = "Failed to load OC person data.";
     }
   }
 };
@@ -1519,7 +1536,7 @@ onMounted(async () => {
               </v-col>
             </v-row>
             <div v-if="newPerson != null">
-              <v-row class="ml-10"> Found: </v-row>
+              <v-row class="ml-10" v-if="newPerson.idNumber"> Found: </v-row>
               <v-row class="ml-16">
                 {{ newPerson.idNumber }}
               </v-row>
@@ -1537,6 +1554,9 @@ onMounted(async () => {
             <div class="ml-10" v-if="message != ''">
               {{ message }}
             </div>
+          </v-card-text>
+          <v-card-text v-if="messageText" class="text-red text-right">
+            {{ messageText }}
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>

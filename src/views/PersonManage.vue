@@ -7,6 +7,7 @@ import { useStore } from "vuex";
 import { formatInTimeZone } from "date-fns-tz";
 
 const message = ref("");
+const messageText = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Active");
 const people = ref([]);
@@ -31,14 +32,20 @@ const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) =>
-    value.length <= 40 || "Name cannot exceed 40 characters",
-  maxCounter: (value) => value.length <= 7,
+    value == null || value.length <= 40 || "Name cannot exceed 40 characters",
+  maxCounter: (value) => value == null || value.length <= 7,
   minCounter: (value) =>
-    value.length >= 7 || "ID number must be 7 numbers long",
+    value == null || value.length >= 7 || "ID number must be 7 numbers long",
   idNumber: (value) =>
-    /^[0-9]{7}$/.test(value) || "ID number must contain only numbers",
+    value == null ||
+    /^[0-9]{7}$/.test(value) ||
+    "ID number must contain only numbers",
   email: (value) => {
-    return pattern.test(value) || "e-mail must be eagles.oc.edu or oc.edu.";
+    return (
+      value == null ||
+      pattern.test(value) ||
+      "e-mail must be eagles.oc.edu or oc.edu."
+    );
   },
 };
 const newPerson = ref({
@@ -89,6 +96,7 @@ const retrieveRooms = async () => {
 
 const getOCPerson = async () => {
   let roomNumber = "";
+  messageText.value = "";
 
   if (newPerson.value.idNumber != null && newPerson.value.idNumber != "") {
     let idNumber = newPerson.value.idNumber;
@@ -99,7 +107,12 @@ const getOCPerson = async () => {
       roomNumber = response.data.OfficeNumber;
       if (roomNumber != null && roomNumber != "") {
         const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
-        roomId = roomResponse.data.roomId;
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found for " + roomNumber + ". Please add room first";
+          roomNumber = null;
+        }
       }
       newPerson.value = {
         fName: response.data.FirstName,
@@ -109,8 +122,7 @@ const getOCPerson = async () => {
         roomId: roomId,
       };
     } catch (error) {
-      console.error("Error loading OC person data:", error);
-      message.value = "Failed to load OC person data.";
+      messageText.value = "Failed to load OC person data.";
     }
   } else if (newPerson.value.email != null && newPerson.value.email != "") {
     let email = newPerson.value.email;
@@ -120,7 +132,12 @@ const getOCPerson = async () => {
       roomNumber = response.data.OfficeNumber;
       if (roomNumber != null && roomNumber != "") {
         const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
-        roomId = roomResponse.data[0].roomId;
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found for " + roomNumber + ". Please add room first";
+          roomNumber = null;
+        }
       }
 
       newPerson.value = {
@@ -135,7 +152,6 @@ const getOCPerson = async () => {
       message.value = "Failed to load OC person data.";
     }
   }
-  console.log(newPerson.value);
 };
 
 const editPerson = async (person) => {
@@ -621,7 +637,7 @@ onMounted(async () => {
                     variant="outlined"
                     v-model="newPerson.email"
                     placeholder="first.last@oc.edu or first.last@eagles.oc.edu"
-                    :rules="[rules.require, rules.email]"
+                    :rules="[rules.required, rules.email]"
                     maxlength="40"
                     counter
                     prepend-icon="mdi-email"
@@ -662,6 +678,9 @@ onMounted(async () => {
               </v-row>
             </v-container>
           </v-form>
+        </v-card-text>
+        <v-card-text v-if="messageText" class="text-red text-right">
+          {{ messageText }}
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
