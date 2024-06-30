@@ -72,11 +72,11 @@ const getUserRole = async () => {
 
 const rules = {
   required: (value) => !!value || "Required.",
-  maxDescLength: (value) => value.length <= 255,
-  maxNameLength: (value) => value.length <= 50,
-  serialNumberLength: (value) => value.length <= 20,
-  validPrice: (value) => {
-    value.value > 0 || "Enter a valid price";
+  maxDescLength: (value) => value === null || value.length <= 255,
+  maxNameLength: (value) => value === null || value.length <= 50,
+  serialNumberLength: (value) => value === null || value.length <= 20,
+  validPrice: (value) => { 
+    value === null || value.value > 0 || "Enter a valid price";
   },
 };
 

@@ -1,5 +1,6 @@
 <script setup>
 import PersonServices from "../services/personServices";
+import RoomServices from "../services/roomServices";
 import { ref, onMounted, watch, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
@@ -8,6 +9,7 @@ const message = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Active");
 const people = ref([]);
+const rooms = ref([]);
 const showAddPersonDialog = ref(false);
 const editingPerson = ref(false);
 const originalPerson = ref({});
@@ -43,6 +45,7 @@ const newPerson = ref({
   lName: "",
   email: "",
   idNumber: "",
+  roomId: null,
 });
 
 // People Section
@@ -57,10 +60,28 @@ const retrievePeople = async () => {
       lName: person.lName,
       email: person.email,
       idNumber: person.idNumber,
+      roomId: person.roomId,
       activeStatus: person.activeStatus,
     }));
   } catch (error) {
     console.error("Error loading people:", error);
+  }
+};
+
+const retrieveRooms = async () => {
+  try {
+    const response = await RoomServices.getAll();
+    rooms.value = response.data || [];
+    rooms.value.forEach((room) => {
+      room.roomName =
+        room.building.abbreviation +
+        "-" +
+        room.roomNo +
+        " " +
+        room.building.name;
+    });
+  } catch (error) {
+    console.error("Error loading rooms:", error);
   }
 };
 
@@ -71,6 +92,7 @@ const editPerson = async (person) => {
     email: person.email,
     idNumber: person.idNumber,
     personId: person.key,
+    roomId: person.roomId,
   };
   editingPerson.value = true;
   showAddPersonDialog.value = true;
@@ -83,6 +105,7 @@ const savePerson = async () => {
     lName: newPerson.value.lName,
     email: newPerson.value.email,
     idNumber: newPerson.value.idNumber,
+    roomId: newPerson.value.roomId,
   };
 
   try {
@@ -220,6 +243,15 @@ const highlightText = (text) => {
   return text.replace(regex, '<mark class="custom-highlight">$1</mark>'); // Apply custom highlight
 };
 
+const hasPersonChanged = computed(() => {
+  return (
+    newPerson.value.title !== originalPerson.value.title ||
+    newPerson.value.lName !== originalPerson.value.lName ||
+    newPerson.value.email !== originalPerson.value.email ||
+    newPerson.value.idNumber !== originalPerson.value.idNumber ||
+    newPerson.value.roomId !== originalPerson.value.roomId
+  );
+});
 const highlightedPeople = computed(() => {
   const lowerSearchQuery = searchQuery.value
     ? searchQuery.value.toLowerCase()
@@ -295,6 +327,7 @@ watch(selectedTab, (newValue) => {
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await retrievePeople();
+  await retrieveRooms();
 });
 </script>
 
@@ -510,6 +543,7 @@ onMounted(async () => {
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -520,6 +554,7 @@ onMounted(async () => {
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -532,6 +567,7 @@ onMounted(async () => {
                     maxlength="40"
                     counter
                     prepend-icon="mdi-email"
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -549,7 +585,21 @@ onMounted(async () => {
                     maxlength="7"
                     counter
                     prepend-icon="mdi-pound"
+                    :disabled="editingPerson"
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-select
+                    label="Office/Room"
+                    variant="outlined"
+                    v-model="newPerson.roomId"
+                    item-title="roomName"
+                    item-value="roomId"
+                    :return-object="false"
+                    :items="rooms"
+                    prepend-icon="mdi-office-building"
+                    clearable
+                  ></v-select>
                 </v-col>
               </v-row>
             </v-container>
