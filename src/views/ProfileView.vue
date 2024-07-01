@@ -2,6 +2,7 @@
 import AssetProfileServices from "../services/assetProfileServices";
 import SerializedAssetServices from "../services/serializedAssetServices";
 import ProfileDataServices from "../services/profileDataServices";
+import WarrantyServices from "../services/warrantyServices";
 import { ref, onMounted, watch, defineProps, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
@@ -26,7 +27,11 @@ const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const rawAcquisitionDate = ref(null);
 const rawDisposalDate = ref(null);
+const rawWarrStartDate = ref(null);
+const rawWarrEndDate = ref(null);
 const acquisitionDateMenu = ref(false);
+const warrStartDateMenu = ref(false);
+const warrEndDateMenu = ref(false);
 const disposalDateMenu = ref(false);
 const disposalValueLabel = ref("Disposal Value"); // Default label
 const serialNumberLabel = ref("Serial Number"); // Default label
@@ -38,7 +43,7 @@ const canAdd = computed(() => {
 });
 const rules = {
   required: (value) => !!value || "Required.",
-  maxDescLength: (value) => value.length <= 255,
+  maxDescLength: (value) => value == null || value.length <= 255,
   validPrice: (value) => {
     return value > 0 || "Enter a valid price"; // Ensure the function returns a value
   },
@@ -69,7 +74,13 @@ const props = defineProps({
     required: true,
   },
 });
-
+function monthDiff(d1, d2) {
+  var months;
+  months = (d2.getFullYear() - d1.getFullYear()) * 12;
+  months -= d1.getMonth();
+  months += d2.getMonth();
+  return months <= 0 ? 0 : months;
+}
 const newSerializedAsset = ref({
   serialNumber: "",
   notes: "",
@@ -79,6 +90,8 @@ const newSerializedAsset = ref({
   disposalDate: null,
   disposalNotes: "",
   disposalPrice: "",
+  warrantyDescription: "",
+  warrantyNotes: "",
 });
 
 // Profile Section
@@ -86,7 +99,10 @@ const newSerializedAsset = ref({
 // Retrieve Buildings from Database
 const retrieveAssetsForProfile = async () => {
   try {
-    const response = await SerializedAssetServices.getAll();
+    const response = await SerializedAssetServices.getAllForProfile(
+      props.profileId
+    );
+
     serializedAssets.value = response.data.map((serializedAsset) => {
       const profile = assetProfiles.value.find(
         (t) => t.key === serializedAsset.profileId
@@ -99,7 +115,6 @@ const retrieveAssetsForProfile = async () => {
       };
     });
   } catch (error) {
-    console.error("Error loading serialized assets:", error);
     message.value = "Failed to load serializedAssets.";
   }
 };
@@ -117,7 +132,12 @@ const editSerializedAsset = (serializedAsset) => {
   showAddSerializedAssetDialog.value = true;
 
   // Ensure that the raw acquisition date is correctly formatted for the picker
-  rawAcquisitionDate.value = new Date(serializedAsset.acquisitionDate);
+  //rawAcquisitionDate.value = new Date(serializedAsset.acquisitionDate);
+  let targetTime = parseISO(serializedAsset.acquisitionDate);
+  let tzDifference = targetTime.getTimezoneOffset();
+  rawAcquisitionDate.value = new Date(
+    targetTime.getTime() + tzDifference * 60 * 1000
+  );
 };
 
 // Save asset (add or edit)
@@ -126,6 +146,22 @@ const saveSerializedAsset = async () => {
   if (rawAcquisitionDate.value) {
     formattedAcquisitionDate = format(
       new Date(rawAcquisitionDate.value),
+      "MMM dd, yyyy"
+    );
+  }
+  let formattedWarrStartDate = null;
+  if (rawWarrStartDate.value) {
+    // Convert local date to UTC before storing
+    formattedWarrStartDate = format(
+      new Date(rawWarrStartDate.value),
+      "MMM dd, yyyy"
+    );
+  }
+  let formattedWarrEndDate = null;
+  if (rawWarrEndDate.value) {
+    // Convert local date to UTC before storing
+    formattedWarrEndDate = format(
+      new Date(rawWarrEndDate.value),
       "MMM dd, yyyy"
     );
   }
@@ -147,13 +183,30 @@ const saveSerializedAsset = async () => {
         newSerializedAsset.value.id,
         serializedAssetData
       );
+
       snackbarText.value = "Asset updated successfully.";
     } else {
-      await SerializedAssetServices.create(serializedAssetData);
-      snackbarText.value = "Asset added successfully.";
+      await SerializedAssetServices.create(serializedAssetData).then((data) => {
+        newSerializedAsset.value.id = data.data.serializedAssetId;
+        let lengthMonth = monthDiff(
+          new Date(rawWarrStartDate.value),
+          new Date(rawWarrEndDate.value)
+        );
+
+        let newWarranty = {
+          serializedAssetId: newSerializedAsset.value.id,
+          startDate: formattedWarrStartDate,
+          endDate: formattedWarrEndDate,
+          warrantyDescription: newSerializedAsset.value.warrantyDescription,
+          length: lengthMonth,
+          warrantyNotes: newSerializedAsset.value.warrantyNotes,
+        };
+
+        WarrantyServices.create(newWarranty);
+        snackbarText.value = "Asset added successfully.";
+      });
     }
     snackbar.value = true; // Show the snackbar
-    message.value = "Asset saved successfully.";
     await retrieveAssetsForProfile();
   } catch (error) {
     console.error("Error saving asset:", error);
@@ -183,12 +236,41 @@ const openAddSerializedAssetDialog = () => {
   // Reset other serialized asset form values
   resetSerializedAssetForm();
 
+  let targetTime1 = parseISO(profileDetails.acquisitionDate);
+  let tzDifference1 = targetTime1.getTimezoneOffset();
+  const acquisitionDate = new Date(
+    targetTime1.getTime() + tzDifference1 * 60 * 1000
+  );
+
+  targetTime1 = parseISO(profileDetails.value.warrantyStartDate);
+  tzDifference1 = targetTime1.getTimezoneOffset();
+  const tempWarrStartDate = new Date(
+    targetTime1.getTime() + tzDifference1 * 60 * 1000
+  );
+
+  targetTime1 = parseISO(profileDetails.value.warrantyEndDate);
+  tzDifference1 = targetTime1.getTimezoneOffset();
+  const tempWarrEndDate = new Date(
+    targetTime1.getTime() + tzDifference1 * 60 * 1000
+  );
+
+  rawAcquisitionDate.value = !isNaN(acquisitionDate.getTime())
+    ? acquisitionDate
+    : new Date();
+  rawWarrStartDate.value = !isNaN(tempWarrStartDate.getTime())
+    ? tempWarrStartDate
+    : null;
+  rawWarrEndDate.value = !isNaN(tempWarrEndDate.getTime())
+    ? tempWarrEndDate
+    : null;
+
   // Prefill the purchase price and acquisition date from the profileDetails
   newSerializedAsset.value.purchasePrice =
     profileDetails.value.purchasePrice || "";
-  rawAcquisitionDate.value = profileDetails.value.acquisitionDate
-    ? new Date(profileDetails.value.acquisitionDate)
-    : null;
+  newSerializedAsset.value.warrantyDescription =
+    profileDetails.value.warrantyDescription || "";
+  newSerializedAsset.value.warrantyNotes =
+    profileDetails.value.warrantyNotes || "";
 
   // Open the dialog
   showAddSerializedAssetDialog.value = true;
@@ -205,11 +287,17 @@ const resetSerializedAssetForm = () => {
     serialNumber: "",
     notes: "",
     acquisitionDate: null,
+    warrantyStartDate: null,
+    warrEndDateMenu: null,
     purchasePrice: "",
+    warrantyDescription: "",
+    warrantyNotes: "",
   };
   validSerializedAsset.value = false;
   editingSerializedAsset.value = false;
   rawAcquisitionDate.value = null;
+  rawWarrEndDate.value = null;
+  rawWarrStartDate.value = null;
   serialNumberLabel.value = "Serial Number"; // Reset label to default
 };
 
@@ -278,24 +366,16 @@ const updateDisposalValueLabel = () => {
 };
 
 const updateSerialNumberLabel = () => {
-  // Log the current value of selectedProfileId
-  // console.log("Selected Profile ID:", selectedProfileId.value);
-
   // Check if the selectedProfileId has a valid key and fetch the corresponding profile
   const profile = assetProfiles.value.find(
     (p) => p.key === selectedProfileId.value?.key
   );
 
-  // Log the found profile
-  // console.log("Found Profile:", profile);
-
   if (profile && (profile.typeId === 13 || profile.typeId === "13")) {
     // Check for both '13' as a string and 13 as a number
     serialNumberLabel.value = "Key Number";
-    // console.log("Label set to Key Number because typeId is 13");
   } else {
     serialNumberLabel.value = "Serial Number";
-    // console.log("Label set to Serial Number");
   }
 };
 
@@ -473,7 +553,7 @@ const confirmActivate = async () => {
 };
 
 const goBack = () => {
-  router.replace("/assetManage");
+  router.push("/assetManage");
 };
 
 const translateStatus = (status) => {
@@ -494,6 +574,22 @@ const formattedAcquisitionDate = computed(() => {
   if (rawAcquisitionDate.value) {
     // Display the date in a readable format
     return moment.utc(rawAcquisitionDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+
+const formattedWarrStartDate = computed(() => {
+  if (rawWarrStartDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+
+const formattedWarrEndDate = computed(() => {
+  if (rawWarrEndDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
   }
   return "";
 });
@@ -551,29 +647,57 @@ onMounted(async () => {
           <v-divider class="my-4"></v-divider>
 
           <!-- Purchase Price and Acquisition Date -->
-        <v-row>
-          <v-col cols="12" sm="6" md="4">
-            <div class="asset-detail">
-              <strong>Purchase Price</strong>
-              <div>{{ formatCurrency(profileDetails.purchasePrice) }}</div>
-            </div>
-          </v-col>
-          <v-col cols="12" sm="6" md="4">
-            <div class="asset-detail">
-              <strong>Acquisition Date</strong>
-              <div>{{ formatDate(profileDetails.acquisitionDate) || "N/A" }}</div>
-            </div>
-          </v-col>
-
-          <!-- Notes Section -->
-          <v-col cols="12" sm="6" md="4">
-            <div class="notes-section">
-              <strong>Notes</strong>
-              <div class="notes-data">{{ profileDetails.notes || "No notes available" }}</div>
-            </div>
-          </v-col>
-        </v-row>
-
+          <v-row>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Purchase Price</strong>
+                <div>{{ formatCurrency(profileDetails.purchasePrice) }}</div>
+              </div>
+            </v-col>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Acquisition Date</strong>
+                <div>
+                  {{ formatDate(profileDetails.acquisitionDate) || "N/A" }}
+                </div>
+              </div>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Warranty Desc</strong>
+                <div>{{ profileDetails.warrantyDescription || "N/A" }}</div>
+              </div>
+            </v-col>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Warranty Start Date</strong>
+                <div>
+                  {{ formatDate(profileDetails.warrantyStartDate) || "N/A" }}
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Warranty End Date</strong>
+                <div>
+                  {{ formatDate(profileDetails.warrantyEndDate) || "N/A" }}
+                </div>
+              </div>
+            </v-col>
+          </v-row>
+          <v-row>
+            <!-- Notes Section -->
+            <v-col cols="12" sm="6" md="4">
+              <div class="notes-section">
+                <strong>Notes</strong>
+                <div class="notes-data">
+                  {{ profileDetails.notes || "No notes available" }}
+                </div>
+              </div>
+            </v-col>
+          </v-row>
 
           <!-- Profile Details Section -->
           <v-row>
@@ -824,6 +948,79 @@ onMounted(async () => {
                     ></v-date-picker>
                   </v-menu>
                 </v-col>
+                <v-col cols="12" v-if="!editingSerializedAsset">
+                  <v-text-field
+                    label="Warranty Description"
+                    variant="outlined"
+                    v-model="newSerializedAsset.warrantyDescription"
+                    maxlength="255"
+                    :counter="255"
+                    prepend-icon="mdi-note"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" v-if="!editingSerializedAsset">
+                  <v-text-field
+                    label="Warranty Notes"
+                    variant="outlined"
+                    v-model="newSerializedAsset.warrantyNotes"
+                    maxlength="255"
+                    :counter="255"
+                    prepend-icon="mdi-note"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6" v-if="!editingSerializedAsset">
+                  <v-menu
+                    v-model="warrStartDateMenu"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    min-width="auto"
+                  >
+                    <template v-slot:activator="{ attrs }">
+                      <v-text-field
+                        v-model="formattedWarrStartDate"
+                        label="Warranty Start Date"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        readonly
+                        v-bind="attrs"
+                        @click="warrStartDateMenu = !warrStartDateMenu"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      v-model="rawWarrStartDate"
+                      @input="warrStartDateMenu = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu>
+                </v-col>
+                <v-col cols="6" v-if="!editingSerializedAsset">
+                  <v-menu
+                    v-model="warrEndDateMenu"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    min-width="auto"
+                  >
+                    <template v-slot:activator="{ attrs }">
+                      <v-text-field
+                        v-model="formattedWarrEndDate"
+                        label="Warranty Start Date"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        readonly
+                        v-bind="attrs"
+                        @click="warrEndDateMenu = !warrEndDateMenu"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      v-model="rawWarrEndDate"
+                      @input="warrEndDateMenu = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu>
+                </v-col>
+
                 <v-col cols="12">
                   <v-textarea
                     label="Notes"

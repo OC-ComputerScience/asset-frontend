@@ -47,13 +47,14 @@ const canAdd = computed(() => {
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) =>
-    value.length <= 40 || "Name cannot exceed 40 characters",
+    value.length <= 40 || "Description cannot exceed 40 characters",
   onlyNumbers: (value) =>
     /^[0-9]{1,3}$/.test(value) || "Must be a number (max 3 digits)",
 };
 const newWarranty = ref({
   serializedAssetId: "",
-  warrantyType: "",
+  warrantyDescription: "",
+  warrantyNotes: "",
   length: "",
   startDate: null,
   endDate: null,
@@ -68,7 +69,8 @@ const retrieveWarranties = async () => {
     warranties.value = response.data.map((warranty) => ({
       key: warranty.warrantyId,
       serializedAssetId: warranty.serializedAssetId,
-      warrantyType: warranty.warrantyType,
+      warrantyDescription: warranty.warrantyDescription,
+      warrantyNotes: warranty.warrantyNotes,
       startDate: warranty.startDate,
       endDate: warranty.endDate,
       length: warranty.length,
@@ -107,7 +109,8 @@ const editWarranty = async (warranty) => {
   newWarranty.value = {
     key: warranty.key,
     serializedAssetId: warranty.serializedAssetId,
-    warrantyType: warranty.warrantyType,
+    warrantyDescription: warranty.warrantyDescription,
+    warrantyNotes: warranty.warrantyNotes,
     startDate: warranty.startDate,
     endDate: warranty.endDate,
     length: warranty.length,
@@ -145,8 +148,9 @@ const saveWarranty = async () => {
     startDate: formattedStartDate,
     endDate: formattedEndDate,
     length: newWarranty.value.length,
-    warrantyType: newWarranty.value.warrantyType,
+    warrantyDescription: newWarranty.value.warrantyDescription,
     serializedAssetId: selectedSerializedAssetId.value.key,
+    warrantyNotes: newWarranty.value.warrantyNotes,
   };
 
   try {
@@ -216,7 +220,8 @@ function resetWarrantyForm() {
     startDate: null,
     endDate: null,
     length: "",
-    warrantyType: "",
+    warrantyDescription: "",
+    warrantyNotes: "",
   };
   selectedSerializedAssetId.value = "";
   startDate.value = null;
@@ -239,7 +244,7 @@ const closeWarrantyDialog = () => {
 
 const baseWarrantyHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
-  { title: "Warranty Type", key: "warrantyType" },
+  { title: "Warranty Description", key: "warrantyDescription" },
   { title: "Length", key: "length" },
   { title: "Start Date", key: "startDate" },
   { title: "End Date", key: "endDate" },
@@ -385,9 +390,6 @@ const formattedEndDate = computed(() => {
 onMounted(async () => {
   await retrieveWarranties();
   await retrieveSerializedAssets();
-  console.log(
-    "Known issues: Search by serialized Asset not working, edit function not 100%, warranties should be sorted by closes to end date (maybe)"
-  );
 });
 </script>
 
@@ -587,14 +589,24 @@ onMounted(async () => {
                 </v-col>
                 <v-col cols="12">
                   <v-text-field
-                    label="Warranty Name"
+                    label="Warranty Description"
                     variant="outlined"
                     prepend-icon="mdi-account"
-                    v-model="newWarranty.warrantyType"
+                    v-model="newWarranty.warrantyDescription"
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-textarea
+                    label="Warranty Notes"
+                    variant="outlined"
+                    prepend-icon="mdi-account"
+                    v-model="newWarranty.warrantyNotes"
+                    maxlength="255"
+                    counter
+                  ></v-textarea>
                 </v-col>
 
                 <!-- Start Date Picker -->
