@@ -38,13 +38,15 @@ const decRegex = /^-?\d+(\.\d+)?$/;
 const decTest = (value) => decRegex.test(value) || "Enter only decimals";
 const filterIntegerInput = (event) => {
   const value = event.target.value;
-  event.target.value = value.replace(/[^\d-]/g, '');
+  event.target.value = value.replace(/[^\d-]/g, "");
 };
 const filterDecimalInput = (event) => {
   const value = event.target.value;
-  event.target.value = value.replace(/[^0-9.-]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/(\-.*?)-.*/g, '$1');
+  event.target.value = value
+    .replace(/[^0-9.-]/g, "")
+    .replace(/(\..*?)\..*/g, "$1")
+    .replace(/(\-.*?)-.*/g, "$1");
 };
-
 
 // maska options
 const options = {
@@ -90,11 +92,9 @@ const newProfile = ref({
   warrantyNotes: "",
 });
 
-
 const changeProfileInfo = () => {
   profileInfoChanged.value = true;
-}
-
+};
 
 // When you load the profile for editing, store the initial state
 const loadProfileForEditing = async (profile) => {
@@ -136,8 +136,6 @@ const loadProfileForEditing = async (profile) => {
     rawWarrEndDate.value = null; // Fallback if there's no acquisition date
   }
 
-
-
   // Update `originalProfile` for comparison
   originalProfile.value = {
     profileName: profile.profileName,
@@ -170,9 +168,8 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-
-const retrieveCustomFields = async(typeId) => {
-  try{
+const retrieveCustomFields = async (typeId) => {
+  try {
     let response = await customFieldTypeServices.getAllForType(typeId);
     let customFieldPromises = response.data.map(async (field) => {
       let newField = {
@@ -183,15 +180,17 @@ const retrieveCustomFields = async(typeId) => {
         required: field.required,
         identifier: field.identifier,
         fieldValueId: null,
-        value: '',
+        value: "",
         profileDataId: null,
         listValues: {},
         sequence: field.sequence,
-        changed: false
+        changed: false,
       };
 
-      if (newField.type === 'List') {
-        let data = await customFieldValueServices.getAllForField(newField.customFieldId);
+      if (newField.type === "List") {
+        let data = await customFieldValueServices.getAllForField(
+          newField.customFieldId
+        );
         newField.listValues = data.data;
       }
       return newField;
@@ -199,46 +198,46 @@ const retrieveCustomFields = async(typeId) => {
 
     let customFieldsArray = await Promise.all(customFieldPromises);
     customFields.value.push(...customFieldsArray);
-  }
-  catch(err){
-
+  } catch (err) {
     console.error(err);
   }
-}
+};
 
-const retrieveFieldValues = async(profileId) => {
-   let response = await profileDataServices.getByProfileId(profileId);
-   let profileData = response.data;
-   profileData.forEach(profile => {
-    let customField = customFields.value.find(field => field.customFieldId === profile.customFieldValue.customFieldId);
+const retrieveFieldValues = async (profileId) => {
+  let response = await profileDataServices.getByProfileId(profileId);
+  let profileData = response.data;
+  profileData.forEach((profile) => {
+    let customField = customFields.value.find(
+      (field) => field.customFieldId === profile.customFieldValue.customFieldId
+    );
     customField.value = profile.customFieldValue.value;
     customField.fieldValueId = profile.fieldValueId;
     customField.profileDataId = profile.profileDataId;
-    if(customField.sequence){
+    if (customField.sequence) {
       titleArray.value[customField.sequence - 1] = customField.value;
     }
-   })
+  });
 };
 
 const changeFieldValue = (field) => {
   field.changed = true;
-  if(field.type == 'List'){
-    let newValue = field.listValues.find(listValue => listValue.value === field.value);
-    if(newValue){
+  if (field.type == "List") {
+    let newValue = field.listValues.find(
+      (listValue) => listValue.value === field.value
+    );
+    if (newValue) {
       field.fieldValueId = newValue.id;
-    }
-    else field.fieldValueId = null;
-    
+    } else field.fieldValueId = null;
   }
   updateTitle(field.value, field.sequence);
-}
+};
 
 const updateTitle = (value, sequence) => {
-  if(sequence > 0 && !overrideTitle.value) {
+  if (sequence > 0 && !overrideTitle.value) {
     titleArray.value[sequence - 1] = value;
-    newProfile.value.profileName = titleArray.value.join(' ');
+    newProfile.value.profileName = titleArray.value.join(" ");
   }
-}
+};
 
 // Save profile (add or edit)
 const saveProfile = async () => {
@@ -272,7 +271,6 @@ const saveProfile = async () => {
   };
 
   try {
-
     // Check if editing profile
     if (newProfile.value.id && profileInfoChanged.value) {
       // Update the profile itself
@@ -305,36 +303,32 @@ const saveProfile = async () => {
   }
 };
 
-const saveFieldValues = async(profileId) => {
-  for(let field of customFields.value){
-    if(field.changed){
+const saveFieldValues = async (profileId) => {
+  for (let field of customFields.value) {
+    if (field.changed) {
       let fieldValueId;
       let data = {
-            customFieldId: field.customFieldId,
-            value: field.value 
-          };
-      try{
-        if(field.fieldValueId && field.type != 'List'){
+        customFieldId: field.customFieldId,
+        value: field.value,
+      };
+      try {
+        if (field.fieldValueId && field.type != "List") {
           fieldValueId = field.fieldValueId;
           await customFieldValueServices.update(fieldValueId, data);
-        }
-        else if(field.fieldValueId && field.type == 'List'){
-          let newFieldValue = {fieldValueId: field.fieldValueId};
+        } else if (field.fieldValueId && field.type == "List") {
+          let newFieldValue = { fieldValueId: field.fieldValueId };
           await profileDataServices.update(field.profileDataId, newFieldValue);
-        }
-        else{
+        } else {
           let response = await customFieldValueServices.create(data);
           fieldValueId = response.data.id;
           let profileData = {
             profileId: profileId,
-            fieldValueId: fieldValueId
+            fieldValueId: fieldValueId,
           };
           await profileDataServices.create(profileData);
         }
-      }
-      catch(err){
+      } catch (err) {
         console.error(err);
-
       }
     }
   }
@@ -447,19 +441,17 @@ const emitUpdateSnackbar = () => {
 // Watchers
 
 watch(selectedTypeId, async (newVal) => {
-  if(dataLoaded.value){
+  if (dataLoaded.value) {
     const typeId = newVal?.typeId || newVal;
     customFields.value = [];
     await retrieveCustomFields(typeId);
   }
-  
 });
 
 // Watch for changes in selectedProfile and update the form accordingly
 watch(
   selectedProfile,
   (newValue, oldValue) => {
-
     if (newValue) {
       // Ensure all fields are assigned correctly
       newProfile.value.profileName = newValue.profileName || "";
@@ -559,7 +551,7 @@ onMounted(async () => {
                     clearable
                     return-object
                     prepend-icon="mdi-devices"
-                    @update:modelValue = changeProfileInfo
+                    @update:modelValue="changeProfileInfo"
                   ></v-autocomplete>
                 </v-col>
                 <v-col cols="7">
@@ -572,9 +564,8 @@ onMounted(async () => {
                     counter
                     prepend-icon="mdi-rename"
                     :disabled="!overrideTitle"
-                    @update:modelValue = changeProfileInfo
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
-                  
                 </v-col>
                 <v-col cols="5">
                   <v-checkbox
@@ -596,38 +587,49 @@ onMounted(async () => {
                     inputmode="numeric"
                     type="text"
                     prepend-icon="mdi-cash-multiple"
-                    @update:modelValue = changeProfileInfo
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
                 </v-col>
                 <v-col>
-                  <v-menu
-                    v-model="menu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedAcquisitionDate"
-                        label="Acquisition Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu = !menu"
-                        @update:modelValue = changeProfileInfo
-                      ></v-text-field>
-                    </template>
+                  <v-date-input
+                    v-model="rawAcquisitionDate"
+                    clearable
+                    label="Aqusition Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                  <!-- <div id="acq" class="relative-container">
+                    <v-menu
+                      v-model="menu"
+                      attach="#acq"
+                      :close-on-content-click="false"
+                      min-width="auto"
+                      transition="scale-transition"
+                      max-width="290"
+                      offset-y
+                    >
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-text-field
+                          v-model="formattedAcquisitionDate"
+                          label="Acquisition Date"
+                          variant="outlined"
+                          prepend-icon="mdi-calendar"
+                          :rules="[rules.required]"
+                          readonly
+                          v-bind="attrs"
+                          @click="menu = !menu"
+                          @update:modelValue="changeProfileInfo"
+                        ></v-text-field>
+                      </template>
 
-                    <v-date-picker
-                      v-model="rawAcquisitionDate"
-                      timezone="UTC"
-                      @input="menu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                      <v-date-picker
+                        v-model="rawAcquisitionDate"
+                        timezone="UTC"
+                        @input="menu = false"
+                        color="primary"
+                      ></v-date-picker>
+                    </v-menu>
+                  </div> -->
                 </v-col>
                 <v-col cols="12">
                   <v-text-field
@@ -647,12 +649,20 @@ onMounted(async () => {
                   ></v-textarea>
                 </v-col>
                 <v-col>
-                  <v-menu
+                  <v-date-input
+                    v-model="rawWarrStartDate"
+                    clearable
+                    label="Warranty Start Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                  <!-- <v-menu
                     v-model="menu1"
                     attach="#attach"
                     :close-on-content-click="false"
                     transition="scale-transition"
-                    min-width="auto"
+                    max-width="100px"
+                    max-height="100px"
                   >
                     <template v-slot:activator="{ on, attrs }">
                       <v-text-field
@@ -667,14 +677,23 @@ onMounted(async () => {
                       ></v-text-field>
                     </template>
                     <v-date-picker
+                      max-width="100px"
+                      max-height="100px"
                       v-model="rawWarrStartDate"
                       @input="menu1 = false"
                       color="primary"
                     ></v-date-picker>
-                  </v-menu>
+                  </v-menu> -->
                 </v-col>
                 <v-col>
-                  <v-menu
+                  <v-date-input
+                    v-model="rawWarrEndDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                  <!-- <v-menu
                     v-model="menu2"
                     attach="#attach"
                     :close-on-content-click="false"
@@ -698,14 +717,11 @@ onMounted(async () => {
                       @input="menu2 = false"
                       color="primary"
                     ></v-date-picker>
-                  </v-menu>
+                  </v-menu> -->
                 </v-col>
               </v-row>
             </v-col>
-            <template
-              v-for="(field, index) in customFields"
-              :key="index"
-            >
+            <template v-for="(field, index) in customFields" :key="index">
               <v-col cols="4" v-if="field.type === 'List'">
                 <v-combobox
                   v-model="field.value"
@@ -735,7 +751,9 @@ onMounted(async () => {
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
-                  :rules="field.required ? [rules.required, intTest] : [intTest]"
+                  :rules="
+                    field.required ? [rules.required, intTest] : [intTest]
+                  "
                   variant="outlined"
                   prepend-icon="field"
                   :return-object="false"
@@ -747,7 +765,9 @@ onMounted(async () => {
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
-                  :rules="field.required ? [rules.required, decTest] : [decTest]"
+                  :rules="
+                    field.required ? [rules.required, decTest] : [decTest]
+                  "
                   variant="outlined"
                   prepend-icon="field"
                   :return-object="false"
@@ -766,7 +786,7 @@ onMounted(async () => {
                 variant="outlined"
                 v-model="newProfile.notes"
                 :rules="[rules.maxNotesLength]"
-                @update:modelValue = changeProfileInfo
+                @update:modelValue="changeProfileInfo"
               ></v-textarea>
             </v-col>
           </v-row>
@@ -776,9 +796,16 @@ onMounted(async () => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="cancelgrey" text @click="emitCloseDialog">Cancel</v-btn>
-      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile">Save</v-btn>
+      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile"
+        >Save</v-btn
+      >
     </v-card-actions>
   </v-card>
 </template>
+<style scoped>
+.relative-container {
+  position: relative;
+}
+</style>
 
 <!-- Love, "Zane" and Jaxen-->

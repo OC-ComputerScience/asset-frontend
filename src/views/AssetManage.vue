@@ -80,12 +80,10 @@ const rules = {
   required: (value) => !!value || "Required.",
   maxDescLength: (value) => value === null || value.length <= 255,
   maxNameLength: (value) => value === null || value.length <= 50,
-
   maxNotesLength: (value) => value === null || value.length <= 255,
   serialNumberLength: (value) => value === null || value.length <= 20,
-
-    value === null || value.value > 0 || "Enter a valid price";
-  },
+  purchasePrice: (value) =>
+    value === null || value === "" || !isNaN(value) || "Invalid price.",
 };
 
 // maska options
@@ -858,7 +856,6 @@ const editSerializedAsset = (serializedAsset) => {
   rawAcquisitionDate.value = new Date(
     targetTime.getTime() + tzDifference * 60 * 1000
   );
-
 };
 
 const filteredSerializedAssets = computed(() => {
@@ -1812,15 +1809,25 @@ onMounted(async () => {
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6">
+                  <v-date-input
+                    v-model="rawAcquisitionDate"
+                    clearable
+                    label="Acquisition Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
+                </v-col>
+                <!-- <v-col cols="6">
                   <v-menu
                     v-model="acquisitionDateMenu"
-                    attach="#attach"
                     :close-on-content-click="false"
                     transition="scale-transition"
                     min-width="auto"
                   >
                     <template v-slot:activator="{ attrs }">
                       <v-text-field
+                        type="date"
                         v-model="formattedAcquisitionDate"
                         label="Acquisition Date"
                         variant="outlined"
@@ -1837,7 +1844,7 @@ onMounted(async () => {
                       color="primary"
                     ></v-date-picker>
                   </v-menu>
-                </v-col>
+                </v-col> -->
                 <v-col cols="12" v-if="!editingSerializedAsset">
                   <v-text-field
                     label="Warranty Description"
@@ -1859,7 +1866,16 @@ onMounted(async () => {
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6" v-if="!editingSerializedAsset">
-                  <v-menu
+                  <v-date-input
+                    v-model="rawWarrStartDate"
+                    clearable
+                    label="Warranty Start Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
+
+                  <!-- <v-menu
                     v-model="warrStartDateMenu"
                     attach="#attach"
                     :close-on-content-click="false"
@@ -1869,7 +1885,7 @@ onMounted(async () => {
                     <template v-slot:activator="{ attrs }">
                       <v-text-field
                         v-model="formattedWarrStartDate"
-                        label="Warranty Start Date"
+                        label="Warranty xStart Date"
                         variant="outlined"
                         prepend-icon="mdi-calendar"
                         readonly
@@ -1882,10 +1898,18 @@ onMounted(async () => {
                       @input="warrStartDateMenu = false"
                       color="primary"
                     ></v-date-picker>
-                  </v-menu>
+                  </v-menu> -->
                 </v-col>
                 <v-col cols="6" v-if="!editingSerializedAsset">
-                  <v-menu
+                  <v-date-input
+                    v-model="rawWarrEndDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
+                  <!-- <v-menu
                     v-model="warrEndDateMenu"
                     attach="#attach"
                     :close-on-content-click="false"
@@ -1895,7 +1919,7 @@ onMounted(async () => {
                     <template v-slot:activator="{ attrs }">
                       <v-text-field
                         v-model="formattedWarrEndDate"
-                        label="Warranty Start Date"
+                        label="Warranty End Date"
                         variant="outlined"
                         prepend-icon="mdi-calendar"
                         readonly
@@ -1908,7 +1932,7 @@ onMounted(async () => {
                       @input="warrEndDateMenu = false"
                       color="primary"
                     ></v-date-picker>
-                  </v-menu>
+                  </v-menu> -->
                 </v-col>
 
                 <v-col cols="12">
