@@ -89,6 +89,7 @@ const retrieveRooms = async () => {
         " " +
         room.building.name;
     });
+    rooms.value.sort((a, b) => a.roomName.localeCompare(b.roomName));
   } catch (error) {
     console.error("Error loading rooms:", error);
   }
@@ -202,7 +203,6 @@ const savePerson = async () => {
     showAddPersonDialog.value = false;
 
     newPerson.value = { fName: "", lName: "", email: "", idNumber: "" }; // Reset the form
-
   }
 };
 
