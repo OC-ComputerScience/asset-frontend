@@ -119,7 +119,6 @@ const getOCPerson = async () => {
             "No room found with that room number " +
             roomNumber +
             ". Please add room first";
-          roomNumber = null;
         }
         roomId = roomResponse.data.roomId;
       }
@@ -130,6 +129,7 @@ const getOCPerson = async () => {
         email: response.data.Email,
         idNumber: response.data.UserID,
         roomId: roomId,
+        roomNumber: roomNumber,
       };
     } catch (error) {
       console.error("Error loading OC person data:", error);
@@ -155,7 +155,6 @@ const getOCPerson = async () => {
                 "No room found with that room number " +
                 roomNumber +
                 ". Please add room first";
-              roomNumber = null;
             }
           }
         );
@@ -669,6 +668,7 @@ const openAddNewPersonDialog = () => {
 
 const closeAddNewPersonDialog = () => {
   showAddNewPersonDialog.value = false;
+  messageText.value = "";
   idNumber.value = "";
   email.value = "";
   newPerson.value = {
