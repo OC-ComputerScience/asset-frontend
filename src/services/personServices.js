@@ -12,6 +12,13 @@ export default {
   getById(personId) {
     return apiClient.get(baseURL + `${personId}`);
   },
+  getOCPersonById (personId) {
+    return apiClient.get(baseURL + `OCPerson/id/${personId}`);
+  },
+
+  getOCPersonByEmail (email) {
+    return apiClient.get(baseURL + `OCPerson/email/${email}`);
+  },
   update(personId, data) {
     return apiClient.put(baseURL + `${personId}`, data);
   },

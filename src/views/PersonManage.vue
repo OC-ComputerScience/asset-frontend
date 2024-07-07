@@ -4,8 +4,10 @@ import RoomServices from "../services/roomServices";
 import { ref, onMounted, watch, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
+import { formatInTimeZone } from "date-fns-tz";
 
 const message = ref("");
+const messageText = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Active");
 const people = ref([]);
@@ -20,28 +22,34 @@ const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
-const personSortBy = ref([{ key: "title", order: "asc" }]);
+const personSortBy = ref([{ key: "fName", order: "asc" }]);
 const searchQuery = ref("");
 const store = useStore();
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
+const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) =>
-    value.length <= 40 || "Name cannot exceed 40 characters",
-  maxCounter: (value) => value.length <= 7,
+    value == null || value.length <= 40 || "Name cannot exceed 40 characters",
+  maxCounter: (value) => value == null || value.length <= 7,
   minCounter: (value) =>
-    value.length >= 7 || "ID number must be 7 numbers long",
+    value == null || value.length >= 7 || "ID number must be 7 numbers long",
   idNumber: (value) =>
-    /^[0-9]{7}$/.test(value) || "ID number must contain only numbers",
+    value == null ||
+    /^[0-9]{7}$/.test(value) ||
+    "ID number must contain only numbers",
   email: (value) => {
-    const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
-    return pattern.test(value) || "e-mail must be eagles.oc.edu or oc.edu.";
+    return (
+      value == null ||
+      pattern.test(value) ||
+      "e-mail must be eagles.oc.edu or oc.edu."
+    );
   },
 };
 const newPerson = ref({
-  title: "",
+  formatInTimeZone: "",
   lName: "",
   email: "",
   idNumber: "",
@@ -51,11 +59,12 @@ const newPerson = ref({
 // People Section
 
 // Retrieve People from Database
+
 const retrievePeople = async () => {
   try {
     const response = await PersonServices.getAll();
     people.value = response.data.map((person) => ({
-      title: person.fName,
+      fName: person.fName,
       key: person.personId,
       lName: person.lName,
       email: person.email,
@@ -80,14 +89,76 @@ const retrieveRooms = async () => {
         " " +
         room.building.name;
     });
+    rooms.value.sort((a, b) => a.roomName.localeCompare(b.roomName));
   } catch (error) {
     console.error("Error loading rooms:", error);
   }
 };
 
+const getOCPerson = async () => {
+  let roomNumber = "";
+  messageText.value = "";
+
+  if (newPerson.value.idNumber != null && newPerson.value.idNumber != "") {
+    let idNumber = newPerson.value.idNumber;
+    let roomNumber = newPerson.value.roomNo;
+    let roomId = null;
+    try {
+      const response = await PersonServices.getOCPersonById(idNumber);
+      roomNumber = response.data.OfficeNumber;
+      if (roomNumber != null && roomNumber != "") {
+        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found for " + roomNumber + ". Please add room first";
+          roomNumber = null;
+        }
+      }
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomId: roomId,
+      };
+    } catch (error) {
+      messageText.value = "Failed to load OC person data.";
+    }
+  } else if (newPerson.value.email != null && newPerson.value.email != "") {
+    let email = newPerson.value.email;
+    let roomId = null;
+    try {
+      const response = await PersonServices.getOCPersonByEmail(email);
+      roomNumber = response.data.OfficeNumber;
+      if (roomNumber != null && roomNumber != "") {
+        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found for " + roomNumber + ". Please add room first";
+          roomNumber = null;
+        }
+      }
+
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomId: roomId,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      message.value = "Failed to load OC person data.";
+    }
+  }
+};
+
 const editPerson = async (person) => {
   newPerson.value = {
-    title: person.title,
+    fullName: `${person.fName} ${person.lName}`,
+    fName: person.fName,
     lName: person.lName,
     email: person.email,
     idNumber: person.idNumber,
@@ -101,7 +172,7 @@ const editPerson = async (person) => {
 
 const savePerson = async () => {
   const personData = {
-    fName: newPerson.value.title,
+    fName: newPerson.value.fName,
     lName: newPerson.value.lName,
     email: newPerson.value.email,
     idNumber: newPerson.value.idNumber,
@@ -130,7 +201,8 @@ const savePerson = async () => {
   } finally {
     editingPerson.value = false;
     showAddPersonDialog.value = false;
-    newPerson.value = { title: "", lName: "", email: "", idNumber: "" }; // Reset the form
+
+    newPerson.value = { fName: "", lName: "", email: "", idNumber: "" }; // Reset the form
   }
 };
 
@@ -221,7 +293,7 @@ const filteredPeople = computed(() => {
 
     result = result.filter(
       (person) =>
-        `${person.title} ${person.lName}`
+        `${person.fName} ${person.lName}`
           .toLowerCase()
           .includes(lowerSearchQuery) ||
         person.idNumber.toLowerCase().includes(lowerSearchQuery) // Include ID in the search
@@ -258,13 +330,13 @@ const highlightedPeople = computed(() => {
     : ""; // Handle null/empty cases
 
   return filteredPeople.value.map((person) => {
-    const title = person.title || ""; // Default to empty string if null
+    const fName = person.fName || ""; // Default to empty string if null
     const lName = person.lName || "";
     const idNumber = person.idNumber || "";
 
     return {
       ...person,
-      fullName: `${highlightText(title)} ${highlightText(lName)}`, // Ensure null-safe operation
+      fullName: `${highlightText(fName)} ${highlightText(lName)}`, // Ensure null-safe operation
       idNumber: highlightText(idNumber),
     };
   });
@@ -273,7 +345,7 @@ const highlightedPeople = computed(() => {
 const scrollToPerson = () => {
   const searchLower = searchQuery.value.toLowerCase();
   const matchedPerson = filteredPeople.value.find((person) =>
-    `${person.title} ${person.lName}`.toLowerCase().includes(searchLower)
+    `${person.fName} ${person.lName}`.toLowerCase().includes(searchLower)
   );
 
   if (matchedPerson) {
@@ -531,6 +603,10 @@ onMounted(async () => {
             >{{ editingPerson ? "Edit" : "Add" }} Person</span
           >
         </v-card-title>
+        <v-card-subtitle v-if="!editingPerson"
+          >Enter Email or Id and click GET OC DATA to load current
+          info</v-card-subtitle
+        >
         <v-card-text>
           <v-form ref="formPerson" v-model="validPerson">
             <v-container>
@@ -539,7 +615,7 @@ onMounted(async () => {
                   <v-text-field
                     label="First Name"
                     variant="outlined"
-                    v-model="newPerson.title"
+                    v-model="newPerson.fName"
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
@@ -563,7 +639,7 @@ onMounted(async () => {
                     variant="outlined"
                     v-model="newPerson.email"
                     placeholder="first.last@oc.edu or first.last@eagles.oc.edu"
-                    :rules="[rules.require, rules.email]"
+                    :rules="[rules.required, rules.email]"
                     maxlength="40"
                     counter
                     prepend-icon="mdi-email"
@@ -589,7 +665,7 @@ onMounted(async () => {
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-select
+                  <v-autocomplete
                     label="Office/Room"
                     variant="outlined"
                     v-model="newPerson.roomId"
@@ -599,14 +675,18 @@ onMounted(async () => {
                     :items="rooms"
                     prepend-icon="mdi-office-building"
                     clearable
-                  ></v-select>
+                  ></v-autocomplete>
                 </v-col>
               </v-row>
             </v-container>
           </v-form>
         </v-card-text>
+        <v-card-text v-if="messageText" class="text-red text-right">
+          {{ messageText }}
+        </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <v-btn color="green" @click="getOCPerson">Get OC Data</v-btn>
           <v-btn color="cancelgrey" text @click="closePersonDialog"
             >Cancel</v-btn
           >

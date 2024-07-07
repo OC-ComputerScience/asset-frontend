@@ -65,7 +65,7 @@ const props = defineProps({
     required: false,
   },
   rules: {
-    required: true
+    required: true,
   },
 });
 
@@ -129,6 +129,7 @@ const retrieveAssetTypes = async () => {
   }
 };
 
+
 const retrieveCustomFields = async(typeId) => {
   try{
     let response = await customFieldTypeServices.getAllForType(typeId);
@@ -159,6 +160,7 @@ const retrieveCustomFields = async(typeId) => {
     customFields.value.push(...customFieldsArray);
   }
   catch(err){
+
     console.error(err);
   }
 }
@@ -216,6 +218,8 @@ const saveProfile = async () => {
   };
 
   try {
+
+
     // Check if editing profile
     if (newProfile.value.id && profileInfoChanged.value) {
       // Update the profile itself
@@ -229,7 +233,6 @@ const saveProfile = async () => {
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
-
       // Create new profile
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
@@ -245,6 +248,7 @@ const saveProfile = async () => {
     emitCloseDialog();
   }
 };
+
 
 const saveFieldValues = async(profileId) => {
   for(let field of customFields.value){
@@ -275,6 +279,7 @@ const saveFieldValues = async(profileId) => {
       }
       catch(err){
         console.error(err);
+
       }
     }
   }
@@ -295,7 +300,6 @@ const editProfile = async () => {
     }
   }
 };
-
 
 // Computed property for display
 const formattedAcquisitionDate = computed(() => {
@@ -389,9 +393,7 @@ onMounted(async () => {
 <template>
   <v-card class="pa-4 rounded-xl">
     <v-card-title>
-      <span class="headline"
-        >{{ editMode ? "Edit" : "Add" }} Profile</span
-      >
+      <span class="headline">{{ editMode ? "Edit" : "Add" }} Profile</span>
     </v-card-title>
     <v-card-text>
       <v-form ref="formProfile" v-model="validProfile">

@@ -14,7 +14,7 @@ import { format } from "date-fns";
 import { zonedTimeToUtc } from "date-fns-tz";
 import moment from "moment-timezone";
 
-const userRole = ref({})
+const userRole = ref({});
 const message = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Checkout");
@@ -29,6 +29,7 @@ const buildings = ref([]);
 const buildingAssets = ref([]);
 const rooms = ref([]);
 const roomAssets = ref([]);
+const showAddNewPersonDialog = ref(false);
 const showPersonCheckoutDialog = ref(false);
 const showPersonCheckinDialog = ref(false);
 const showBuildingCheckoutDialog = ref(false);
@@ -53,15 +54,17 @@ const checkedOutInByFullName = `${loginUser.value.fName} ${loginUser.value.lName
 const checkoutSortBy = ref([{ key: "checkoutDate", order: "desc" }]);
 const checkinSortBy = ref([{ key: "checkinDate", order: "desc" }]);
 const notificationSender = ref(null);
+const messageText = ref("");
 const rules = {
   required: (value) => !!value || "Required.",
 };
-const userRoleId = computed(() =>{
-  return store.getters.getUserRole
-})
+const userRoleId = computed(() => {
+  return store.getters.getUserRole;
+});
 const getUserRole = async () => {
-    userRole.value = await UserRoleServices.get(userRoleId.value);
-    return userRole.value;
+  userRole.value = await UserRoleServices.get(userRoleId.value);
+
+  return userRole.value;
 };
 const newPersonAsset = ref({
   serializedAssetId: "",
@@ -88,8 +91,115 @@ const newRoomAsset = ref({
   checkedOutBy: "",
 });
 
-// *** People Section ***
+const idNumber = ref("");
+const email = ref("");
+const newPerson = ref(null);
 
+// *** People Section ***
+const getOCPerson = async () => {
+  message.value = "";
+  messageText.value = "";
+  newPerson.value = null;
+  let roomNumber = "";
+
+  if (idNumber.value != null && idNumber.value != "") {
+    try {
+      const response = await PersonServices.getOCPersonById(idNumber.value);
+      if (response.data.Success == "False") {
+        messageText.value = "No person found with that ID number.";
+        return;
+      }
+      roomNumber = response.data.OfficeNumber;
+      let roomId = null;
+      if (roomNumber != null) {
+        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found with that room number " +
+            roomNumber +
+            ". Please add room first";
+        }
+        roomId = roomResponse.data.roomId;
+      }
+
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomId: roomId,
+        roomNumber: roomNumber,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      messageText.value = "Failed to load OC person data.";
+    }
+  } else if (email.value != null && email.value != "") {
+    try {
+      const response = await PersonServices.getOCPersonByEmail(email.value);
+      if (response.data.Success == "False") {
+        messageText.value = "No person found with that email.";
+        return;
+      }
+      roomNumber = response.data.OfficeNumber;
+
+      let roomId = null;
+      if (roomNumber != null) {
+        await RoomServices.getByBldRoomNumber(roomNumber).then(
+          (roomResponse) => {
+            if (roomResponse.data.length > 0)
+              roomId = roomResponse.data[0].roomId;
+            else {
+              messageText.value =
+                "No room found with that room number " +
+                roomNumber +
+                ". Please add room first";
+            }
+          }
+        );
+      }
+
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomId: roomId,
+        roomNumber: roomNumber,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      messageText.value = "Failed to load OC person data.";
+    }
+  }
+};
+
+const saveNewPerson = async () => {
+  await PersonServices.create(newPerson.value)
+    .then(async (response) => {
+      snackbarText.value = "Person added successfully!";
+      snackbar.value = true;
+      closeAddNewPersonDialog();
+      await retrievePeople();
+      newPersonAsset.value.personId = response.data.personId;
+      idNumber.value = "";
+      email.value = "";
+      newPerson.value = {
+        fName: "",
+        lName: "",
+        email: "",
+        idNumber: "",
+        roomId: null,
+        activeStatus: true,
+      };
+    })
+    .catch((error) => {
+      console.error("Error saving new person:", error);
+      snackbarText.value = "Failed to add the person. Already exists.";
+      snackbar.value = true;
+    });
+};
 // Retrieve People from Database
 const retrievePeople = async () => {
   try {
@@ -119,7 +229,9 @@ const retrievePersonAssets = async () => {
     } else {
       // Fetch person assets by specific category ID
 
-      response = await PersonAssetServices.getPersonAssetsByCategoryId(userRole.value.data.categoryId);
+      response = await PersonAssetServices.getPersonAssetsByCategoryId(
+        userRole.value.data.categoryId
+      );
     }
 
     // Process the response data
@@ -153,7 +265,6 @@ const retrievePersonAssets = async () => {
   }
 };
 
-
 const savePersonCheckout = async () => {
   if (newPersonAsset.value.personId && newPersonAsset.value.serializedAssetId) {
     const checkoutDateUtc = convertToUtcForStorage(new Date());
@@ -169,6 +280,12 @@ const savePersonCheckout = async () => {
       checkinDate = format(new Date(expectedCheckinDate.value), "MMM dd, yyyy");
     }
 
+    if (newPersonAsset.value.personId.key === undefined) {
+      newPersonAsset.value.personId = people.value.find(
+        (person) => person.personId === newPersonAsset.value.personId
+      );
+    }
+
     const personAssetData = {
       serializedAssetId: newPersonAsset.value.serializedAssetId.key,
       personId: newPersonAsset.value.personId.key,
@@ -177,12 +294,6 @@ const savePersonCheckout = async () => {
       expectedCheckinDate: checkinDate,
       checkedOutBy: checkedOutInByFullName,
     };
-    console.log(
-      "details going to email: ",
-      newPersonAsset.value.personId.email,
-      newPersonAsset.value.serializedAssetId.title,
-      newPersonAsset.value.personId.title
-    );
 
     try {
       // Create new PersonAsset record
@@ -249,13 +360,6 @@ const savePersonCheckin = async () => {
       if (!selectedPersonAsset) {
         throw new Error("Selected asset not found.");
       }
-      console.log(
-        "details going to email: ",
-        selectedPersonAsset.person.email,
-        selectedPersonAsset.person.fullNameWithId,
-        // formattedCheckinDate,
-        selectedPersonAsset.serializedAsset.serializedAssetName
-      );
 
       // Update the checkout status for both the PersonAsset and the SerializedAsset
       await PersonAssetServices.updateCheckoutStatusAndDate(
@@ -275,7 +379,8 @@ const savePersonCheckin = async () => {
           to: selectedPersonAsset.person.email,
           fullName: selectedPersonAsset.person.fullNameWithId,
           checkinDate: formattedCheckinDate,
-          serializedAssetName: selectedPersonAsset.serializedAsset.serializedAssetName,
+          serializedAssetName:
+            selectedPersonAsset.serializedAsset.serializedAssetName,
         },
         "receipt"
       );
@@ -286,7 +391,8 @@ const savePersonCheckin = async () => {
           checkedInBy: checkedOutInByFullName,
           fullName: selectedPersonAsset.person.fullNameWithId,
           expectedCheckinDate: formattedCheckinDate,
-          serializedAssetName: selectedPersonAsset.serializedAsset.serializedAssetName,
+          serializedAssetName:
+            selectedPersonAsset.serializedAsset.serializedAssetName,
         },
         "checkinNotify"
       );
@@ -393,7 +499,6 @@ const retrieveBuildings = async () => {
       .sort((a, b) => a.title.localeCompare(b.title)); // Sort buildings by name
 
     buildings.value = sortedBuildings;
-    console.log(buildings.value); // Optional: log to console to verify sorted list
   } catch (error) {
     console.error("Error loading buildings:", error);
   }
@@ -408,25 +513,33 @@ const retrieveBuildingAssets = async () => {
       response = await BuildingAssetServices.getAll();
     } else {
       // Fetch building assets by specific category ID
-      response = await BuildingAssetServices.getBuildingAssetsByCategoryId(userRole.value.data.categoryId);
+      response = await BuildingAssetServices.getBuildingAssetsByCategoryId(
+        userRole.value.data.categoryId
+      );
     }
 
     // Process the response data
     buildingAssets.value = response.data.map((buildingAsset) => {
-      const building = buildings.value.find((b) => b.key === buildingAsset.buildingId);
+      const building = buildings.value.find(
+        (b) => b.key === buildingAsset.buildingId
+      );
       const serializedAsset = serializedAssets.value.find(
         (ba) => ba.key === buildingAsset.serializedAssetId
       );
 
       // Creating a combined title with building's name and asset's title
-      const combinedTitle = `${building ? building.title : "Unknown Building"}: ${
+      const combinedTitle = `${
+        building ? building.title : "Unknown Building"
+      }: ${
         serializedAsset ? serializedAsset.serializedAssetName : "Unknown Asset"
       }`;
 
       return {
         ...buildingAsset,
         name: building ? building.title : "Unknown",
-        assetName: serializedAsset ? serializedAsset.serializedAssetName : "Unknown Asset",
+        assetName: serializedAsset
+          ? serializedAsset.serializedAssetName
+          : "Unknown Asset",
         title: combinedTitle, // Combined title
       };
     });
@@ -435,7 +548,6 @@ const retrieveBuildingAssets = async () => {
     message.value = "Failed to load building assets.";
   }
 };
-
 
 const saveBuildingCheckout = async () => {
   if (
@@ -549,6 +661,26 @@ const filteredBuildingAssets = computed(() => {
   return buildingAssets.value;
 });
 
+const openAddNewPersonDialog = () => {
+  message.value = "";
+  showAddNewPersonDialog.value = true;
+};
+
+const closeAddNewPersonDialog = () => {
+  showAddNewPersonDialog.value = false;
+  messageText.value = "";
+  idNumber.value = "";
+  email.value = "";
+  newPerson.value = {
+    fName: "",
+    lName: "",
+    email: "",
+    idNumber: "",
+    roomId: null,
+    activeStatus: true,
+  };
+};
+
 const closeBuildingCheckoutDialog = () => {
   showBuildingCheckoutDialog.value = false;
   resetFields();
@@ -626,7 +758,6 @@ const retrieveRooms = async () => {
       .sort((a, b) => a.title.localeCompare(b.title)); // Sort rooms by roomName
 
     rooms.value = sortedRooms;
-    console.log(rooms.value); // Optional: log to console to verify sorted list
   } catch (error) {
     console.error("Error loading rooms:", error);
   }
@@ -640,7 +771,9 @@ const retrieveRoomAssets = async () => {
       response = await RoomAssetServices.getAll();
     } else {
       // Fetch room assets by specific category ID
-      response = await RoomAssetServices.getRoomAssetsByCategoryId(userRole.value.data.categoryId);
+      response = await RoomAssetServices.getRoomAssetsByCategoryId(
+        userRole.value.data.categoryId
+      );
     }
 
     // Process the response data
@@ -658,17 +791,17 @@ const retrieveRoomAssets = async () => {
       return {
         ...roomAsset,
         name: room ? room.title : "Unknown",
-        assetName: serializedAsset ? serializedAsset.serializedAssetName : "Unknown Asset",
+        assetName: serializedAsset
+          ? serializedAsset.serializedAssetName
+          : "Unknown Asset",
         title: combinedTitle, // Combined title
       };
     });
-    console.log(roomAssets.value);
   } catch (error) {
     console.error("Error loading room assets:", error);
     message.value = "Failed to load room assets.";
   }
 };
-
 
 const saveRoomCheckout = async () => {
   if (newRoomAsset.value.roomId && newRoomAsset.value.serializedAssetId) {
@@ -846,7 +979,9 @@ const retrieveSerializedAssets = async () => {
       response = await SerializedAssetServices.getAll();
     } else {
       // Fetch assets by specific category ID
-      response = await SerializedAssetServices.getSerializedAssetsByCategoryId(userRole.value.data.categoryId);
+      response = await SerializedAssetServices.getSerializedAssetsByCategoryId(
+        userRole.value.data.categoryId
+      );
     }
 
     // Process the response data
@@ -868,7 +1003,6 @@ const retrieveSerializedAssets = async () => {
     message.value = "Failed to load serializedAssets.";
   }
 };
-
 
 const translateStatus = (status) => {
   return status ? "Checked Out" : "Checked In";
@@ -1354,6 +1488,9 @@ onMounted(async () => {
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
+            <v-btn color="green" text @click="openAddNewPersonDialog">
+              Add New Person</v-btn
+            >
             <v-btn color="cancelgrey" text @click="closePersonCheckoutDialog"
               >Cancel</v-btn
             >
@@ -1364,6 +1501,77 @@ onMounted(async () => {
               @click="savePersonCheckout"
               :disabled="!checkoutFormValid"
               >Checkout</v-btn
+            >
+          </v-card-actions>
+        </v-form>
+      </v-card>
+    </v-dialog>
+
+    <!-- *** Add New Person Dialog *** -->
+    <v-dialog v-model="showAddNewPersonDialog" persistet max-width="600px">
+      <v-card class="rounded-xl">
+        <v-card-title class="justify-space-between">
+          <span class="headline">Add New Person</span>
+        </v-card-title>
+        <v-form ref="personAddForm">
+          <v-card-text>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="idNumber"
+                  label="OC Id Number"
+                  variant="outlined"
+                  prepend-icon="mdi-account"
+                  clearable
+                ></v-text-field>
+                OR
+                <v-text-field
+                  v-model="email"
+                  label="OC Email"
+                  variant="outlined"
+                  prepend-icon="mdi-account"
+                  clearable
+                ></v-text-field>
+              </v-col>
+            </v-row>
+            <div v-if="newPerson != null">
+              <v-row class="ml-10" v-if="newPerson.idNumber"> Found: </v-row>
+              <v-row class="ml-16">
+                {{ newPerson.idNumber }}
+              </v-row>
+              <v-row class="ml-16">
+                {{ newPerson.fName }}
+                {{ newPerson.lName }}
+              </v-row>
+              <v-row class="ml-16">
+                {{ newPerson.email }}
+              </v-row>
+              <v-row class="ml-16">
+                {{ newPerson.roomNumber }}
+              </v-row>
+            </div>
+            <div class="ml-10" v-if="message != ''">
+              {{ message }}
+            </div>
+          </v-card-text>
+          <v-card-text v-if="messageText" class="text-red text-right">
+            {{ messageText }}
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn color="green" class="ma-2" text @click="getOCPerson"
+              >Get OC Info</v-btn
+            >
+            <v-btn color="cancelgrey" text @click="closeAddNewPersonDialog"
+              >Cancel</v-btn
+            >
+            <v-btn
+              color="saveblue"
+              class="ma-2"
+              text
+              @click="saveNewPerson"
+              :disabled="newPerson == null"
+              >Save New Person</v-btn
             >
           </v-card-actions>
         </v-form>
@@ -1391,51 +1599,6 @@ onMounted(async () => {
                     :rules="[rules.required]"
                     return-object
                     clearable
-                  ></v-autocomplete>
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="cancelgrey" text @click="closePersonCheckinDialog"
-              >Cancel</v-btn
-            >
-            <v-btn
-              color="saveblue"
-              class="ma-2"
-              text
-              @click="savePersonCheckin"
-              :disabled="!checkinFormValid"
-              >Check-in</v-btn
-            >
-          </v-card-actions>
-        </v-form>
-      </v-card>
-    </v-dialog>
-
-    <!-- *** Person Checkin Dialog *** -->
-    <v-dialog v-model="showPersonCheckinDialog" persistent max-width="600px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title>
-          <span class="headline">Check-in Asset</span>
-        </v-card-title>
-        <v-form ref="personCheckinForm" v-model="checkinFormValid">
-          <v-card-text>
-            <v-container>
-              <v-row>
-                <v-col cols="12">
-                  <v-autocomplete
-                    label="Select Asset for Check-in"
-                    v-model="selectedPersonAsset"
-                    :items="availableForCheckinPersonAssets"
-                    variant="outlined"
-                    item-text="formatPersonAssetText"
-                    item-value="personAssetId"
-                    :rules="[rules.required]"
-                    return-object
-                    clearable
-                    prepend-icon="mdi-cellphone-settings"
                   ></v-autocomplete>
                 </v-col>
               </v-row>
