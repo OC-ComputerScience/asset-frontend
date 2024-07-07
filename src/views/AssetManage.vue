@@ -940,10 +940,12 @@ const updateDisposalValueLabel = () => {
 };
 
 const updateSerialNumberLabel = () => {
+
   // Check if the selectedProfileId has a valid key and fetch the corresponding profile
   const profile = assetProfiles.value.find(
     (p) => p.key === selectedProfileId.value?.key
   );
+
 
   if (profile && (profile.typeId === 13 || profile.typeId === "13")) {
     // Check for both '13' as a string and 13 as a number
