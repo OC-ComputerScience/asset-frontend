@@ -29,10 +29,7 @@ const rawAcquisitionDate = ref(null);
 const rawDisposalDate = ref(null);
 const rawWarrStartDate = ref(null);
 const rawWarrEndDate = ref(null);
-const acquisitionDateMenu = ref(false);
-const warrStartDateMenu = ref(false);
-const warrEndDateMenu = ref(false);
-const disposalDateMenu = ref(false);
+
 const disposalValueLabel = ref("Disposal Value"); // Default label
 const serialNumberLabel = ref("Serial Number"); // Default label
 const snackbar = ref(false);
@@ -138,6 +135,11 @@ const editSerializedAsset = (serializedAsset) => {
   rawAcquisitionDate.value = new Date(
     targetTime.getTime() + tzDifference * 60 * 1000
   );
+  targetTime = parseISO(serializedAsset.disposalDate);
+  tzDifference = targetTime.getTimezoneOffset();
+  rawDisposalDate.value = new Date(
+    targetTime.getTime() + tzDifference * 60 * 1000
+  );
 };
 
 // Save asset (add or edit)
@@ -165,6 +167,14 @@ const saveSerializedAsset = async () => {
       "MMM dd, yyyy"
     );
   }
+  let formatteddDisposalDate = null;
+  if (rawDisposalDate.value) {
+    // Convert local date to UTC before storing
+    formattedWarrEndDate = format(
+      new Date(rawDisposalDate.value),
+      "MMM dd, yyyy"
+    );
+  }
 
   const serializedAssetData = {
     serialNumber: newSerializedAsset.value.serialNumber,
@@ -174,6 +184,7 @@ const saveSerializedAsset = async () => {
       ""
     ),
     acquisitionDate: formattedAcquisitionDate,
+    disposalDate: formatteddDisposalDate,
     notes: newSerializedAsset.value.notes,
   };
 
@@ -921,33 +932,32 @@ onMounted(async () => {
                     prepend-icon="mdi-cash-multiple"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="6">
-                  <v-menu
-                    v-model="acquisitionDateMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedAcquisitionDate"
-                        label="Acquisition Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="acquisitionDateMenu = !acquisitionDateMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawAcquisitionDate"
-                      @input="acquisitionDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                <v-col
+                  cols="6"
+                  v-if="
+                    editingSerializedAsset && !newSerializedAsset.activeStatus
+                  "
+                >
+                  <v-date-input
+                    v-model="rawDisposalDate"
+                    clearable
+                    label="Disposal Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
                 </v-col>
+                <v-col cols="6">
+                  <v-date-input
+                    v-model="rawAcquisitionDate"
+                    clearable
+                    label="Acquisition Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
+                </v-col>
+
                 <v-col cols="12" v-if="!editingSerializedAsset">
                   <v-text-field
                     label="Warranty Description"
@@ -969,56 +979,24 @@ onMounted(async () => {
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6" v-if="!editingSerializedAsset">
-                  <v-menu
-                    v-model="warrStartDateMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedWarrStartDate"
-                        label="Warranty Start Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        readonly
-                        v-bind="attrs"
-                        @click="warrStartDateMenu = !warrStartDateMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawWarrStartDate"
-                      @input="warrStartDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="rawWarrStartDate"
+                    clearable
+                    label="Warranty Start Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
                 </v-col>
                 <v-col cols="6" v-if="!editingSerializedAsset">
-                  <v-menu
-                    v-model="warrEndDateMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedWarrEndDate"
-                        label="Warranty Start Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        readonly
-                        v-bind="attrs"
-                        @click="warrEndDateMenu = !warrEndDateMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawWarrEndDate"
-                      @input="warrEndDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="rawWarrEndDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
                 </v-col>
 
                 <v-col cols="12">
@@ -1080,32 +1058,16 @@ onMounted(async () => {
             <v-container id="attachDisposal">
               <v-row>
                 <v-col>
-                  <v-menu
-                    v-model="disposalDateMenu"
-                    attach="#attachDisposal"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedDisposalDate"
-                        label="Disposal Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="disposalDateMenu = !disposalDateMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawDisposalDate"
-                      @input="disposalDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="rawDisposalDate"
+                    clearable
+                    label="Disposal Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  ></v-date-input>
                 </v-col>
+
                 <v-col cols="12">
                   <!-- Disposal Method Selection -->
                   <v-select
