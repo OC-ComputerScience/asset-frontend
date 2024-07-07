@@ -20,7 +20,13 @@ const customFields = ref([]);
 const originalProfile = ref({});
 const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
+const rawWarrStartDate = ref(null);
+const rawWarrEndDate = ref(null);
 const menu = ref(false);
+
+const menu1 = ref(false);
+const menu2 = ref(false);
+
 const editMode = ref(false);
 const overrideTitle = ref(false);
 const dataLoaded = ref(false);
@@ -32,13 +38,15 @@ const decRegex = /^-?\d+(\.\d+)?$/;
 const decTest = (value) => decRegex.test(value) || "Enter only decimals";
 const filterIntegerInput = (event) => {
   const value = event.target.value;
-  event.target.value = value.replace(/[^\d-]/g, '');
+  event.target.value = value.replace(/[^\d-]/g, "");
 };
 const filterDecimalInput = (event) => {
   const value = event.target.value;
-  event.target.value = value.replace(/[^0-9.-]/g, '').replace(/(\..*?)\..*/g, '$1').replace(/(\-.*?)-.*/g, '$1');
+  event.target.value = value
+    .replace(/[^0-9.-]/g, "")
+    .replace(/(\..*?)\..*/g, "$1")
+    .replace(/(\-.*?)-.*/g, "$1");
 };
-
 
 // maska options
 const options = {
@@ -78,11 +86,15 @@ const newProfile = ref({
   purchasePrice: "",
   acquisitionDate: "",
   notes: "",
+  warrantyStartDate: "",
+  warrantyEndDate: "",
+  warrantyDescription: "",
+  warrantyNotes: "",
 });
 
 const changeProfileInfo = () => {
   profileInfoChanged.value = true;
-}
+};
 
 // When you load the profile for editing, store the initial state
 const loadProfileForEditing = async (profile) => {
@@ -94,12 +106,35 @@ const loadProfileForEditing = async (profile) => {
 
   // Correctly assign `rawAcquisitionDate`
   if (profile.acquisitionDate) {
-    rawAcquisitionDate.value = parseISO(profile.acquisitionDate);
+    //rawAcquisitionDate.value = parseISO(profile.acquisitionDate);
+    let targetTime = parseISO(profile.acquisitionDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawAcquisitionDate.value = offsetTime;
   } else {
     rawAcquisitionDate.value = null; // Fallback if there's no acquisition date
   }
 
-  // Correctly set `selectedTypeId`
+  // Correctly assign `rawWarrStartDate`
+  if (profile.warrantyStartDate) {
+    //rawWarrStartDate.value = parseISO(profile.warrantyStartDate);
+    let targetTime = parseISO(profile.warrantyStartDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawWarrStartDate.value = offsetTime;
+  } else {
+    rawWarrStartDate.value = null; // Fallback if there's no acquisition date
+  }
+  // Correctly assign `rawWarrEndDate`
+  if (profile.warrantyEndDate) {
+    //rawWarrEndDate.value = parseISO(profile.warrantyEndDate);
+    let targetTime = parseISO(profile.warrantyEndDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawWarrEndDate.value = offsetTime;
+  } else {
+    rawWarrEndDate.value = null; // Fallback if there's no acquisition date
+  }
 
   // Update `originalProfile` for comparison
   originalProfile.value = {
@@ -108,6 +143,10 @@ const loadProfileForEditing = async (profile) => {
     purchasePrice: profile.purchasePrice,
     acquisitionDate: profile.acquisitionDate,
     notes: profile.notes,
+    warrantyStartDate: profile.warrantyStartDate,
+    warrantyEndDate: profile.warrantyEndDate,
+    warrantyDescription: profile.warrantyDescription,
+    warrantyNotes: profile.warrantyNotes,
   };
 
   initialTypeId.value = profile.typeId; // Store initial typeId
@@ -130,8 +169,10 @@ const retrieveAssetTypes = async () => {
 };
 
 
+
 const retrieveCustomFields = async(typeId) => {
   try{
+
     let response = await customFieldTypeServices.getAllForType(typeId);
     let customFieldPromises = response.data.map(async (field) => {
       let newField = {
@@ -142,15 +183,17 @@ const retrieveCustomFields = async(typeId) => {
         required: field.required,
         identifier: field.identifier,
         fieldValueId: null,
-        value: '',
+        value: "",
         profileDataId: null,
         listValues: {},
         sequence: field.sequence,
-        changed: false
+        changed: false,
       };
 
-      if (newField.type === 'List') {
-        let data = await customFieldValueServices.getAllForField(newField.customFieldId);
+      if (newField.type === "List") {
+        let data = await customFieldValueServices.getAllForField(
+          newField.customFieldId
+        );
         newField.listValues = data.data;
       }
       return newField;
@@ -158,46 +201,48 @@ const retrieveCustomFields = async(typeId) => {
 
     let customFieldsArray = await Promise.all(customFieldPromises);
     customFields.value.push(...customFieldsArray);
-  }
-  catch(err){
+
+  } catch (err) {
 
     console.error(err);
   }
-}
+};
 
-const retrieveFieldValues = async(profileId) => {
-   let response = await profileDataServices.getByProfileId(profileId);
-   let profileData = response.data;
-   profileData.forEach(profile => {
-    let customField = customFields.value.find(field => field.customFieldId === profile.customFieldValue.customFieldId);
+const retrieveFieldValues = async (profileId) => {
+  let response = await profileDataServices.getByProfileId(profileId);
+  let profileData = response.data;
+  profileData.forEach((profile) => {
+    let customField = customFields.value.find(
+      (field) => field.customFieldId === profile.customFieldValue.customFieldId
+    );
     customField.value = profile.customFieldValue.value;
     customField.fieldValueId = profile.fieldValueId;
     customField.profileDataId = profile.profileDataId;
-    if(customField.sequence){
+    if (customField.sequence) {
       titleArray.value[customField.sequence - 1] = customField.value;
     }
-   })
+  });
 };
 
 const changeFieldValue = (field) => {
   field.changed = true;
-  if(field.type == 'List'){
-    let newValue = field.listValues.find(listValue => listValue.value === field.value);
-    if(newValue){
+  if (field.type == "List") {
+    let newValue = field.listValues.find(
+      (listValue) => listValue.value === field.value
+    );
+    if (newValue) {
       field.fieldValueId = newValue.id;
-    }
-    else field.fieldValueId = null;
-    
+    } else field.fieldValueId = null;
   }
   updateTitle(field.value, field.sequence);
-}
+};
 
 const updateTitle = (value, sequence) => {
-  if(sequence > 0 && !overrideTitle.value) {
+  if (sequence > 0 && !overrideTitle.value) {
     titleArray.value[sequence - 1] = value;
-    newProfile.value.profileName = titleArray.value.join(' ');
+    newProfile.value.profileName = titleArray.value.join(" ");
   }
-}
+};
 
 // Save profile (add or edit)
 const saveProfile = async () => {
@@ -209,12 +254,25 @@ const saveProfile = async () => {
     "yyyy-MM-dd"
   );
 
+  let formattedWarrStartDate = null;
+  formattedWarrStartDate = format(
+    new Date(rawWarrStartDate.value),
+    "yyyy-MM-dd"
+  );
+
+  let formattedWarrEndDate = null;
+  formattedWarrEndDate = format(new Date(rawWarrEndDate.value), "yyyy-MM-dd");
+
   const profilePayload = {
     profileName: newProfile.value.profileName,
     notes: newProfile.value.notes,
     purchasePrice: purchasePrice,
     acquisitionDate: formattedAcquisitionDate,
     typeId: selectedTypeId.value.typeId,
+    warrantyStartDate: formattedWarrStartDate,
+    warrantyEndDate: formattedWarrEndDate,
+    warrantyDescription: newProfile.value.warrantyDescription,
+    warrantyNotes: newProfile.value.warrantyNotes,
   };
 
   try {
@@ -229,6 +287,7 @@ const saveProfile = async () => {
       );
 
       // Update the profile data
+
       await saveFieldValues(newProfile.value.id);
 
       emitUpdateSnackbar();
@@ -237,7 +296,9 @@ const saveProfile = async () => {
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
         newProfile.value.id = createResponse.data.profileId;
+
         await saveFieldValues(newProfile.value.id);
+
         emitSaveSnackbar();
       }
     }
@@ -253,31 +314,29 @@ const saveProfile = async () => {
 const saveFieldValues = async(profileId) => {
   for(let field of customFields.value){
     if(field.changed){
+
       let fieldValueId;
       let data = {
-            customFieldId: field.customFieldId,
-            value: field.value 
-          };
-      try{
-        if(field.fieldValueId && field.type != 'List'){
+        customFieldId: field.customFieldId,
+        value: field.value,
+      };
+      try {
+        if (field.fieldValueId && field.type != "List") {
           fieldValueId = field.fieldValueId;
           await customFieldValueServices.update(fieldValueId, data);
-        }
-        else if(field.fieldValueId && field.type == 'List'){
-          let newFieldValue = {fieldValueId: field.fieldValueId};
+        } else if (field.fieldValueId && field.type == "List") {
+          let newFieldValue = { fieldValueId: field.fieldValueId };
           await profileDataServices.update(field.profileDataId, newFieldValue);
-        }
-        else{
+        } else {
           let response = await customFieldValueServices.create(data);
           fieldValueId = response.data.id;
           let profileData = {
             profileId: profileId,
-            fieldValueId: fieldValueId
+            fieldValueId: fieldValueId,
           };
           await profileDataServices.create(profileData);
         }
-      }
-      catch(err){
+      } catch (err) {
         console.error(err);
 
       }
@@ -309,6 +368,73 @@ const formattedAcquisitionDate = computed(() => {
   }
   return "";
 });
+const formattedWarrStartDate = computed(() => {
+  if (rawWarrStartDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+
+const formattedWarrEndDate = computed(() => {
+  if (rawWarrEndDate.value) {
+    // Display the date in a readable format
+    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
+  }
+  return "";
+});
+
+// const hasProfileChanged = () => {
+//   if (editingProfile.value) {
+//     // Assuming selectedTypeId.value holds the currently selected type object
+//     const currentTypeId = selectedTypeId.value?.key || selectedTypeId.value;
+//     // Strip out white space and $ for comparison
+//     const newPurchasePrice = newProfile.value.purchasePrice.replace(
+//       /[$,]/g,
+//       ""
+//     );
+//     return (
+//       newProfile.value.profileName !== originalProfile.value.profileName ||
+//       currentTypeId !== originalProfile.value.typeId || // Adjust this line
+//       newPurchasePrice !== originalProfile.value.purchasePrice ||
+//       newProfile.value.acquisitionDate !==
+//         originalProfile.value.acquisitionDate ||
+//       newProfile.value.notes !== originalProfile.value.notes
+//     );
+//   }
+// };
+
+// Utility function to check if a dynamic field has changed
+const hasDynamicFieldChanged = (field) => {
+  // Find the original field with the same name
+  const originalField = originalDynamicFields.value.find(
+    (original) => original.fieldName === field.fieldName
+  );
+  // If there is no original field (which means it's a new field), or if the data has changed, return true
+  return !originalField || originalField.fieldValue !== field.fieldValue;
+};
+
+// const canSave = computed(() => {
+//   // Check if the profile itself has changed
+//   const profileChanged = hasProfileChanged();
+
+//   // Check if any of the dynamic fields have changed
+//   const dynamicFieldChanged = generateDynamicFields.value.some((field) =>
+//     hasDynamicFieldChanged(field)
+//   );
+
+//   // Enable Save button if there are changes to save
+//   return !(validProfile.value && (profileChanged || dynamicFieldChanged));
+// });
+
+// Groups the text fields into row with 3 columns
+const groupFields = computed(() => {
+  const rowOfFields = [];
+  for (let i = 0; i < generateDynamicFields.value.length; i += 3) {
+    rowOfFields.push(generateDynamicFields.value.slice(i, i + 3));
+  }
+  return rowOfFields;
+});
 
 const emitCloseDialog = () => {
   emit("closeDialog");
@@ -325,19 +451,17 @@ const emitUpdateSnackbar = () => {
 // Watchers
 
 watch(selectedTypeId, async (newVal) => {
-  if(dataLoaded.value){
+  if (dataLoaded.value) {
     const typeId = newVal?.typeId || newVal;
     customFields.value = [];
     await retrieveCustomFields(typeId);
   }
-  
 });
 
 // Watch for changes in selectedProfile and update the form accordingly
 watch(
   selectedProfile,
   (newValue, oldValue) => {
-
     if (newValue) {
       // Ensure all fields are assigned correctly
       newProfile.value.profileName = newValue.profileName || "";
@@ -345,16 +469,40 @@ watch(
       newProfile.value.purchasePrice = newValue.purchasePrice || "";
       newProfile.value.acquisitionDate = newValue.acquisitionDate || "";
       newProfile.value.notes = newValue.notes || "";
-
+      newProfile.value.warrantyStartDate = newValue.warrantyStartDate || "";
+      newProfile.value.warrantyEndDate = newValue.warrantyEndDate || "";
+      newProfile.value.warrantyDescription = newValue.warrantyDescription || "";
+      newProfile.value.warrantyNotes = newValue.warrantyNotes || "";
       if (newValue.typeId) {
         selectedTypeId.value = newValue.typeId; // Update `selectedTypeId`
       }
 
       if (newValue.acquisitionDate) {
-        rawAcquisitionDate.value = parseISO(newValue.acquisitionDate); // Update date
+        let targetTime = parseISO(newValue.acquisitionDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawAcquisitionDate.value = offsetTime;
+        //rawAcquisitionDate.value = parseISO(newValue.acquisitionDate);
+        //convert the offset to milliseconds, add to targetTime, and make a new Date
       }
-    } else {
-      console.error("Selected profile is undefined or null");
+      if (newValue.warrantyStartDate) {
+        let targetTime = parseISO(newValue.warrantyStartDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawWarrStartDate.value = offsetTime;
+      }
+      if (newValue.warrantyEndDate) {
+        let targetTime = parseISO(newValue.warrantyEndDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawWarrEndDate.value = offsetTime;
+      }
     }
   },
   { immediate: true, deep: true }
@@ -413,7 +561,7 @@ onMounted(async () => {
                     clearable
                     return-object
                     prepend-icon="mdi-devices"
-                    @update:modelValue = changeProfileInfo
+                    @update:modelValue="changeProfileInfo"
                   ></v-autocomplete>
                 </v-col>
                 <v-col cols="7">
@@ -421,14 +569,13 @@ onMounted(async () => {
                     label="Profile Name"
                     variant="outlined"
                     v-model="newProfile.profileName"
-                    :rules="[rules.required, rules.maxFieldLength]"
+                    :rules="[rules.required, rules.maxNameLength]"
                     maxlength="50"
                     counter
                     prepend-icon="mdi-rename"
                     :disabled="!overrideTitle"
-                    @update:modelValue = changeProfileInfo
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
-                  
                 </v-col>
                 <v-col cols="5">
                   <v-checkbox
@@ -450,12 +597,114 @@ onMounted(async () => {
                     inputmode="numeric"
                     type="text"
                     prepend-icon="mdi-cash-multiple"
-                    @update:modelValue = changeProfileInfo
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
                 </v-col>
                 <v-col>
-                  <v-menu
-                    v-model="menu"
+                  <v-date-input
+                    v-model="rawAcquisitionDate"
+                    clearable
+                    label="Aqusition Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                  <!-- <div id="acq" class="relative-container">
+                    <v-menu
+                      v-model="menu"
+                      attach="#acq"
+                      :close-on-content-click="false"
+                      min-width="auto"
+                      transition="scale-transition"
+                      max-width="290"
+                      offset-y
+                    >
+                      <template v-slot:activator="{ on, attrs }">
+                        <v-text-field
+                          v-model="formattedAcquisitionDate"
+                          label="Acquisition Date"
+                          variant="outlined"
+                          prepend-icon="mdi-calendar"
+                          :rules="[rules.required]"
+                          readonly
+                          v-bind="attrs"
+                          @click="menu = !menu"
+                          @update:modelValue="changeProfileInfo"
+                        ></v-text-field>
+                      </template>
+
+                      <v-date-picker
+                        v-model="rawAcquisitionDate"
+                        timezone="UTC"
+                        @input="menu = false"
+                        color="primary"
+                      ></v-date-picker>
+                    </v-menu>
+                  </div> -->
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    label="Warranty Description"
+                    prepend-icon="mdi-note"
+                    variant="outlined"
+                    v-model="newProfile.warrantyDescription"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-textarea
+                    label="Warrany Notes"
+                    prepend-icon="mdi-note"
+                    variant="outlined"
+                    v-model="newProfile.warrantyNotes"
+                    :rules="[rules.maxNotesLength]"
+                  ></v-textarea>
+                </v-col>
+                <v-col>
+                  <v-date-input
+                    v-model="rawWarrStartDate"
+                    clearable
+                    label="Warranty Start Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                  <!-- <v-menu
+                    v-model="menu1"
+                    attach="#attach"
+                    :close-on-content-click="false"
+                    transition="scale-transition"
+                    max-width="100px"
+                    max-height="100px"
+                  >
+                    <template v-slot:activator="{ on, attrs }">
+                      <v-text-field
+                        v-model="formattedWarrStartDate"
+                        label="Warranty Start Date"
+                        variant="outlined"
+                        prepend-icon="mdi-calendar"
+                        :rules="[rules.required]"
+                        readonly
+                        v-bind="attrs"
+                        @click="menu1 = !menu1"
+                      ></v-text-field>
+                    </template>
+                    <v-date-picker
+                      max-width="100px"
+                      max-height="100px"
+                      v-model="rawWarrStartDate"
+                      @input="menu1 = false"
+                      color="primary"
+                    ></v-date-picker>
+                  </v-menu> -->
+                </v-col>
+                <v-col>
+                  <v-date-input
+                    v-model="rawWarrEndDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                  <!-- <v-menu
+                    v-model="menu2"
                     attach="#attach"
                     :close-on-content-click="false"
                     transition="scale-transition"
@@ -463,30 +712,26 @@ onMounted(async () => {
                   >
                     <template v-slot:activator="{ on, attrs }">
                       <v-text-field
-                        v-model="formattedAcquisitionDate"
-                        label="Acquisition Date"
+                        v-model="formattedWarrEndDate"
+                        label="Warranty End Date"
                         variant="outlined"
                         prepend-icon="mdi-calendar"
                         :rules="[rules.required]"
                         readonly
                         v-bind="attrs"
-                        @click="menu = !menu"
-                        @update:modelValue = changeProfileInfo
+                        @click="menu2 = !menu2"
                       ></v-text-field>
                     </template>
                     <v-date-picker
-                      v-model="rawAcquisitionDate"
-                      @input="menu = false"
+                      v-model="rawWarrEndDate"
+                      @input="menu2 = false"
                       color="primary"
                     ></v-date-picker>
-                  </v-menu>
+                  </v-menu> -->
                 </v-col>
               </v-row>
             </v-col>
-            <template
-              v-for="(field, index) in customFields"
-              :key="index"
-            >
+            <template v-for="(field, index) in customFields" :key="index">
               <v-col cols="4" v-if="field.type === 'List'">
                 <v-combobox
                   v-model="field.value"
@@ -516,7 +761,9 @@ onMounted(async () => {
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
-                  :rules="field.required ? [rules.required, intTest] : [intTest]"
+                  :rules="
+                    field.required ? [rules.required, intTest] : [intTest]
+                  "
                   variant="outlined"
                   prepend-icon="field"
                   :return-object="false"
@@ -528,7 +775,9 @@ onMounted(async () => {
                 <v-text-field
                   v-model="field.value"
                   :label="field.name"
-                  :rules="field.required ? [rules.required, decTest] : [decTest]"
+                  :rules="
+                    field.required ? [rules.required, decTest] : [decTest]
+                  "
                   variant="outlined"
                   prepend-icon="field"
                   :return-object="false"
@@ -547,7 +796,7 @@ onMounted(async () => {
                 variant="outlined"
                 v-model="newProfile.notes"
                 :rules="[rules.maxNotesLength]"
-                @update:modelValue = changeProfileInfo
+                @update:modelValue="changeProfileInfo"
               ></v-textarea>
             </v-col>
           </v-row>
@@ -557,9 +806,16 @@ onMounted(async () => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="cancelgrey" text @click="emitCloseDialog">Cancel</v-btn>
-      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile">Save</v-btn>
+      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile"
+        >Save</v-btn
+      >
     </v-card-actions>
   </v-card>
 </template>
+<style scoped>
+.relative-container {
+  position: relative;
+}
+</style>
 
 <!-- Love, "Zane" and Jaxen-->
