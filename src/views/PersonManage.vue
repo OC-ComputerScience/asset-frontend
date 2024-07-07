@@ -665,7 +665,7 @@ onMounted(async () => {
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
-                  <v-select
+                  <v-autocomplete
                     label="Office/Room"
                     variant="outlined"
                     v-model="newPerson.roomId"
@@ -675,7 +675,7 @@ onMounted(async () => {
                     :items="rooms"
                     prepend-icon="mdi-office-building"
                     clearable
-                  ></v-select>
+                  ></v-autocomplete>
                 </v-col>
               </v-row>
             </v-container>
