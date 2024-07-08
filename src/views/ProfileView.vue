@@ -677,6 +677,20 @@ onMounted(async () => {
           <v-row>
             <v-col cols="12" sm="6" md="4">
               <div class="asset-detail">
+                <strong>Features</strong>
+                <div>{{ profileDetails.features || "N/A" }}</div>
+              </div>
+            </v-col>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Accessories</strong>
+                <div>{{ profileDetails.accessories || "N/A" }}</div>
+              </div>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
                 <strong>Warranty Desc</strong>
                 <div>{{ profileDetails.warrantyDescription || "N/A" }}</div>
               </div>
