@@ -678,13 +678,33 @@ onMounted(async () => {
             <v-col cols="12" sm="6" md="4">
               <div class="asset-detail">
                 <strong>Features</strong>
-                <div>{{ profileDetails.features || "N/A" }}</div>
+                <div>
+                  <v-textarea
+                    v-model="profileDetails.features"
+                    rows="1"
+                    variant="filled"
+                    auto-grow
+                    bg-color="white"
+                    base-color="white"
+                    read-only
+                    flat
+                  ></v-textarea>
+                </div>
               </div>
             </v-col>
             <v-col cols="12" sm="6" md="4">
               <div class="asset-detail">
                 <strong>Accessories</strong>
-                <div>{{ profileDetails.accessories || "N/A" }}</div>
+                <v-textarea
+                  read-only
+                  v-model="profileDetails.accessories"
+                  rows="1"
+                  variant="filled"
+                  auto-grow
+                  bg-color="white"
+                  base-color="white"
+                  flat
+                ></v-textarea>
               </div>
             </v-col>
           </v-row>
