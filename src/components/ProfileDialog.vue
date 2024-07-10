@@ -2,7 +2,6 @@
 import { ref, toRefs, watch, onMounted, computed, reactive } from "vue";
 import { vMaska } from "maska";
 import { parseISO, format } from "date-fns";
-import moment from "moment-timezone";
 import AssetProfileServices from "../services/assetProfileServices";
 import AssetTypeServices from "../services/assetTypeServices";
 import customFieldValueServices from "../services/customFieldValueServices";
@@ -20,10 +19,6 @@ const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
 const rawWarrStartDate = ref(null);
 const rawWarrEndDate = ref(null);
-const menu = ref(false);
-
-const menu1 = ref(false);
-const menu2 = ref(false);
 
 const editMode = ref(false);
 const overrideTitle = ref(false);
