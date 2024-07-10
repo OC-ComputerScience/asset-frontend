@@ -225,6 +225,7 @@ const retrieveFieldValues = async (profileId) => {
 };
 
 const changeFieldValue = (field) => {
+  console.log('changed')
   field.changed = true;
   if (field.type == "List") {
     let newValue = field.listValues.find(
@@ -324,17 +325,24 @@ const saveFieldValues = async(profileId) => {
         if (field.fieldValueId && field.type != "List") {
           fieldValueId = field.fieldValueId;
           await customFieldValueServices.update(fieldValueId, data);
-        } else if (field.fieldValueId && field.type == "List") {
+        } 
+        else if (field.fieldValueId && field.type == "List") {
           let newFieldValue = { fieldValueId: field.fieldValueId };
           await profileDataServices.update(field.profileDataId, newFieldValue);
-        } else {
+        } 
+        else {
           let response = await customFieldValueServices.create(data);
           fieldValueId = response.data.id;
           let profileData = {
             profileId: profileId,
             fieldValueId: fieldValueId,
           };
-          await profileDataServices.create(profileData);
+          if(field.profileDataId){
+            await profileDataServices.update(profileData);
+          }
+          else {
+            await profileDataServices.create(profileData);
+          }
         }
       } catch (err) {
         console.error(err);
