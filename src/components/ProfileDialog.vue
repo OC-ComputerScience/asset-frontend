@@ -3,10 +3,8 @@ import { ref, toRefs, watch, onMounted, computed, reactive } from "vue";
 import { vMaska } from "maska";
 import { parseISO, format } from "date-fns";
 import moment from "moment-timezone";
-import ProfileDataServices from "../services/profileDataServices";
 import AssetProfileServices from "../services/assetProfileServices";
 import AssetTypeServices from "../services/assetTypeServices";
-import assetTypeServices from "../services/assetTypeServices";
 import customFieldValueServices from "../services/customFieldValueServices";
 import customFieldTypeServices from "../services/customFieldTypeServices";
 import profileDataServices from "../services/profileDataServices";
@@ -225,7 +223,6 @@ const retrieveFieldValues = async (profileId) => {
 };
 
 const changeFieldValue = (field) => {
-  console.log('changed')
   field.changed = true;
   if (field.type == "List") {
     let newValue = field.listValues.find(
@@ -367,82 +364,6 @@ const editProfile = async () => {
     }
   }
 };
-
-// Computed property for display
-const formattedAcquisitionDate = computed(() => {
-  if (rawAcquisitionDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawAcquisitionDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-const formattedWarrStartDate = computed(() => {
-  if (rawWarrStartDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
-const formattedWarrEndDate = computed(() => {
-  if (rawWarrEndDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
-// const hasProfileChanged = () => {
-//   if (editingProfile.value) {
-//     // Assuming selectedTypeId.value holds the currently selected type object
-//     const currentTypeId = selectedTypeId.value?.key || selectedTypeId.value;
-//     // Strip out white space and $ for comparison
-//     const newPurchasePrice = newProfile.value.purchasePrice.replace(
-//       /[$,]/g,
-//       ""
-//     );
-//     return (
-//       newProfile.value.profileName !== originalProfile.value.profileName ||
-//       currentTypeId !== originalProfile.value.typeId || // Adjust this line
-//       newPurchasePrice !== originalProfile.value.purchasePrice ||
-//       newProfile.value.acquisitionDate !==
-//         originalProfile.value.acquisitionDate ||
-//       newProfile.value.notes !== originalProfile.value.notes
-//     );
-//   }
-// };
-
-// Utility function to check if a dynamic field has changed
-const hasDynamicFieldChanged = (field) => {
-  // Find the original field with the same name
-  const originalField = originalDynamicFields.value.find(
-    (original) => original.fieldName === field.fieldName
-  );
-  // If there is no original field (which means it's a new field), or if the data has changed, return true
-  return !originalField || originalField.fieldValue !== field.fieldValue;
-};
-
-// const canSave = computed(() => {
-//   // Check if the profile itself has changed
-//   const profileChanged = hasProfileChanged();
-
-//   // Check if any of the dynamic fields have changed
-//   const dynamicFieldChanged = generateDynamicFields.value.some((field) =>
-//     hasDynamicFieldChanged(field)
-//   );
-
-//   // Enable Save button if there are changes to save
-//   return !(validProfile.value && (profileChanged || dynamicFieldChanged));
-// });
-
-// Groups the text fields into row with 3 columns
-const groupFields = computed(() => {
-  const rowOfFields = [];
-  for (let i = 0; i < generateDynamicFields.value.length; i += 3) {
-    rowOfFields.push(generateDynamicFields.value.slice(i, i + 3));
-  }
-  return rowOfFields;
-});
 
 const emitCloseDialog = () => {
   emit("closeDialog");
@@ -616,38 +537,6 @@ onMounted(async () => {
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
-                  <!-- <div id="acq" class="relative-container">
-                    <v-menu
-                      v-model="menu"
-                      attach="#acq"
-                      :close-on-content-click="false"
-                      min-width="auto"
-                      transition="scale-transition"
-                      max-width="290"
-                      offset-y
-                    >
-                      <template v-slot:activator="{ on, attrs }">
-                        <v-text-field
-                          v-model="formattedAcquisitionDate"
-                          label="Acquisition Date"
-                          variant="outlined"
-                          prepend-icon="mdi-calendar"
-                          :rules="[rules.required]"
-                          readonly
-                          v-bind="attrs"
-                          @click="menu = !menu"
-                          @update:modelValue="changeProfileInfo"
-                        ></v-text-field>
-                      </template>
-
-                      <v-date-picker
-                        v-model="rawAcquisitionDate"
-                        timezone="UTC"
-                        @input="menu = false"
-                        color="primary"
-                      ></v-date-picker>
-                    </v-menu>
-                  </div> -->
                 </v-col>
                 <v-col cols="12">
                   <v-text-field
@@ -674,34 +563,6 @@ onMounted(async () => {
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
-                  <!-- <v-menu
-                    v-model="menu1"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    max-width="100px"
-                    max-height="100px"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedWarrStartDate"
-                        label="Warranty Start Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu1 = !menu1"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      max-width="100px"
-                      max-height="100px"
-                      v-model="rawWarrStartDate"
-                      @input="menu1 = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu> -->
                 </v-col>
                 <v-col>
                   <v-date-input
@@ -711,31 +572,6 @@ onMounted(async () => {
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
-                  <!-- <v-menu
-                    v-model="menu2"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedWarrEndDate"
-                        label="Warranty End Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu2 = !menu2"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawWarrEndDate"
-                      @input="menu2 = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu> -->
                 </v-col>
               </v-row>
             </v-col>
