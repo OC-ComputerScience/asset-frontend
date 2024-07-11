@@ -751,7 +751,7 @@ onMounted(async () => {
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                   <span>Active {{ profileDetails.profileName }}</span>
-                  <template v-if="canAdd">
+                  <template v-if="canAdd && profileDetails.activeStatus">
                     <v-btn
                       color="primary"
                       class="ma-2"
