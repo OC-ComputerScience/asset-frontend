@@ -161,18 +161,20 @@ const retrieveAssetTypes = async () => {
       key: type.typeId,
       title: type.typeName,
       description: type.desc,
+      activeStatus: type.activeStatus,
     }));
+    assetTypes.value = assetTypes.value.filter(
+      (type) => type.activeStatus === true
+    );
+    assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
   } catch (error) {
     console.error("Error loading types:", error);
     message.value = "Failed to load types.";
   }
 };
 
-
-
-const retrieveCustomFields = async(typeId) => {
-  try{
-
+const retrieveCustomFields = async (typeId) => {
+  try {
     let response = await customFieldTypeServices.getAllForType(typeId);
     let customFieldPromises = response.data.map(async (field) => {
       let newField = {
@@ -201,9 +203,7 @@ const retrieveCustomFields = async(typeId) => {
 
     let customFieldsArray = await Promise.all(customFieldPromises);
     customFields.value.push(...customFieldsArray);
-
   } catch (err) {
-
     console.error(err);
   }
 };
@@ -276,8 +276,6 @@ const saveProfile = async () => {
   };
 
   try {
-
-
     // Check if editing profile
     if (newProfile.value.id && profileInfoChanged.value) {
       // Update the profile itself
@@ -310,11 +308,9 @@ const saveProfile = async () => {
   }
 };
 
-
-const saveFieldValues = async(profileId) => {
-  for(let field of customFields.value){
-    if(field.changed){
-
+const saveFieldValues = async (profileId) => {
+  for (let field of customFields.value) {
+    if (field.changed) {
       let fieldValueId;
       let data = {
         customFieldId: field.customFieldId,
@@ -338,7 +334,6 @@ const saveFieldValues = async(profileId) => {
         }
       } catch (err) {
         console.error(err);
-
       }
     }
   }
@@ -560,6 +555,7 @@ onMounted(async () => {
                     :rules="[rules.required]"
                     clearable
                     return-object
+                    :disabled="editMode"
                     prepend-icon="mdi-devices"
                     @update:modelValue="changeProfileInfo"
                   ></v-autocomplete>

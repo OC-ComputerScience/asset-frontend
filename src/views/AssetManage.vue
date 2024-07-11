@@ -21,8 +21,11 @@ const selectedProfile = ref(""); // this is to be sent as a prop to DynamicTextF
 const selectedTab = ref("SerializedAssets");
 const selectedStatus = ref("Active");
 const assetCategories = ref([]);
+
 const assetTypes = ref([]);
+const activeAssetTypes = ref([]);
 const assetProfiles = ref([]);
+const activeAssetProfiles = ref([]);
 const serializedAssets = ref([]);
 const showAddTypeDialog = ref(false);
 const showAddProfileDialog = ref(false);
@@ -159,8 +162,12 @@ const retrieveAssetCategories = async () => {
         ...category,
         title: category.categoryName,
         key: category.categoryId,
+        activeStatus: category.activeStatus,
       }));
       assetCategories.value = enrichedCategories;
+      assetCategories.value.sort((a, b) =>
+        a.categoryName.localeCompare(b.categoryName)
+      );
     } else {
       throw new Error("Data is not an array");
     }
@@ -211,9 +218,14 @@ const retrieveAssetTypes = async () => {
           key: type.typeId,
           title: type.typeName,
           categoryId: type.categoryId,
+          activeStatus: type.activeStatus,
         };
       });
       assetTypes.value = enrichedTypes;
+      assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
+      activeAssetTypes.value = assetTypes.filter(
+        (type) => type.activeStatus === true
+      );
     } else {
       throw new Error("Data is not an array");
     }
@@ -414,10 +426,17 @@ const retrieveAssetProfiles = async () => {
             key: profile.profileId,
             title: profile.profileName,
             assetsCount: assetsCount,
+            activeStatus: profile.activeStatus,
           };
         });
         assetProfiles.value = enrichedProfiles;
-      } else {
+        assetProfiles.value.sort((a, b) =>
+          a.profileName.localeCompare(b.profileName)
+        );
+        activeAssetProfiles.value = assetProfiles.value.filter(
+          (profile) => profile.activeStatus === true
+        );
+
         throw new Error("Data is not an array");
       }
     } else {
@@ -558,6 +577,9 @@ const archiveProfile = async (profileId) => {
     // Refresh the list of profiles after successful deletion
     retrieveAssetProfiles();
     assetProfiles.value = assetProfiles.value.filter((c) => c.id !== profileId);
+    activeAssetProfiles.value = activeAssetProfiles.value.filter(
+      (c) => c.id !== profileId
+    );
   } catch (error) {
     console.error(error);
     message.value = "Error archiving profile.";
@@ -574,10 +596,10 @@ const activateProfile = async (profileId) => {
     snackbar.value = true; // Show the snackbar
     // Refresh the list of categories after successful deletion
     retrieveAssetProfiles();
-    assetProfiles.value = assetProfiles.value.filter((c) => c.id !== profileId);
+    //assetProfiles.value = assetProfiles.value.filter((c) => c.id !== profileId);
   } catch (error) {
     console.error(error);
-    message.value = "Error archiving profile.";
+    message.value = "Error activating profile.";
   }
 };
 
@@ -940,12 +962,10 @@ const updateDisposalValueLabel = () => {
 };
 
 const updateSerialNumberLabel = () => {
-
   // Check if the selectedProfileId has a valid key and fetch the corresponding profile
   const profile = assetProfiles.value.find(
     (p) => p.key === selectedProfileId.value?.key
   );
-
 
   if (profile && (profile.typeId === 13 || profile.typeId === "13")) {
     // Check for both '13' as a string and 13 as a number
@@ -1785,7 +1805,7 @@ onMounted(async () => {
                   <v-autocomplete
                     label="Profile"
                     variant="outlined"
-                    :items="assetProfiles"
+                    :items="activeAssetProfiles"
                     item-text="title"
                     item-value="key"
                     v-model="selectedProfileId"
