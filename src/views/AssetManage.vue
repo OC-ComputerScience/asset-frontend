@@ -74,6 +74,9 @@ const canAdd = computed(() => {
 const userRoleId = computed(() => {
   return store.getters.getUserRole;
 });
+const userRoleCategoryId = computed(() => {
+  return userRole.value.data.categoryId;
+});
 const getUserRole = async () => {
   userRole.value = await UserRoleServices.get(userRoleId.value);
   return userRole.value;
@@ -223,7 +226,7 @@ const retrieveAssetTypes = async () => {
       });
       assetTypes.value = enrichedTypes;
       assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
-      activeAssetTypes.value = assetTypes.filter(
+      activeAssetTypes.value = assetTypes.value.filter(
         (type) => type.activeStatus === true
       );
     } else {
@@ -436,7 +439,7 @@ const retrieveAssetProfiles = async () => {
         activeAssetProfiles.value = assetProfiles.value.filter(
           (profile) => profile.activeStatus === true
         );
-
+      } else {
         throw new Error("Data is not an array");
       }
     } else {
@@ -1773,6 +1776,7 @@ onMounted(async () => {
       <ProfileDialog
         :rules="rules"
         :selected-profile="selectedProfile"
+        :userCategoryId="userRoleCategoryId"
         @closeDialog="handleCloseProfileDialog"
         @updateSnackbar="handleUpdatedProfile"
         @saveSnackbar="handleSavedProfile"

@@ -75,6 +75,9 @@ const props = defineProps({
   rules: {
     required: true,
   },
+  userCategoryId: {
+    required: true,
+  },
 });
 
 // Deconstruct props => refs
@@ -162,9 +165,13 @@ const retrieveAssetTypes = async () => {
       title: type.typeName,
       description: type.desc,
       activeStatus: type.activeStatus,
+      categoryId: type.categoryId,
     }));
+
     assetTypes.value = assetTypes.value.filter(
-      (type) => type.activeStatus === true
+      (type) =>
+        type.activeStatus === true &&
+        (props.userCategoryId === 4 || type.categoryId == props.userCategoryId)
     );
     assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
   } catch (error) {
