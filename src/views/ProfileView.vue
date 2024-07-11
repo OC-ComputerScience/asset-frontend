@@ -677,6 +677,40 @@ onMounted(async () => {
           <v-row>
             <v-col cols="12" sm="6" md="4">
               <div class="asset-detail">
+                <strong>Features</strong>
+                <div>
+                  <v-textarea
+                    v-model="profileDetails.features"
+                    rows="1"
+                    variant="filled"
+                    auto-grow
+                    bg-color="background"
+                    base-color="background"
+                    readonly
+                    flat
+                  ></v-textarea>
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Accessories</strong>
+                <v-textarea
+                  readonly
+                  v-model="profileDetails.accessories"
+                  rows="1"
+                  variant="filled"
+                  auto-grow
+                  bg-color="background"
+                  base-color="background"
+                  flat
+                ></v-textarea>
+              </div>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
                 <strong>Warranty Desc</strong>
                 <div>{{ profileDetails.warrantyDescription || "N/A" }}</div>
               </div>
