@@ -86,8 +86,8 @@ const newProfile = ref({
   purchasePrice: "",
   acquisitionDate: "",
   notes: "",
-  warrantyStartDate: "",
-  warrantyEndDate: "",
+  warrantyStartDate: null,
+  warrantyEndDate: null,
   warrantyDescription: "",
   warrantyNotes: "",
   features: "",
@@ -125,7 +125,7 @@ const loadProfileForEditing = async (profile) => {
     let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
     rawWarrStartDate.value = offsetTime;
   } else {
-    rawWarrStartDate.value = null; // Fallback if there's no acquisition date
+    rawWarrStartDate.value = null; // Fallback if there's no Start date
   }
   // Correctly assign `rawWarrEndDate`
   if (profile.warrantyEndDate) {
@@ -135,7 +135,7 @@ const loadProfileForEditing = async (profile) => {
     let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
     rawWarrEndDate.value = offsetTime;
   } else {
-    rawWarrEndDate.value = null; // Fallback if there's no acquisition date
+    rawWarrEndDate.value = null; // Fallback if there's no end date
   }
 
   // Update `originalProfile` for comparison
@@ -254,13 +254,15 @@ const saveProfile = async () => {
   );
 
   let formattedWarrStartDate = null;
-  formattedWarrStartDate = format(
-    new Date(rawWarrStartDate.value),
-    "yyyy-MM-dd"
-  );
+  if (rawWarrStartDate.value)
+    formattedWarrStartDate = format(
+      new Date(rawWarrStartDate.value),
+      "yyyy-MM-dd"
+    );
 
   let formattedWarrEndDate = null;
-  formattedWarrEndDate = format(new Date(rawWarrEndDate.value), "yyyy-MM-dd");
+  if (rawWarrEndDate.value)
+    formattedWarrEndDate = format(new Date(rawWarrEndDate.value), "yyyy-MM-dd");
 
   const profilePayload = {
     profileName: newProfile.value.profileName,
