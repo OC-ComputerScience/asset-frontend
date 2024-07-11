@@ -684,8 +684,8 @@ onMounted(async () => {
                     rows="1"
                     variant="filled"
                     auto-grow
-                    bg-color="white"
-                    base-color="white"
+                    bg-color="background"
+                    base-color="background"
                     readonly
                     flat
                   ></v-textarea>
@@ -701,8 +701,8 @@ onMounted(async () => {
                   rows="1"
                   variant="filled"
                   auto-grow
-                  bg-color="white"
-                  base-color="white"
+                  bg-color="background"
+                  base-color="background"
                   flat
                 ></v-textarea>
               </div>
