@@ -686,7 +686,7 @@ onMounted(async () => {
                     auto-grow
                     bg-color="white"
                     base-color="white"
-                    read-only
+                    readonly
                     flat
                   ></v-textarea>
                 </div>
@@ -696,7 +696,7 @@ onMounted(async () => {
               <div class="asset-detail">
                 <strong>Accessories</strong>
                 <v-textarea
-                  read-only
+                  readonly
                   v-model="profileDetails.accessories"
                   rows="1"
                   variant="filled"
