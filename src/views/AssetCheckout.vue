@@ -71,7 +71,7 @@ const newPersonAsset = ref({
   personId: "",
   checkoutDate: "",
   checkoutStatus: "",
-  expectedCheckinDate: "",
+  expectedCheckinDate: null,
   checkedOutBy: "",
 });
 const newBuildingAsset = ref({
@@ -79,7 +79,7 @@ const newBuildingAsset = ref({
   buildingId: "",
   checkoutDate: "",
   checkoutStatus: "",
-  expectedCheckinDate: "",
+  expectedCheckinDate: null,
   checkedOutBy: "",
 });
 const newRoomAsset = ref({
@@ -87,7 +87,7 @@ const newRoomAsset = ref({
   roomId: "",
   checkoutDate: "",
   checkoutStatus: "",
-  expectedCheckinDate: "",
+  expectedCheckinDate: null,
   checkedOutBy: "",
 });
 
@@ -277,7 +277,8 @@ const savePersonCheckout = async () => {
     let checkinDate = null;
     if (!indefiniteCheckout.value && expectedCheckinDate.value) {
       // Since you're already using local time for checkout, ensure that expected check-in date handling is consistent
-      checkinDate = format(new Date(expectedCheckinDate.value), "MMM dd, yyyy");
+
+      checkinDate = format(expectedCheckinDate.value, "MMM dd, yyyy");
     }
 
     if (newPersonAsset.value.personId.key === undefined) {
@@ -564,7 +565,7 @@ const saveBuildingCheckout = async () => {
     let checkinDate = null;
     if (!indefiniteCheckout.value && expectedCheckinDate.value) {
       // Since you're already using local time for checkout, ensure that expected check-in date handling is consistent
-      checkinDate = format(new Date(expectedCheckinDate.value), "MMM dd, yyyy");
+      checkinDate = format(expectedCheckinDate.value, "MMM dd, yyyy");
     }
 
     const buildingAssetData = {
@@ -815,7 +816,7 @@ const saveRoomCheckout = async () => {
     let checkinDate = null;
     if (!indefiniteCheckout.value && expectedCheckinDate.value) {
       // Since you're already using local time for checkout, ensure that expected check-in date handling is consistent
-      checkinDate = format(new Date(expectedCheckinDate.value), "MMM dd, yyyy");
+      checkinDate = format(expectedCheckinDate.value, "MMM dd, yyyy");
     }
 
     const roomAssetData = {
@@ -1029,7 +1030,7 @@ const convertToUtcForStorage = (localDate) => {
 // Computed property for display
 const formattedCheckinDate = computed(() => {
   if (expectedCheckinDate.value) {
-    return format(new Date(expectedCheckinDate.value), "MMM dd, yyyy");
+    return format(expectedCheckinDate.value, "MMM dd, yyyy");
   }
   return "";
 });
@@ -1457,31 +1458,13 @@ onMounted(async () => {
                   ></v-checkbox>
                 </v-col>
                 <v-col cols="12" v-if="!indefiniteCheckout">
-                  <v-menu
-                    v-model="menu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedCheckinDate"
-                        label="Expected Check-in Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu = !menu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="expectedCheckinDate"
-                      @input="menu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="expectedCheckinDate"
+                    clearable
+                    label="Expected Check-in Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
                 </v-col>
               </v-row>
             </v-container>
@@ -1666,33 +1649,14 @@ onMounted(async () => {
                     label="Indefinite Checkout"
                   ></v-checkbox>
                 </v-col>
-                <v-col cols="12" v-if="!indefiniteCheckout">
-                  <v-menu
-                    v-model="menu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedCheckinDate"
-                        label="Expected Check-in Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu = !menu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="expectedCheckinDate"
-                      @input="menu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
-                </v-col>
+                <v-date-input
+                  v-model="expectedCheckinDate"
+                  clearable
+                  label="Expected Check-in Date"
+                  variant="outlined"
+                  color="blue"
+                ></v-date-input>
+                <v-col cols="12" v-if="!indefiniteCheckout"> </v-col>
               </v-row>
             </v-container>
           </v-card-text>
@@ -1804,31 +1768,13 @@ onMounted(async () => {
                   ></v-checkbox>
                 </v-col>
                 <v-col cols="12" v-if="!indefiniteCheckout">
-                  <v-menu
-                    v-model="menu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedCheckinDate"
-                        label="Expected Check-in Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu = !menu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="expectedCheckinDate"
-                      @input="menu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="expectedCheckinDate"
+                    clearable
+                    label="Expected Check-in Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
                 </v-col>
               </v-row>
             </v-container>

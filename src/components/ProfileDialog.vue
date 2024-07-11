@@ -168,11 +168,8 @@ const retrieveAssetTypes = async () => {
   }
 };
 
-
-
-const retrieveCustomFields = async(typeId) => {
-  try{
-
+const retrieveCustomFields = async (typeId) => {
+  try {
     let response = await customFieldTypeServices.getAllForType(typeId);
     let customFieldPromises = response.data.map(async (field) => {
       let newField = {
@@ -201,9 +198,7 @@ const retrieveCustomFields = async(typeId) => {
 
     let customFieldsArray = await Promise.all(customFieldPromises);
     customFields.value.push(...customFieldsArray);
-
   } catch (err) {
-
     console.error(err);
   }
 };
@@ -276,8 +271,6 @@ const saveProfile = async () => {
   };
 
   try {
-
-
     // Check if editing profile
     if (newProfile.value.id && profileInfoChanged.value) {
       // Update the profile itself
@@ -310,11 +303,9 @@ const saveProfile = async () => {
   }
 };
 
-
-const saveFieldValues = async(profileId) => {
-  for(let field of customFields.value){
-    if(field.changed){
-
+const saveFieldValues = async (profileId) => {
+  for (let field of customFields.value) {
+    if (field.changed) {
       let fieldValueId;
       let data = {
         customFieldId: field.customFieldId,
@@ -338,7 +329,6 @@ const saveFieldValues = async(profileId) => {
         }
       } catch (err) {
         console.error(err);
-
       }
     }
   }
@@ -608,38 +598,6 @@ onMounted(async () => {
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
-                  <!-- <div id="acq" class="relative-container">
-                    <v-menu
-                      v-model="menu"
-                      attach="#acq"
-                      :close-on-content-click="false"
-                      min-width="auto"
-                      transition="scale-transition"
-                      max-width="290"
-                      offset-y
-                    >
-                      <template v-slot:activator="{ on, attrs }">
-                        <v-text-field
-                          v-model="formattedAcquisitionDate"
-                          label="Acquisition Date"
-                          variant="outlined"
-                          prepend-icon="mdi-calendar"
-                          :rules="[rules.required]"
-                          readonly
-                          v-bind="attrs"
-                          @click="menu = !menu"
-                          @update:modelValue="changeProfileInfo"
-                        ></v-text-field>
-                      </template>
-
-                      <v-date-picker
-                        v-model="rawAcquisitionDate"
-                        timezone="UTC"
-                        @input="menu = false"
-                        color="primary"
-                      ></v-date-picker>
-                    </v-menu>
-                  </div> -->
                 </v-col>
                 <v-col cols="12">
                   <v-text-field
@@ -666,34 +624,6 @@ onMounted(async () => {
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
-                  <!-- <v-menu
-                    v-model="menu1"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    max-width="100px"
-                    max-height="100px"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedWarrStartDate"
-                        label="Warranty Start Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu1 = !menu1"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      max-width="100px"
-                      max-height="100px"
-                      v-model="rawWarrStartDate"
-                      @input="menu1 = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu> -->
                 </v-col>
                 <v-col>
                   <v-date-input
@@ -703,31 +633,6 @@ onMounted(async () => {
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
-                  <!-- <v-menu
-                    v-model="menu2"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedWarrEndDate"
-                        label="Warranty End Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu2 = !menu2"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawWarrEndDate"
-                      @input="menu2 = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu> -->
                 </v-col>
               </v-row>
             </v-col>

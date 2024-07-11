@@ -82,6 +82,11 @@ const formatDate = (dateString) => {
   // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY - h:mm A");
 };
+const formatExpectedDate = (dateString) => {
+  if (!dateString) return "Indefinite";
+  // Parse the date as UTC and format it
+  return moment.utc(dateString).format("MMM DD, YYYY ");
+};
 
 const formatCheckinDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -190,7 +195,9 @@ onMounted(async () => {
                       <td>{{ formatDate(item.checkoutDate) }}</td>
                     </template>
                     <template v-slot:item.expectedCheckinDate="{ item }">
-                      <td>{{ formatDate(item.expectedCheckinDate) }}</td>
+                      <td>
+                        {{ formatExpectedDate(item.expectedCheckinDate) }}
+                      </td>
                     </template>
                   </v-data-table>
                 </v-card-text>

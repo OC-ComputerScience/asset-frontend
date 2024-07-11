@@ -125,7 +125,13 @@ const editLease = async (lease) => {
   showAddLeaseDialog.value = true;
   originalLease.value = { ...newLease.value };
 };
-
+function monthDiff(d1, d2) {
+  var months;
+  months = (d2.getFullYear() - d1.getFullYear()) * 12;
+  months -= d1.getMonth();
+  months += d2.getMonth();
+  return months <= 0 ? 0 : months;
+}
 const saveLease = async () => {
   let formattedStartDate = null;
   if (startDate.value) {
@@ -138,11 +144,14 @@ const saveLease = async () => {
     // Convert local date to UTC before storing
     formattedEndDate = format(new Date(endDate.value), "MMM dd, yyyy");
   }
-
+  let lengthMonth = monthDiff(
+    new Date(startDate.value),
+    new Date(endDate.value)
+  );
   const leaseData = {
     startDate: formattedStartDate,
     endDate: formattedEndDate,
-    length: newLease.value.length,
+    length: lengthMonth,
     lessor: newLease.value.lessor,
     serializedAssetId: selectedSerializedAssetId.value.key,
   };
@@ -393,9 +402,6 @@ const formattedEndDate = computed(() => {
 onMounted(async () => {
   await retrieveLeases();
   await retrieveSerializedAssets();
-  console.log(
-    "Know Issues: When editing day shows a day before the DB date // Search by serialized asset not functioning // Leases need to be sorted by closest to end date (maybe)"
-  );
 });
 </script>
 
@@ -599,34 +605,16 @@ onMounted(async () => {
 
                 <!-- Start Date Picker -->
                 <v-col cols="12">
-                  <v-menu
-                    v-model="startMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedStartDate"
-                        label="Start Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="startMenu = !startMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="startDate"
-                      @input="startMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="startDate"
+                    clearable
+                    label="Warranty Start Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
                 </v-col>
 
-                <!-- Lease Length Field -->
+                <!-- Lease Length Field
                 <v-col cols="12">
                   <v-text-field
                     label="Length (months)"
@@ -637,35 +625,17 @@ onMounted(async () => {
                     maxlength="3"
                     counter
                   ></v-text-field>
-                </v-col>
+                </v-col> -->
 
                 <!-- End Date Picker -->
                 <v-col cols="12">
-                  <v-menu
-                    v-model="endMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedEndDate"
-                        label="End Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="endMenu = !endMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="endDate"
-                      @input="endMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="endDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
                 </v-col>
 
                 <v-col cols="12"> </v-col>
