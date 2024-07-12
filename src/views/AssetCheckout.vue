@@ -1659,15 +1659,16 @@ onMounted(async () => {
                     label="Indefinite Checkout"
                   ></v-checkbox>
                 </v-col>
-                <v-date-input
-                  v-model="expectedCheckinDate"
-                  clearable
-                  label="Expected Check-in Date"
-                  variant="outlined"
-                  color="blue"
-                  :rules="[rules.expectedCheckinDate]"
-                ></v-date-input>
-                <v-col cols="12" v-if="!indefiniteCheckout"> </v-col>
+                <v-col cols="12" v-if="!indefiniteCheckout">
+                  <v-date-input
+                    v-model="expectedCheckinDate"
+                    clearable
+                    label="Expected Check-in Date"
+                    variant="outlined"
+                    color="blue"
+                    :rules="[rules.expectedCheckinDate]"
+                  ></v-date-input>
+                </v-col>
               </v-row>
             </v-container>
           </v-card-text>
