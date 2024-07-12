@@ -230,7 +230,7 @@ const closeLogDialog = () => {
 
 const baseMaintenanceHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
-  { title: "Scheuled Date", key: "scheduledDate" },
+  { title: "Scheduled Date", key: "scheduledDate" },
   { title: "Date Performed", key: "serviceDate" },
   { title: "Description", key: "description" },
   { title: "Performed By", key: "performedBy" },
