@@ -789,6 +789,8 @@ const saveSerializedAsset = async () => {
         serializedAssetData
       );
       snackbarText.value = "Asset updated successfully.";
+      snackbar.value = true; // Show the snackbar
+      message.value = "Asset saved successfully.";
     } else {
       // Call create service if adding a new profile
       await SerializedAssetServices.create(serializedAssetData).then(
@@ -809,7 +811,7 @@ const saveSerializedAsset = async () => {
               length: lengthMonth,
               warrantyNotes: newSerializedAsset.value.warrantyNotes,
             };
-            snackbarText.value = "Asset added successfully.";
+
             WarrantyServices.create(newWarranty);
           }
 
@@ -823,7 +825,7 @@ const saveSerializedAsset = async () => {
             };
             BarcodeServices.create(newBarcode);
           });
-
+          snackbarText.value = "Asset added successfully.";
           snackbar.value = true; // Show the snackbar
           message.value = "Asset saved successfully.";
           await retrieveSerializedAssets();
