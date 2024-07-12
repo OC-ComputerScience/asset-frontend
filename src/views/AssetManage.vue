@@ -1919,7 +1919,7 @@ onMounted(async () => {
                   </v-row>
                 </v-col>
 
-                <v-col cols="12">
+                <v-col cols="12" v-if="!editingSerializedAsset">
                   <v-tooltip bottom>
                     <template v-slot:activator="{ attrs }">
                       <v-btn
