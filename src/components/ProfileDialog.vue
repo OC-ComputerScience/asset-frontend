@@ -594,7 +594,7 @@ onMounted(async () => {
                   <v-date-input
                     v-model="rawAcquisitionDate"
                     clearable
-                    label="Aqusition Date"
+                    label="Aquisition Date"
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
