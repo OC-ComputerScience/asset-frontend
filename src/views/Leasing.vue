@@ -611,21 +611,9 @@ onMounted(async () => {
                     label="Warranty Start Date"
                     variant="outlined"
                     color="blue"
+                    :rules="[rules.required]"
                   ></v-date-input>
                 </v-col>
-
-                <!-- Lease Length Field
-                <v-col cols="12">
-                  <v-text-field
-                    label="Length (months)"
-                    variant="outlined"
-                    prepend-icon="mdi-clock"
-                    v-model="newLease.length"
-                    :rules="[rules.required, rules.onlyNumbers]"
-                    maxlength="3"
-                    counter
-                  ></v-text-field>
-                </v-col> -->
 
                 <!-- End Date Picker -->
                 <v-col cols="12">
@@ -635,6 +623,7 @@ onMounted(async () => {
                     label="Warranty End Date"
                     variant="outlined"
                     color="blue"
+                    :rules="[rules.required]"
                   ></v-date-input>
                 </v-col>
 
