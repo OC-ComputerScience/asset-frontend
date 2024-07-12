@@ -162,7 +162,9 @@ const saveLog = async () => {
 
   const logData = {
     serviceDate:
-      newLog.value.type != "preventative" ? formattedServiceDate : null,
+      newLog.value.type != "preventative" || editingLog
+        ? formattedServiceDate
+        : null,
     scheduledDate:
       newLog.value.type === "preventative" ? formattedScheduledDate : null,
     performedBy: newLog.value.performedBy,

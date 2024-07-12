@@ -57,6 +57,15 @@ const notificationSender = ref(null);
 const messageText = ref("");
 const rules = {
   required: (value) => !!value || "Required.",
+  expectedCheckinDate: (value) => {
+    console.log(value);
+    return (
+      (!indefiniteCheckout.value &&
+        !!value &&
+        new Date(value).getDate() >= new Date().getDate()) ||
+      "Required and must be today or in the future."
+    );
+  },
 };
 const userRoleId = computed(() => {
   return store.getters.getUserRole;
@@ -1464,6 +1473,7 @@ onMounted(async () => {
                     label="Expected Check-in Date"
                     variant="outlined"
                     color="blue"
+                    :rules="[rules.expectedCheckinDate]"
                   ></v-date-input>
                 </v-col>
               </v-row>
@@ -1655,6 +1665,7 @@ onMounted(async () => {
                   label="Expected Check-in Date"
                   variant="outlined"
                   color="blue"
+                  :rules="[rules.expectedCheckinDate]"
                 ></v-date-input>
                 <v-col cols="12" v-if="!indefiniteCheckout"> </v-col>
               </v-row>
@@ -1774,6 +1785,7 @@ onMounted(async () => {
                     label="Expected Check-in Date"
                     variant="outlined"
                     color="blue"
+                    :rules="[rules.expectedCheckinDate]"
                   ></v-date-input>
                 </v-col>
               </v-row>
