@@ -12,6 +12,9 @@ export default {
   getById(barcodeId) {
     return apiClient.get(baseURL + `${barcodeId}`);
   },
+  getBarcodesBySerializedAssetId(serializedAssetId) {
+    return apiClient.get(baseURL + "bySerializedAsset/" + `${serializedAssetId}`);
+  },
   update(barcodeId, data) {
     return apiClient.put(baseURL + `${barcodeId}`, data);
   },
