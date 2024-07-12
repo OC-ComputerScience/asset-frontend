@@ -172,7 +172,7 @@ const saveSerializedAsset = async () => {
   let formatteddDisposalDate = null;
   if (rawDisposalDate.value) {
     // Convert local date to UTC before storing
-    formattedWarrEndDate = format(
+    formatteddDisposalDate = format(
       new Date(rawDisposalDate.value),
       "MMM dd, yyyy"
     );
@@ -201,22 +201,33 @@ const saveSerializedAsset = async () => {
     } else {
       await SerializedAssetServices.create(serializedAssetData).then((data) => {
         newSerializedAsset.value.id = data.data.serializedAssetId;
-        let lengthMonth = monthDiff(
-          new Date(rawWarrStartDate.value),
-          new Date(rawWarrEndDate.value)
-        );
+        if (
+          rawWarrStartDate.value &&
+          rawWarrEndDate.value &&
+          newSerializedAsset.value.warrantyDescription
+        ) {
+          // Calculate the length of the warranty in months
+          // let lengthMonth = monthDiff(
+          //   new Date(rawWarrStartDate.value),
+          //   new Date(rawWarrEndDate.value)
+          //
+          let lengthMonth = monthDiff(
+            new Date(rawWarrStartDate.value),
+            new Date(rawWarrEndDate.value)
+          );
 
-        let newWarranty = {
-          serializedAssetId: newSerializedAsset.value.id,
-          startDate: formattedWarrStartDate,
-          endDate: formattedWarrEndDate,
-          warrantyDescription: newSerializedAsset.value.warrantyDescription,
-          length: lengthMonth,
-          warrantyNotes: newSerializedAsset.value.warrantyNotes,
-        };
-        // add warranty
-        WarrantyServices.create(newWarranty);
-        snackbarText.value = "Asset added successfully.";
+          let newWarranty = {
+            serializedAssetId: newSerializedAsset.value.id,
+            startDate: formattedWarrStartDate,
+            endDate: formattedWarrEndDate,
+            warrantyDescription: newSerializedAsset.value.warrantyDescription,
+            length: lengthMonth,
+            warrantyNotes: newSerializedAsset.value.warrantyNotes,
+          };
+          // add warranty
+          WarrantyServices.create(newWarranty);
+        }
+
         // Add barcodes
         barcodes.value.forEach((barcode) => {
           if (barcode.type && barcode.code) {
@@ -227,6 +238,7 @@ const saveSerializedAsset = async () => {
             });
           }
         });
+        snackbarText.value = "Asset added successfully.";
       });
       snackbar.value = true; // Show the snackbar
       await retrieveAssetsForProfile();
@@ -1050,7 +1062,7 @@ onMounted(async () => {
                   </v-row>
                 </v-col>
 
-                <v-col cols="12">
+                <v-col cols="12" v-if="!editingSerializedAsset">
                   <v-tooltip bottom>
                     <template v-slot:activator="{ attrs }">
                       <v-btn
