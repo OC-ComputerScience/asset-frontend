@@ -619,7 +619,7 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                     v-model="rawAcquisitionDate"
                     clearable
-                    label="Aqusition Date"
+                    label="Aquisition Date"
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
@@ -641,6 +641,7 @@ onMounted(async () => {
                     prepend-icon="mdi-headphones"
                   >
                   </v-textarea>
+
                 </v-col>
                 <v-col cols="12">
                   <v-text-field

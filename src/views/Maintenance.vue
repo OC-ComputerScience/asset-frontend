@@ -161,8 +161,12 @@ const saveLog = async () => {
   }
 
   const logData = {
-    serviceDate: formattedServiceDate,
-    scheduledDate: formattedScheduledDate,
+    serviceDate:
+      newLog.value.type != "preventative" || editingLog
+        ? formattedServiceDate
+        : null,
+    scheduledDate:
+      newLog.value.type === "preventative" ? formattedScheduledDate : null,
     performedBy: newLog.value.performedBy,
     notes: newLog.value.notes,
     description: newLog.value.description,
@@ -226,7 +230,7 @@ const closeLogDialog = () => {
 
 const baseMaintenanceHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
-  { title: "Scheuled Date", key: "scheduledDate" },
+  { title: "Scheduled Date", key: "scheduledDate" },
   { title: "Date Performed", key: "serviceDate" },
   { title: "Description", key: "description" },
   { title: "Performed By", key: "performedBy" },
@@ -503,31 +507,15 @@ onMounted(async () => {
                 </v-row>
 
                 <v-col v-if="newLog.type == 'preventative'" cols="12">
-                  <v-menu
-                    v-model="menuScheduled"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedScheduledDate"
-                        label="Scheduled Date (PM)"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.requiredScheduled]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menuScheduled = !menuScheduled"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawScheduledDate"
-                      @input="menuScheduled = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  Service Date
+                  <v-date-input
+                    v-model="rawScheduledDate"
+                    clearable
+                    label="Scheduled Date (PM)"
+                    variant="outlined"
+                    color="blue"
+                    :rules="[rules.requiredScheudledDate]"
+                  ></v-date-input>
                 </v-col>
                 <v-col
                   v-if="
@@ -557,31 +545,14 @@ onMounted(async () => {
                   "
                   cols="12"
                 >
-                  <v-menu
-                    v-model="menu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedServiceDate"
-                        label="Service Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu = !menu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawServiceDate"
-                      @input="menu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="rawServiceDate"
+                    clearable
+                    label="Service Date"
+                    variant="outlined"
+                    color="blue"
+                    :rules="[rules.required]"
+                  ></v-date-input>
                 </v-col>
                 <v-col
                   v-if="
@@ -618,7 +589,6 @@ onMounted(async () => {
     </v-dialog>
 
     <v-dialog v-model="showNotesDialog" max-width="500px">
-
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between">
           Notes for {{ itemToDisplay.serializedAssetName }}
@@ -634,7 +604,6 @@ onMounted(async () => {
         </v-card-actions>
       </v-card>
     </v-dialog>
-
 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}

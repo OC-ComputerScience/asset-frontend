@@ -35,6 +35,7 @@ const retrieveRoomAssets = async () => {
       checkinDate: roomAsset.checkinDate,
       checkedInBy: roomAsset.checkedInBy,
       checkoutStatus: roomAsset.checkoutStatus,
+      expectedCheckinDate: roomAsset.expectedCheckinDate,
     }));
   } catch (error) {
     console.error("Error loading roomAssets:", error);
