@@ -75,6 +75,9 @@ const props = defineProps({
   rules: {
     required: true,
   },
+  userCategoryId: {
+    required: true,
+  },
 });
 
 // Deconstruct props => refs
@@ -165,7 +168,16 @@ const retrieveAssetTypes = async () => {
       key: type.typeId,
       title: type.typeName,
       description: type.desc,
+      activeStatus: type.activeStatus,
+      categoryId: type.categoryId,
     }));
+
+    assetTypes.value = assetTypes.value.filter(
+      (type) =>
+        type.activeStatus === true &&
+        (props.userCategoryId === 4 || type.categoryId == props.userCategoryId)
+    );
+    assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
   } catch (error) {
     console.error("Error loading types:", error);
     message.value = "Failed to load types.";
@@ -560,6 +572,7 @@ onMounted(async () => {
                     :rules="[rules.required]"
                     clearable
                     return-object
+                    :disabled="editMode"
                     prepend-icon="mdi-devices"
                     @update:modelValue="changeProfileInfo"
                   ></v-autocomplete>
