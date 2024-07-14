@@ -52,10 +52,32 @@ const rules = {
       pattern.test(value) || "Building Abbreviation must be 2 or 3 characters"
     );
   },
+  numberic: (value) => {
+    return /^[0-9]*$/.test(value) || "Value must be a number";
+  },
+  money: (value) => {
+    return (
+      !value ||
+      /^[0-9]+(\.[0-9]{1,2})?$/.test(value) ||
+      "Value must be a money amount"
+    );
+  },
 };
+
 const newBuilding = ref({
   title: "",
   abbreviation: "",
+  activeStatus: true,
+  noOfRooms: "",
+  yearBuilt: "",
+  squareFeet: "",
+  numStories: "",
+  hasElevator: false,
+  hasFireMonitor: false,
+  hasSmokeAlarm: false,
+  constructionType: null,
+  buildingValue: "",
+  buildingBPP: "",
 });
 const newRoom = ref({
   title: "",
@@ -74,6 +96,15 @@ const retrieveBuildings = async () => {
         key: building.buildingId,
         abbreviation: building.abbreviation,
         activeStatus: building.activeStatus,
+        yearBuilt: building.yearBuilt,
+        squareFeet: building.squareFeet,
+        numStories: building.numStories,
+        hasElevator: building.hasElevator,
+        hasFireMonitor: building.hasFireMonitor,
+        hasSmokeAlarm: building.hasSmokeAlarm,
+        constructionType: building.constructionType,
+        buildingValue: building.buildingValue,
+        buildingBPP: building.buildingBPP,
         noOfRooms: building.noOfRooms,
       }))
       .sort((a, b) => a.title.localeCompare(b.title)); // Sorting buildings by name
@@ -88,6 +119,16 @@ const editBuilding = async (building) => {
     abbreviation: building.abbreviation,
     activeStatus: building.activeStatus,
     buildingId: building.key,
+
+    yearBuilt: building.yearBuilt,
+    squareFeet: building.squareFeet,
+    numStories: building.numStories,
+    hasElevator: building.hasElevator,
+    hasFireMonitor: building.hasFireMonitor,
+    hasSmokeAlarm: building.hasSmokeAlarm,
+    constructionType: building.constructionType,
+    buildingValue: building.buildingValue,
+    buildingBPP: building.buildingBPP,
   };
   editingBuilding.value = true;
   showAddBuildingDialog.value = true;
@@ -98,6 +139,18 @@ const saveBuilding = async () => {
   const buildingData = {
     name: newBuilding.value.title,
     abbreviation: newBuilding.value.abbreviation,
+    activeStatus: newBuilding.value.activeStatus,
+    buildingId: newBuilding.value.key,
+
+    yearBuilt: newBuilding.value.yearBuilt,
+    squareFeet: newBuilding.value.squareFeet,
+    numStories: newBuilding.value.numStories,
+    hasElevator: newBuilding.value.hasElevator,
+    hasFireMonitor: newBuilding.value.hasFireMonitor,
+    hasSmokeAlarm: newBuilding.value.hasSmokeAlarm,
+    constructionType: newBuilding.value.constructionType,
+    buildingValue: newBuilding.value.buildingValue,
+    buildingBPP: newBuilding.value.buildingBPP,
   };
 
   try {
@@ -123,7 +176,21 @@ const saveBuilding = async () => {
   } finally {
     editingBuilding.value = false;
     showAddBuildingDialog.value = false;
-    newBuilding.value = { title: "", abbreviation: "" }; // Reset the form
+    newBuilding.value = {
+      title: "",
+      abbreviation: "",
+      title: "",
+      activeStatus: true,
+      yearBuilt: "",
+      squareFeet: "",
+      numStories: "",
+      hasElevator: false,
+      hasFireMonitor: false,
+      hasSmokeAlarm: false,
+      constructionType: null,
+      buildingValue: "",
+      buildingBPP: "",
+    };
   }
 };
 
@@ -873,7 +940,7 @@ onMounted(async () => {
                     counter
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12">
+                <v-col cols="6">
                   <v-text-field
                     label="Building Abbreviation"
                     v-model="newBuilding.abbreviation"
@@ -881,6 +948,79 @@ onMounted(async () => {
                     :rules="[rules.required, rules.buildingAbbreviation]"
                     maxlength="3"
                     counter
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="6">
+                  <v-text-field
+                    label="Year Built"
+                    v-model="newBuilding.yearBuilt"
+                    variant="outlined"
+                    maxlength="4"
+                    :rules="[rules.numberic]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    label="Square Feet"
+                    v-model="newBuilding.squareFeet"
+                    variant="outlined"
+                    maxlength="6"
+                    :rules="[rules.numberic]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    label="Number of Stories"
+                    v-model="newBuilding.numStories"
+                    variant="outlined"
+                    maxlength="1"
+                    :rules="[rules.numberic]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="4">
+                  <v-checkbox
+                    label="Elevator"
+                    v-model="newBuilding.hasElevator"
+                    variant="outlined"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="4">
+                  <v-checkbox
+                    label="Fire Monitor"
+                    v-model="newBuilding.hasFireMonitor"
+                    variant="outlined"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="4">
+                  <v-checkbox
+                    label="Smoke Alarm"
+                    v-model="newBuilding.hasSmokeAlarm"
+                    variant="outlined"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12">
+                  <v-combobox
+                    label="Construction Type"
+                    v-model="newBuilding.constructionType"
+                    variant="outlined"
+                    :items="['Brick & Motar', 'Siding', 'Other']"
+                  ></v-combobox>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    label="Buildiing Value"
+                    v-model="newBuilding.buildingValue"
+                    variant="outlined"
+                    :rules="[rules.money]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    label="BPP Value"
+                    v-model="newBuilding.buildingBPP"
+                    variant="outlined"
+                    :rules="[rules.money]"
                   ></v-text-field>
                 </v-col>
               </v-row>
