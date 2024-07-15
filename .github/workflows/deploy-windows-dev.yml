@@ -30,6 +30,7 @@ jobs:
         uses: appleboy/scp-action@v0.1.7
         with:
           host: "assetdev.oc.edu"
+          port: 22
           username: "david.north"
           key: ${{ secrets.DEV_WIN_SERVER_SSH_KEY  }}
           source: "dist/*"
