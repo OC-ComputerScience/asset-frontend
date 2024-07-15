@@ -2,11 +2,8 @@
 import { ref, toRefs, watch, onMounted, computed, reactive } from "vue";
 import { vMaska } from "maska";
 import { parseISO, format } from "date-fns";
-import moment from "moment-timezone";
-import ProfileDataServices from "../services/profileDataServices";
 import AssetProfileServices from "../services/assetProfileServices";
 import AssetTypeServices from "../services/assetTypeServices";
-import assetTypeServices from "../services/assetTypeServices";
 import customFieldValueServices from "../services/customFieldValueServices";
 import customFieldTypeServices from "../services/customFieldTypeServices";
 import profileDataServices from "../services/profileDataServices";
@@ -22,10 +19,6 @@ const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
 const rawWarrStartDate = ref(null);
 const rawWarrEndDate = ref(null);
-const menu = ref(false);
-
-const menu1 = ref(false);
-const menu2 = ref(false);
 
 const editMode = ref(false);
 const overrideTitle = ref(false);
@@ -323,34 +316,59 @@ const saveProfile = async () => {
   }
 };
 
-const saveFieldValues = async (profileId) => {
-  for (let field of customFields.value) {
-    if (field.changed) {
-      let fieldValueId;
+
+const saveFieldValues = async(profileId) => {
+  for(let field of customFields.value){
+    if(field.changed){
       let data = {
         customFieldId: field.customFieldId,
         value: field.value,
       };
       try {
-        if (field.fieldValueId && field.type != "List") {
-          fieldValueId = field.fieldValueId;
-          await customFieldValueServices.update(fieldValueId, data);
-        } else if (field.fieldValueId && field.type == "List") {
-          let newFieldValue = { fieldValueId: field.fieldValueId };
-          await profileDataServices.update(field.profileDataId, newFieldValue);
-        } else {
-          let response = await customFieldValueServices.create(data);
-          fieldValueId = response.data.id;
-          let profileData = {
-            profileId: profileId,
-            fieldValueId: fieldValueId,
-          };
-          await profileDataServices.create(profileData);
+        if(field.fieldValueId){
+          handleFieldValueWithId(field, data, profileId);
+        }
+        else {
+          handleFieldValueWithoutId(field, data, profileId);
         }
       } catch (err) {
         console.error(err);
       }
     }
+  }
+};
+
+const handleFieldValueWithId = async(field, data, profileId) => {
+  if (field.type != "List") {
+    await customFieldValueServices.update(field.fieldValueId, data);
+  } 
+  else if (field.type == "List") {
+    let newFieldValue = { fieldValueId: field.fieldValueId };
+    if(field.profileDataId){
+      await profileDataServices.update(field.profileDataId, newFieldValue);
+    }
+    else {
+      let profileData = {
+        profileId: profileId,
+        fieldValueId: field.fieldValueId
+      }
+      await profileDataServices.create(profileData);
+    }
+  } 
+};
+
+const handleFieldValueWithoutId = async(field, data, profileId) => {
+  let response = await customFieldValueServices.create(data);
+  let fieldValueId = response.data.id;
+  let profileData = {
+    profileId: profileId, 
+    fieldValueId: fieldValueId
+  };
+  if(field.profileDataId){
+    await profileDataServices.update(profileData);
+  }
+  else {
+    await profileDataServices.create(profileData);
   }
 };
 
@@ -369,82 +387,6 @@ const editProfile = async () => {
     }
   }
 };
-
-// Computed property for display
-const formattedAcquisitionDate = computed(() => {
-  if (rawAcquisitionDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawAcquisitionDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-const formattedWarrStartDate = computed(() => {
-  if (rawWarrStartDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
-const formattedWarrEndDate = computed(() => {
-  if (rawWarrEndDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
-// const hasProfileChanged = () => {
-//   if (editingProfile.value) {
-//     // Assuming selectedTypeId.value holds the currently selected type object
-//     const currentTypeId = selectedTypeId.value?.key || selectedTypeId.value;
-//     // Strip out white space and $ for comparison
-//     const newPurchasePrice = newProfile.value.purchasePrice.replace(
-//       /[$,]/g,
-//       ""
-//     );
-//     return (
-//       newProfile.value.profileName !== originalProfile.value.profileName ||
-//       currentTypeId !== originalProfile.value.typeId || // Adjust this line
-//       newPurchasePrice !== originalProfile.value.purchasePrice ||
-//       newProfile.value.acquisitionDate !==
-//         originalProfile.value.acquisitionDate ||
-//       newProfile.value.notes !== originalProfile.value.notes
-//     );
-//   }
-// };
-
-// Utility function to check if a dynamic field has changed
-const hasDynamicFieldChanged = (field) => {
-  // Find the original field with the same name
-  const originalField = originalDynamicFields.value.find(
-    (original) => original.fieldName === field.fieldName
-  );
-  // If there is no original field (which means it's a new field), or if the data has changed, return true
-  return !originalField || originalField.fieldValue !== field.fieldValue;
-};
-
-// const canSave = computed(() => {
-//   // Check if the profile itself has changed
-//   const profileChanged = hasProfileChanged();
-
-//   // Check if any of the dynamic fields have changed
-//   const dynamicFieldChanged = generateDynamicFields.value.some((field) =>
-//     hasDynamicFieldChanged(field)
-//   );
-
-//   // Enable Save button if there are changes to save
-//   return !(validProfile.value && (profileChanged || dynamicFieldChanged));
-// });
-
-// Groups the text fields into row with 3 columns
-const groupFields = computed(() => {
-  const rowOfFields = [];
-  for (let i = 0; i < generateDynamicFields.value.length; i += 3) {
-    rowOfFields.push(generateDynamicFields.value.slice(i, i + 3));
-  }
-  return rowOfFields;
-});
 
 const emitCloseDialog = () => {
   emit("closeDialog");
@@ -641,7 +583,6 @@ onMounted(async () => {
                     prepend-icon="mdi-headphones"
                   >
                   </v-textarea>
-
                 </v-col>
                 <v-col cols="12">
                   <v-text-field
