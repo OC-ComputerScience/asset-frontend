@@ -32,6 +32,6 @@ jobs:
           local: dist/
           remote: c:/Apache24/htdocs/asset
           recursive: true
-          host: "asset.oc.edu"
+          host: "assetdev.oc.edu"
           username: "david.north"
           privateKey: ${{ secrets.DEV_WIN_SERVER_SSH_KEY }}
