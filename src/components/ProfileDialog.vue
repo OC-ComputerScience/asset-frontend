@@ -68,6 +68,9 @@ const props = defineProps({
   rules: {
     required: true,
   },
+  userCategoryId: {
+    required: true,
+  },
 });
 
 // Deconstruct props => refs
@@ -79,10 +82,12 @@ const newProfile = ref({
   purchasePrice: "",
   acquisitionDate: "",
   notes: "",
-  warrantyStartDate: "",
-  warrantyEndDate: "",
+  warrantyStartDate: null,
+  warrantyEndDate: null,
   warrantyDescription: "",
   warrantyNotes: "",
+  features: "",
+  accessories: "",
 });
 
 const changeProfileInfo = () => {
@@ -116,7 +121,7 @@ const loadProfileForEditing = async (profile) => {
     let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
     rawWarrStartDate.value = offsetTime;
   } else {
-    rawWarrStartDate.value = null; // Fallback if there's no acquisition date
+    rawWarrStartDate.value = null; // Fallback if there's no Start date
   }
   // Correctly assign `rawWarrEndDate`
   if (profile.warrantyEndDate) {
@@ -126,7 +131,7 @@ const loadProfileForEditing = async (profile) => {
     let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
     rawWarrEndDate.value = offsetTime;
   } else {
-    rawWarrEndDate.value = null; // Fallback if there's no acquisition date
+    rawWarrEndDate.value = null; // Fallback if there's no end date
   }
 
   // Update `originalProfile` for comparison
@@ -140,6 +145,8 @@ const loadProfileForEditing = async (profile) => {
     warrantyEndDate: profile.warrantyEndDate,
     warrantyDescription: profile.warrantyDescription,
     warrantyNotes: profile.warrantyNotes,
+    features: profile.features,
+    accessories: profile.accessories,
   };
 
   initialTypeId.value = profile.typeId; // Store initial typeId
@@ -154,18 +161,24 @@ const retrieveAssetTypes = async () => {
       key: type.typeId,
       title: type.typeName,
       description: type.desc,
+      activeStatus: type.activeStatus,
+      categoryId: type.categoryId,
     }));
+
+    assetTypes.value = assetTypes.value.filter(
+      (type) =>
+        type.activeStatus === true &&
+        (props.userCategoryId === 4 || type.categoryId == props.userCategoryId)
+    );
+    assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
   } catch (error) {
     console.error("Error loading types:", error);
     message.value = "Failed to load types.";
   }
 };
 
-
-
-const retrieveCustomFields = async(typeId) => {
-  try{
-
+const retrieveCustomFields = async (typeId) => {
+  try {
     let response = await customFieldTypeServices.getAllForType(typeId);
     let customFieldPromises = response.data.map(async (field) => {
       let newField = {
@@ -194,9 +207,7 @@ const retrieveCustomFields = async(typeId) => {
 
     let customFieldsArray = await Promise.all(customFieldPromises);
     customFields.value.push(...customFieldsArray);
-
   } catch (err) {
-
     console.error(err);
   }
 };
@@ -248,13 +259,15 @@ const saveProfile = async () => {
   );
 
   let formattedWarrStartDate = null;
-  formattedWarrStartDate = format(
-    new Date(rawWarrStartDate.value),
-    "yyyy-MM-dd"
-  );
+  if (rawWarrStartDate.value)
+    formattedWarrStartDate = format(
+      new Date(rawWarrStartDate.value),
+      "yyyy-MM-dd"
+    );
 
   let formattedWarrEndDate = null;
-  formattedWarrEndDate = format(new Date(rawWarrEndDate.value), "yyyy-MM-dd");
+  if (rawWarrEndDate.value)
+    formattedWarrEndDate = format(new Date(rawWarrEndDate.value), "yyyy-MM-dd");
 
   const profilePayload = {
     profileName: newProfile.value.profileName,
@@ -266,11 +279,11 @@ const saveProfile = async () => {
     warrantyEndDate: formattedWarrEndDate,
     warrantyDescription: newProfile.value.warrantyDescription,
     warrantyNotes: newProfile.value.warrantyNotes,
+    features: newProfile.value.features,
+    accessories: newProfile.value.accessories,
   };
 
   try {
-
-
     // Check if editing profile
     if (newProfile.value.id && profileInfoChanged.value) {
       // Update the profile itself
@@ -412,6 +425,8 @@ watch(
       newProfile.value.warrantyEndDate = newValue.warrantyEndDate || "";
       newProfile.value.warrantyDescription = newValue.warrantyDescription || "";
       newProfile.value.warrantyNotes = newValue.warrantyNotes || "";
+      newProfile.value.features = newValue.features || "";
+      newProfile.value.accessories = newValue.accessories || "";
       if (newValue.typeId) {
         selectedTypeId.value = newValue.typeId; // Update `selectedTypeId`
       }
@@ -499,6 +514,7 @@ onMounted(async () => {
                     :rules="[rules.required]"
                     clearable
                     return-object
+                    :disabled="editMode"
                     prepend-icon="mdi-devices"
                     @update:modelValue="changeProfileInfo"
                   ></v-autocomplete>
@@ -539,14 +555,34 @@ onMounted(async () => {
                     @update:modelValue="changeProfileInfo"
                   ></v-text-field>
                 </v-col>
+
                 <v-col>
                   <v-date-input
+                    prepend-icon="mdi-calendar"
                     v-model="rawAcquisitionDate"
                     clearable
-                    label="Aqusition Date"
+                    label="Aquisition Date"
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
+                </v-col>
+                <v-col cols="6">
+                  <v-textarea
+                    prepend-icon="mdi-memory"
+                    label="Features"
+                    variant="outlined"
+                    v-model="newProfile.features"
+                  >
+                  </v-textarea>
+                </v-col>
+                <v-col cols="6">
+                  <v-textarea
+                    label="Accessories"
+                    variant="outlined"
+                    v-model="newProfile.accessories"
+                    prepend-icon="mdi-headphones"
+                  >
+                  </v-textarea>
                 </v-col>
                 <v-col cols="12">
                   <v-text-field

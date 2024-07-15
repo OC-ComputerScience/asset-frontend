@@ -12,7 +12,7 @@ const type = ref({});
 const fields = ref([]);
 const typeFields = ref([]);
 const validType = ref(false);
-const selectedCategory = ref({});
+const selectedCategory = ref(null);
 const editMode = ref(false);
 const hasBeenEdited = ref(false);
 const fieldDataTypes = ref(["String", "List", "Decimal", "Integer"]);
@@ -34,9 +34,9 @@ onMounted(async () => {
       await findNumProfiles();
     } else {
       type.value = {
-        title: "",
-        desc: "",
-        categoryId: "",
+        title: null,
+        desc: null,
+        categoryId: null,
       };
     }
     response = await customFieldServices.getAll();
@@ -214,7 +214,11 @@ const saveFields = async (typeId) => {
                 maxlength="50"
                 counter
                 prepend-icon="mdi-rename"
-                @update:modelValue="() => { hasBeenEdited = true; }"
+                @update:modelValue="
+                  () => {
+                    hasBeenEdited = true;
+                  }
+                "
               ></v-text-field>
             </v-col>
             <v-col cols="12">
@@ -228,9 +232,13 @@ const saveFields = async (typeId) => {
                 item-value="key"
                 :rules="[props.rules.required]"
                 clearable
-                return-object
+                return-object="false"
                 prepend-icon="mdi-folder-multiple-outline"
-                @update:modelValue="() => { hasBeenEdited = true; }"
+                @update:modelValue="
+                  () => {
+                    hasBeenEdited = true;
+                  }
+                "
               ></v-autocomplete>
             </v-col>
             <v-col cols="12">
@@ -242,7 +250,11 @@ const saveFields = async (typeId) => {
                 maxlength="255"
                 counter
                 prepend-icon="mdi-note"
-                @update:modelValue="() => { hasBeenEdited = true; }"
+                @update:modelValue="
+                  () => {
+                    hasBeenEdited = true;
+                  }
+                "
               ></v-textarea>
             </v-col>
           </v-row>

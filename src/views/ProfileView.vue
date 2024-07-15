@@ -3,6 +3,7 @@ import AssetProfileServices from "../services/assetProfileServices";
 import SerializedAssetServices from "../services/serializedAssetServices";
 import ProfileDataServices from "../services/profileDataServices";
 import WarrantyServices from "../services/warrantyServices";
+import BarcodeServices from "../services/barcodeServices";
 import { ref, onMounted, watch, defineProps, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
@@ -35,6 +36,7 @@ const serialNumberLabel = ref("Serial Number"); // Default label
 const snackbar = ref(false);
 const snackbarText = ref("");
 const store = useStore();
+const barcodes = ref([]);
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
@@ -170,7 +172,7 @@ const saveSerializedAsset = async () => {
   let formatteddDisposalDate = null;
   if (rawDisposalDate.value) {
     // Convert local date to UTC before storing
-    formattedWarrEndDate = format(
+    formatteddDisposalDate = format(
       new Date(rawDisposalDate.value),
       "MMM dd, yyyy"
     );
@@ -199,26 +201,48 @@ const saveSerializedAsset = async () => {
     } else {
       await SerializedAssetServices.create(serializedAssetData).then((data) => {
         newSerializedAsset.value.id = data.data.serializedAssetId;
-        let lengthMonth = monthDiff(
-          new Date(rawWarrStartDate.value),
-          new Date(rawWarrEndDate.value)
-        );
+        if (
+          rawWarrStartDate.value &&
+          rawWarrEndDate.value &&
+          newSerializedAsset.value.warrantyDescription
+        ) {
+          // Calculate the length of the warranty in months
+          // let lengthMonth = monthDiff(
+          //   new Date(rawWarrStartDate.value),
+          //   new Date(rawWarrEndDate.value)
+          //
+          let lengthMonth = monthDiff(
+            new Date(rawWarrStartDate.value),
+            new Date(rawWarrEndDate.value)
+          );
 
-        let newWarranty = {
-          serializedAssetId: newSerializedAsset.value.id,
-          startDate: formattedWarrStartDate,
-          endDate: formattedWarrEndDate,
-          warrantyDescription: newSerializedAsset.value.warrantyDescription,
-          length: lengthMonth,
-          warrantyNotes: newSerializedAsset.value.warrantyNotes,
-        };
+          let newWarranty = {
+            serializedAssetId: newSerializedAsset.value.id,
+            startDate: formattedWarrStartDate,
+            endDate: formattedWarrEndDate,
+            warrantyDescription: newSerializedAsset.value.warrantyDescription,
+            length: lengthMonth,
+            warrantyNotes: newSerializedAsset.value.warrantyNotes,
+          };
+          // add warranty
+          WarrantyServices.create(newWarranty);
+        }
 
-        WarrantyServices.create(newWarranty);
+        // Add barcodes
+        barcodes.value.forEach((barcode) => {
+          if (barcode.type && barcode.code) {
+            BarcodeServices.create({
+              serializedAssetId: newSerializedAsset.value.id,
+              barcodeType: barcode.type,
+              barcode: barcode.code,
+            });
+          }
+        });
         snackbarText.value = "Asset added successfully.";
       });
+      snackbar.value = true; // Show the snackbar
+      await retrieveAssetsForProfile();
     }
-    snackbar.value = true; // Show the snackbar
-    await retrieveAssetsForProfile();
   } catch (error) {
     console.error("Error saving asset:", error);
     message.value = `Error saving asset: ${error.message || "Unknown error"}`;
@@ -579,6 +603,16 @@ function viewSerializedAsset(serializedAssetId) {
     query: { sourcePage: sourcePage },
   });
 }
+const addBarCode = () => {
+  barcodes.value.push({
+    type: null,
+    code: null,
+  });
+};
+
+const removeBarCode = (index) => {
+  barcodes.value.splice(index, 1);
+};
 
 // Computed property for display
 const formattedAcquisitionDate = computed(() => {
@@ -677,6 +711,40 @@ onMounted(async () => {
           <v-row>
             <v-col cols="12" sm="6" md="4">
               <div class="asset-detail">
+                <strong>Features</strong>
+                <div>
+                  <v-textarea
+                    v-model="profileDetails.features"
+                    rows="1"
+                    variant="filled"
+                    auto-grow
+                    bg-color="background"
+                    base-color="background"
+                    readonly
+                    flat
+                  ></v-textarea>
+                </div>
+              </div>
+            </v-col>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
+                <strong>Accessories</strong>
+                <v-textarea
+                  readonly
+                  v-model="profileDetails.accessories"
+                  rows="1"
+                  variant="filled"
+                  auto-grow
+                  bg-color="background"
+                  base-color="background"
+                  flat
+                ></v-textarea>
+              </div>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="12" sm="6" md="4">
+              <div class="asset-detail">
                 <strong>Warranty Desc</strong>
                 <div>{{ profileDetails.warrantyDescription || "N/A" }}</div>
               </div>
@@ -751,7 +819,7 @@ onMounted(async () => {
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                   <span>Active {{ profileDetails.profileName }}</span>
-                  <template v-if="canAdd">
+                  <template v-if="canAdd && profileDetails.activeStatus">
                     <v-btn
                       color="primary"
                       class="ma-2"
@@ -997,6 +1065,52 @@ onMounted(async () => {
                     color="blue"
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
+                </v-col>
+                <v-col v-if="!editingSerializedAsset">
+                  <v-row v-for="(barcode, index) in barcodes">
+                    <v-col cols="4">
+                      <v-select
+                        v-model="barcode.type"
+                        :items="['MAC', 'Wireless NIC', 'Onboard NIC']"
+                        label="Barcode Type"
+                        variant="outlined"
+                        dense
+                        :rules="[rules.required]"
+                        prepend-icon="mdi-barcode"
+                      ></v-select>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-text-field
+                        label="Barcode"
+                        variant="outlined"
+                        v-model="barcode.code"
+                        :rules="[rules.required]"
+                        maxlength="30"
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="2">
+                      <v-btn icon @click="removeBarCode(index)">
+                        <v-icon color="primary">mdi-delete</v-icon>
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+                </v-col>
+
+                <v-col cols="12" v-if="!editingSerializedAsset">
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ attrs }">
+                      <v-btn
+                        color="primary"
+                        @click="addBarCode"
+                        icon
+                        v-bind="attrs"
+                      >
+                        <v-icon left>mdi-plus</v-icon>
+                      </v-btn>
+                      Add Barcode
+                    </template>
+                    <span>Add a new field to the asset type</span>
+                  </v-tooltip>
                 </v-col>
 
                 <v-col cols="12">

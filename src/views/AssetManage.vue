@@ -5,6 +5,7 @@ import AssetProfileServices from "../services/assetProfileServices";
 import SerializedAssetServices from "../services/serializedAssetServices";
 import UserRoleServices from "../services/userRoleServices";
 import WarrantyServices from "../services/warrantyServices";
+import BarcodeServices from "../services/barcodeServices";
 import ProfileDialog from "../components/ProfileDialog.vue";
 import EditType from "../components/EditType.vue";
 import { ref, onMounted, watch, computed, toRaw } from "vue";
@@ -21,8 +22,11 @@ const selectedProfile = ref(""); // this is to be sent as a prop to DynamicTextF
 const selectedTab = ref("SerializedAssets");
 const selectedStatus = ref("Active");
 const assetCategories = ref([]);
+
 const assetTypes = ref([]);
+const activeAssetTypes = ref([]);
 const assetProfiles = ref([]);
+const activeAssetProfiles = ref([]);
 const serializedAssets = ref([]);
 const showAddTypeDialog = ref(false);
 const showAddProfileDialog = ref(false);
@@ -63,6 +67,7 @@ const warrEndDateMenu = ref(false);
 const disposalDateMenu = ref(false);
 const disposalValueLabel = ref("Disposal Value"); // Default label
 const serialNumberLabel = ref("Serial Number"); // Default label
+const barcodes = ref([]);
 const store = useStore();
 const originalProfileId = ref(""); // Stores the original profile ID when editing an asset
 const canAdd = computed(() => {
@@ -70,6 +75,9 @@ const canAdd = computed(() => {
 });
 const userRoleId = computed(() => {
   return store.getters.getUserRole;
+});
+const userRoleCategoryId = computed(() => {
+  return userRole.value.data.categoryId;
 });
 const getUserRole = async () => {
   userRole.value = await UserRoleServices.get(userRoleId.value);
@@ -159,8 +167,12 @@ const retrieveAssetCategories = async () => {
         ...category,
         title: category.categoryName,
         key: category.categoryId,
+        activeStatus: category.activeStatus,
       }));
       assetCategories.value = enrichedCategories;
+      assetCategories.value.sort((a, b) =>
+        a.categoryName.localeCompare(b.categoryName)
+      );
     } else {
       throw new Error("Data is not an array");
     }
@@ -211,9 +223,14 @@ const retrieveAssetTypes = async () => {
           key: type.typeId,
           title: type.typeName,
           categoryId: type.categoryId,
+          activeStatus: type.activeStatus,
         };
       });
       assetTypes.value = enrichedTypes;
+      assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
+      activeAssetTypes.value = assetTypes.value.filter(
+        (type) => type.activeStatus === true
+      );
     } else {
       throw new Error("Data is not an array");
     }
@@ -414,9 +431,16 @@ const retrieveAssetProfiles = async () => {
             key: profile.profileId,
             title: profile.profileName,
             assetsCount: assetsCount,
+            activeStatus: profile.activeStatus,
           };
         });
         assetProfiles.value = enrichedProfiles;
+        assetProfiles.value.sort((a, b) =>
+          a.profileName.localeCompare(b.profileName)
+        );
+        activeAssetProfiles.value = assetProfiles.value.filter(
+          (profile) => profile.activeStatus === true
+        );
       } else {
         throw new Error("Data is not an array");
       }
@@ -558,6 +582,9 @@ const archiveProfile = async (profileId) => {
     // Refresh the list of profiles after successful deletion
     retrieveAssetProfiles();
     assetProfiles.value = assetProfiles.value.filter((c) => c.id !== profileId);
+    activeAssetProfiles.value = activeAssetProfiles.value.filter(
+      (c) => c.id !== profileId
+    );
   } catch (error) {
     console.error(error);
     message.value = "Error archiving profile.";
@@ -574,10 +601,10 @@ const activateProfile = async (profileId) => {
     snackbar.value = true; // Show the snackbar
     // Refresh the list of categories after successful deletion
     retrieveAssetProfiles();
-    assetProfiles.value = assetProfiles.value.filter((c) => c.id !== profileId);
+    //assetProfiles.value = assetProfiles.value.filter((c) => c.id !== profileId);
   } catch (error) {
     console.error(error);
-    message.value = "Error archiving profile.";
+    message.value = "Error activating profile.";
   }
 };
 
@@ -721,6 +748,7 @@ const resetSerializedAssetForm = () => {
   rawWarrStartDate.value = null;
   rawWarrEndDate.value = null;
   serialNumberLabel.value = "Serial Number"; // Reset label to default
+  barcodes.value = [];
 };
 
 // Reset Archive for serializedAsset
@@ -786,32 +814,50 @@ const saveSerializedAsset = async () => {
         serializedAssetData
       );
       snackbarText.value = "Asset updated successfully.";
+      snackbar.value = true; // Show the snackbar
+      message.value = "Asset saved successfully.";
     } else {
       // Call create service if adding a new profile
-      await SerializedAssetServices.create(serializedAssetData).then((data) => {
-        newSerializedAsset.value.id = data.data.serializedAssetId;
-        let lengthMonth = monthDiff(
-          new Date(rawWarrStartDate.value),
-          new Date(rawWarrEndDate.value)
-        );
+      await SerializedAssetServices.create(serializedAssetData).then(
+        async (data) => {
+          newSerializedAsset.value.id = data.data.serializedAssetId;
+          let lengthMonth = monthDiff(
+            new Date(rawWarrStartDate.value),
+            new Date(rawWarrEndDate.value)
+          );
+          // Create warranty
 
-        let newWarranty = {
-          serializedAssetId: newSerializedAsset.value.id,
-          startDate: formattedWarrStartDate,
-          endDate: formattedWarrEndDate,
-          warrantyDescription: newSerializedAsset.value.warrantyDescription,
-          length: lengthMonth,
-          warrantyNotes: newSerializedAsset.value.warrantyNotes,
-        };
+          if (formattedWarrStartDate != null && formattedWarrEndDate != null) {
+            let newWarranty = {
+              serializedAssetId: newSerializedAsset.value.id,
+              startDate: formattedWarrStartDate,
+              endDate: formattedWarrEndDate,
+              warrantyDescription: newSerializedAsset.value.warrantyDescription,
+              length: lengthMonth,
+              warrantyNotes: newSerializedAsset.value.warrantyNotes,
+            };
 
-        WarrantyServices.create(newWarranty);
-        snackbarText.value = "Asset added successfully.";
-      });
+            WarrantyServices.create(newWarranty);
+          }
+
+          // Create barcodes
+
+          barcodes.value.forEach((barcode) => {
+            let newBarcode = {
+              barcodeType: barcode.type,
+              barcode: barcode.code,
+              serializedAssetId: newSerializedAsset.value.id,
+            };
+            BarcodeServices.create(newBarcode);
+          });
+          snackbarText.value = "Asset added successfully.";
+          snackbar.value = true; // Show the snackbar
+          message.value = "Asset saved successfully.";
+          await retrieveSerializedAssets();
+          await retrieveAssetProfiles();
+        }
+      );
     }
-    snackbar.value = true; // Show the snackbar
-    message.value = "Asset saved successfully.";
-    await retrieveSerializedAssets();
-    await retrieveAssetProfiles();
   } catch (error) {
     console.error("Error saving asset:", error);
     message.value = `Error saving asset: ${error.message || "Unknown error"}`;
@@ -940,12 +986,10 @@ const updateDisposalValueLabel = () => {
 };
 
 const updateSerialNumberLabel = () => {
-
   // Check if the selectedProfileId has a valid key and fetch the corresponding profile
   const profile = assetProfiles.value.find(
     (p) => p.key === selectedProfileId.value?.key
   );
-
 
   if (profile && (profile.typeId === 13 || profile.typeId === "13")) {
     // Check for both '13' as a string and 13 as a number
@@ -1141,6 +1185,17 @@ watch(
   },
   { deep: true }
 );
+
+const addBarCode = () => {
+  barcodes.value.push({
+    type: null,
+    code: null,
+  });
+};
+
+const removeBarCode = (index) => {
+  barcodes.value.splice(index, 1);
+};
 
 // Watcher for disposal method on serializedAsset archive
 watch(
@@ -1753,6 +1808,7 @@ onMounted(async () => {
       <ProfileDialog
         :rules="rules"
         :selected-profile="selectedProfile"
+        :userCategoryId="userRoleCategoryId"
         @closeDialog="handleCloseProfileDialog"
         @updateSnackbar="handleUpdatedProfile"
         @saveSnackbar="handleSavedProfile"
@@ -1760,7 +1816,7 @@ onMounted(async () => {
     </v-dialog>
 
     <!-- Add/Edit serializedAsset Dialog -->
-    <v-dialog v-model="showAddSerializedAssetDialog" max-width="600px">
+    <v-dialog v-model="showAddSerializedAssetDialog" max-width="800px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between">
           <span>{{ editingSerializedAsset ? "Edit" : "Add" }} Asset</span>
@@ -1785,7 +1841,7 @@ onMounted(async () => {
                   <v-autocomplete
                     label="Profile"
                     variant="outlined"
-                    :items="assetProfiles"
+                    :items="activeAssetProfiles"
                     item-text="title"
                     item-value="key"
                     v-model="selectedProfileId"
@@ -1820,33 +1876,7 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
                 </v-col>
-                <!-- <v-col cols="6">
-                  <v-menu
-                    v-model="acquisitionDateMenu"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        type="date"
-                        v-model="formattedAcquisitionDate"
-                        label="Acquisition Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="acquisitionDateMenu = !acquisitionDateMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawAcquisitionDate"
-                      @input="acquisitionDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
-                </v-col> -->
+
                 <v-col cols="12" v-if="!editingSerializedAsset">
                   <v-text-field
                     label="Warranty Description"
@@ -1876,31 +1906,6 @@ onMounted(async () => {
                     color="blue"
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
-
-                  <!-- <v-menu
-                    v-model="warrStartDateMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedWarrStartDate"
-                        label="Warranty xStart Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        readonly
-                        v-bind="attrs"
-                        @click="warrStartDateMenu = !warrStartDateMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawWarrStartDate"
-                      @input="warrStartDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu> -->
                 </v-col>
                 <v-col cols="6" v-if="!editingSerializedAsset">
                   <v-date-input
@@ -1911,30 +1916,52 @@ onMounted(async () => {
                     color="blue"
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
-                  <!-- <v-menu
-                    v-model="warrEndDateMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedWarrEndDate"
-                        label="Warranty End Date"
+                </v-col>
+                <v-col v-if="!editingSerializedAsset">
+                  <v-row v-for="(barcode, index) in barcodes">
+                    <v-col cols="4">
+                      <v-select
+                        v-model="barcode.type"
+                        :items="['MAC', 'Wireless NIC', 'Onboard NIC']"
+                        label="Barcode Type"
                         variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        readonly
-                        v-bind="attrs"
-                        @click="warrEndDateMenu = !warrEndDateMenu"
+                        dense
+                        :rules="[rules.required]"
+                        prepend-icon="mdi-barcode"
+                      ></v-select>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-text-field
+                        label="Barcode"
+                        variant="outlined"
+                        v-model="barcode.code"
+                        :rules="[rules.required]"
+                        maxlength="30"
                       ></v-text-field>
+                    </v-col>
+                    <v-col cols="2">
+                      <v-btn icon @click="removeBarCode(index)">
+                        <v-icon color="primary">mdi-delete</v-icon>
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+                </v-col>
+
+                <v-col cols="12" v-if="!editingSerializedAsset">
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ attrs }">
+                      <v-btn
+                        color="primary"
+                        @click="addBarCode"
+                        icon
+                        v-bind="attrs"
+                      >
+                        <v-icon left>mdi-plus</v-icon>
+                      </v-btn>
+                      Add Barcode
                     </template>
-                    <v-date-picker
-                      v-model="rawWarrEndDate"
-                      @input="warrEndDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu> -->
+                    <span>Add a new field to the asset type</span>
+                  </v-tooltip>
                 </v-col>
 
                 <v-col cols="12">

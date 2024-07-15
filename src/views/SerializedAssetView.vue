@@ -6,6 +6,7 @@ import RoomAssetServices from "../services/roomAssetServices";
 import PersonAssetServices from "../services/personAssetServices";
 import LogServices from "../services/logServices";
 import WarrantyServices from "../services/warrantyServices";
+import BarcodeServices from "../services/barcodeServices";
 import LeaseServices from "../services/leaseServices";
 import { ref, onMounted, watch, defineProps, computed } from "vue";
 import router from "../router";
@@ -19,6 +20,7 @@ const fullAssetHistory = ref([]);
 const selectedTab = ref("History");
 const maintenanceLogs = ref([]);
 const warranties = ref([]);
+const barcodes = ref([]);
 const leases = ref([]);
 const message = ref("");
 const itemToDisplay = ref(null);
@@ -164,6 +166,25 @@ const warrantyHeaders = ref([
   { title: "Status", key: "activeStatus" },
 ]);
 
+//Warranties section
+
+const retrieveBarcodesBySerializedAssetId = async () => {
+  try {
+    const response = await BarcodeServices.getBarcodesBySerializedAssetId(
+      props.serializedAssetId
+    );
+    barcodes.value = response.data;
+  } catch (error) {
+    console.error("Error loading barcodes", error);
+    message.value = "Failed to load barcodes.";
+  }
+};
+
+const barcodeHeaders = ref([
+  { title: "Type", key: "barcodeType" },
+  { title: "Code", key: "barcode" },
+]);
+
 //Leases section
 
 const retrieveLeasesBySerializedAssetId = async () => {
@@ -300,6 +321,7 @@ onMounted(async () => {
   await retrieveLogsBySerializedAssetId();
   await retrieveWarrantiesBySerializedAssetId();
   await retrieveLeasesBySerializedAssetId();
+  await retrieveBarcodesBySerializedAssetId();
 });
 </script>
 
@@ -427,6 +449,7 @@ onMounted(async () => {
           <v-tab value="Maintenance" color="primary">Maintenance</v-tab>
           <v-tab value="Warranty" color="primary">Warranties</v-tab>
           <v-tab value="Leasing" color="primary">Leases</v-tab>
+          <v-tab value="Barcodes" color="primary">Barcodes</v-tab>
         </v-tabs>
 
         <!-- Data Tables -->
@@ -516,6 +539,16 @@ onMounted(async () => {
           <template v-slot:item.activeStatus="{ item }">
             <td>{{ formatStatus(item.activeStatus) }}</td>
           </template>
+        </v-data-table>
+        <v-data-table
+          v-if="selectedTab === 'Barcodes'"
+          :headers="barcodeHeaders"
+          :items="barcodes"
+          item-key="key"
+          class="elevation-1"
+          :items-per-page="5"
+          :items-per-page-options="[5, 10, 20, 50, -1]"
+        >
         </v-data-table>
         <v-data-table
           v-if="selectedTab === 'Leasing'"
