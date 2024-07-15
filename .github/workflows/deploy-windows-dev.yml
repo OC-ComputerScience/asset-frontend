@@ -32,6 +32,8 @@ jobs:
           host: "assetdev.oc.edu"
           username: "david.north"
           key: ${{ secrets.DEV_WIN_SERVER_SSH_KEY  }}
-          rm: true
           source: "dist/*"
-          target: "c:/Apache24/htdocs/asset"
+          target: "c/apache24/htdocs/asset"
+          tar_dereference: true
+          rm: true
+
