@@ -307,40 +307,55 @@ const saveProfile = async () => {
 const saveFieldValues = async(profileId) => {
   for(let field of customFields.value){
     if(field.changed){
-
-      let fieldValueId;
       let data = {
         customFieldId: field.customFieldId,
         value: field.value,
       };
       try {
-        if (field.fieldValueId && field.type != "List") {
-          fieldValueId = field.fieldValueId;
-          await customFieldValueServices.update(fieldValueId, data);
-        } 
-        else if (field.fieldValueId && field.type == "List") {
-          let newFieldValue = { fieldValueId: field.fieldValueId };
-          await profileDataServices.update(field.profileDataId, newFieldValue);
-        } 
+        if(field.fieldValueId){
+          handleFieldValueWithId(field, data, profileId);
+        }
         else {
-          let response = await customFieldValueServices.create(data);
-          fieldValueId = response.data.id;
-          let profileData = {
-            profileId: profileId,
-            fieldValueId: fieldValueId,
-          };
-          if(field.profileDataId){
-            await profileDataServices.update(profileData);
-          }
-          else {
-            await profileDataServices.create(profileData);
-          }
+          handleFieldValueWithoutId(field, data, profileId);
         }
       } catch (err) {
         console.error(err);
-
       }
     }
+  }
+};
+
+const handleFieldValueWithId = async(field, data, profileId) => {
+  if (field.type != "List") {
+    await customFieldValueServices.update(field.fieldValueId, data);
+  } 
+  else if (field.type == "List") {
+    let newFieldValue = { fieldValueId: field.fieldValueId };
+    if(field.profileDataId){
+      await profileDataServices.update(field.profileDataId, newFieldValue);
+    }
+    else {
+      let profileData = {
+        profileId: profileId,
+        fieldValueId: field.fieldValueId
+      }
+      await profileDataServices.create(profileData);
+    }
+  } 
+};
+
+const handleFieldValueWithoutId = async(field, data, profileId) => {
+  let response = await customFieldValueServices.create(data);
+  let fieldValueId = response.data.id;
+  let profileData = {
+    profileId: profileId, 
+    fieldValueId: fieldValueId
+  };
+  if(field.profileDataId){
+    await profileDataServices.update(profileData);
+  }
+  else {
+    await profileDataServices.create(profileData);
   }
 };
 
