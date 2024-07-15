@@ -26,12 +26,12 @@ jobs:
       - run: npm install
       - run: npm run build
 
-      - name: Copy folder content recursively to remote
-        uses: garygrossgarten/github-action-scp@release
+      - name: copy file via ssh password
+        uses: appleboy/scp-action@v0.1.7
         with:
-          local: dist/
-          remote: c:/Apache24/htdocs/asset
-          recursive: true
           host: "assetdev.oc.edu"
           username: "david.north"
-          privateKey: ${{ secrets.DEV_WIN_SERVER_SSH_KEY  }}
+          key: ${{ secrets.DEV_WIN_SERVER_SSH_KEY  }}
+          rm: true
+          source: "dist/*"
+          target: "c:/Apache24/htdocs/asset"
