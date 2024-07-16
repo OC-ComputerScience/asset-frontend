@@ -107,7 +107,6 @@ const removeField = async (index, field) => {
 };
 
 const updateFieldValue = (field) => {
-  console.log(field)
   if (!field.customField || !field.customField.id) {
     field.customField = {
       id: null,
