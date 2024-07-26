@@ -9,6 +9,9 @@ export default {
   getAll() {
     return apiClient.get(baseURL);
   },
+  getAllRecent() {
+    return apiClient.get(baseURL+"recent ");
+  },
   getById(roomAssetId) {
     return apiClient.get(baseURL + `${roomAssetId}`);
   },
@@ -18,6 +21,9 @@ export default {
 
   getRoomAssetsByCategoryId(categoryId) {
     return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`);
+  },
+  getRecentByCategoryId(categoryId) {
+    return apiClient.get(baseURL + "byCategoryId/recent/" + `${categoryId}`);
   },
 
   update(roomAssetId, data) {
