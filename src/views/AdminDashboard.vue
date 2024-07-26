@@ -18,11 +18,13 @@ const snackbarText = ref("");
 // Retrieve PersonAssets from Database
 const retrievePersonAssets = async () => {
   try {
-    const response = await PersonAssetServices.getAll();
+    const response = await PersonAssetServices.getAllRecent();
     personAssets.value = response.data.map((personAsset) => {
       return {
         ...personAsset,
-        fullName: personAsset.person ? personAsset.person.fullName : "Unknown/Archived",
+        fullName: personAsset.person
+          ? personAsset.person.fullName
+          : "Unknown/Archived",
         title: personAsset.serializedAsset
           ? personAsset.serializedAsset.serializedAssetName
           : "Unknown/Archived Asset",
@@ -41,7 +43,9 @@ const retrieveBuildingAssets = async () => {
     buildingAssets.value = response.data.map((buildingAsset) => {
       return {
         ...buildingAsset,
-        name: buildingAsset.building ? buildingAsset.building.name : "Unknown/Archived",
+        name: buildingAsset.building
+          ? buildingAsset.building.name
+          : "Unknown/Archived",
         title: buildingAsset.serializedAsset
           ? buildingAsset.serializedAsset.serializedAssetName
           : "Unknown/Archived Asset",

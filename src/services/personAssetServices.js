@@ -9,6 +9,9 @@ export default {
   getAll() {
     return apiClient.get(baseURL);
   },
+  getAllRecent() {
+    return apiClient.get(baseURL+'recent');
+  },
   getById(personAssetId) {
     return apiClient.get(baseURL + `${personAssetId}`);
   },
@@ -17,6 +20,9 @@ export default {
   },
   getPersonAssetsByCategoryId(categoryId) {
     return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`);
+  },
+  getRecentByCategoryId(categoryId) {
+    return apiClient.get(baseURL + "byCategoryId/recent/" + `${categoryId}`);
   },
   update(personAssetId, data) {
     return apiClient.put(baseURL + `${personAssetId}`, data);

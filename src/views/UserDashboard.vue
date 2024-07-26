@@ -9,7 +9,7 @@ import moment from "moment-timezone";
 import store from "../store/store.js";
 import UserRoleServices from "../services/userRoleServices";
 
-const userRole = ref({})
+const userRole = ref({});
 const router = useRouter();
 const message = ref("");
 const personAssets = ref([]);
@@ -17,12 +17,12 @@ const buildingAssets = ref([]);
 const roomAssets = ref([]);
 const snackbar = ref(false);
 const snackbarText = ref("");
-const userRoleId = computed(() =>{
-  return store.getters.getUserRole
-})
+const userRoleId = computed(() => {
+  return store.getters.getUserRole;
+});
 const getUserRole = async () => {
-    userRole.value = await UserRoleServices.get(userRoleId.value);
-    return userRole.value;
+  userRole.value = await UserRoleServices.get(userRoleId.value);
+  return userRole.value;
 };
 
 const retrievePersonAssets = async () => {
@@ -30,15 +30,19 @@ const retrievePersonAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      response = await PersonAssetServices.getAll();
+      response = await PersonAssetServices.getAllRecent();
     } else {
-      response = await PersonAssetServices.getPersonAssetsByCategoryId(userRole.value.data.categoryId);
+      response = await PersonAssetServices.getRecentByCategoryId(
+        userRole.value.data.categoryId
+      );
     }
 
     personAssets.value = response.data.map((personAsset) => {
       return {
         ...personAsset,
-        fullName: personAsset.person ? personAsset.person.fullName : "Unknown/Archived",
+        fullName: personAsset.person
+          ? personAsset.person.fullName
+          : "Unknown/Archived",
         title: personAsset.serializedAsset
           ? personAsset.serializedAsset.serializedAssetName
           : "Unknown/Archived Asset",
@@ -50,7 +54,6 @@ const retrievePersonAssets = async () => {
   }
 };
 
-
 const retrieveBuildingAssets = async () => {
   try {
     let response;
@@ -58,13 +61,17 @@ const retrieveBuildingAssets = async () => {
     if (userRole.value.data.categoryId === 4) {
       response = await BuildingAssetServices.getAll();
     } else {
-      response = await BuildingAssetServices.getBuildingAssetsByCategoryId(userRole.value.data.categoryId);
+      response = await BuildingAssetServices.getBuildingAssetsByCategoryId(
+        userRole.value.data.categoryId
+      );
     }
 
     buildingAssets.value = response.data.map((buildingAsset) => {
       return {
         ...buildingAsset,
-        name: buildingAsset.building ? buildingAsset.building.name : "Unknown/Archived",
+        name: buildingAsset.building
+          ? buildingAsset.building.name
+          : "Unknown/Archived",
         title: buildingAsset.serializedAsset
           ? buildingAsset.serializedAsset.serializedAssetName
           : "Unknown/Archived Asset",
@@ -76,7 +83,6 @@ const retrieveBuildingAssets = async () => {
   }
 };
 
-
 const retrieveRoomAssets = async () => {
   try {
     let response;
@@ -84,7 +90,9 @@ const retrieveRoomAssets = async () => {
     if (userRole.value.data.categoryId === 4) {
       response = await RoomAssetServices.getAll();
     } else {
-      response = await RoomAssetServices.getRoomAssetsByCategoryId(userRole.value.data.categoryId);
+      response = await RoomAssetServices.getRoomAssetsByCategoryId(
+        userRole.value.data.categoryId
+      );
     }
 
     roomAssets.value = response.data.map((roomAsset) => {
@@ -101,7 +109,6 @@ const retrieveRoomAssets = async () => {
     message.value = "Failed to load room assets.";
   }
 };
-
 
 const formatDate = (dateString) => {
   if (!dateString) return "Indefinite";
