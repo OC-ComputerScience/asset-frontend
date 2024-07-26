@@ -59,9 +59,9 @@ const retrieveBuildingAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      response = await BuildingAssetServices.getAll();
+      response = await BuildingAssetServices.getAllRecent();
     } else {
-      response = await BuildingAssetServices.getBuildingAssetsByCategoryId(
+      response = await BuildingAssetServices.getRecentByCategoryId(
         userRole.value.data.categoryId
       );
     }
@@ -88,9 +88,9 @@ const retrieveRoomAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      response = await RoomAssetServices.getAll();
+      response = await RoomAssetServices.getAllRecent();
     } else {
-      response = await RoomAssetServices.getRoomAssetsByCategoryId(
+      response = await RoomAssetServices.getRecentByCategoryId(
         userRole.value.data.categoryId
       );
     }
@@ -141,30 +141,48 @@ const combinedAssets = computed(() => {
 
   // Process person assets
   personAssets.value.forEach((asset) => {
-    if (asset.checkoutDate) {
+    if (
+      asset.checkoutDate &&
+      new Date(asset.checkoutDate) >= moment().subtract(28, "days").toDate()
+    ) {
       addActivity(asset, "Checkout", asset.checkoutDate, asset.checkedOutBy);
     }
-    if (asset.checkinDate) {
+    if (
+      asset.checkinDate &&
+      new Date(asset.checkinDate) >= moment().subtract(28, "days").toDate()
+    ) {
       addActivity(asset, "Check-in", asset.checkinDate, asset.checkedInBy);
     }
   });
 
   // Process building assets
   buildingAssets.value.forEach((asset) => {
-    if (asset.checkoutDate) {
+    if (
+      asset.checkoutDate &&
+      new Date(asset.checkoutDate) >= moment().subtract(28, "days").toDate()
+    ) {
       addActivity(asset, "Checkout", asset.checkoutDate, asset.checkedOutBy);
     }
-    if (asset.checkinDate) {
+    if (
+      asset.checkinDate &&
+      new Date(asset.checkinDate) >= moment().subtract(28, "days").toDate()
+    ) {
       addActivity(asset, "Check-in", asset.checkinDate, asset.checkedInBy);
     }
   });
 
   // Process room assets
   roomAssets.value.forEach((asset) => {
-    if (asset.checkoutDate) {
+    if (
+      asset.checkoutDate &&
+      new Date(asset.checkoutDate) >= moment().subtract(28, "days").toDate()
+    ) {
       addActivity(asset, "Checkout", asset.checkoutDate, asset.checkedOutBy);
     }
-    if (asset.checkinDate) {
+    if (
+      asset.checkinDate &&
+      new Date(asset.checkinDate) >= moment().subtract(28, "days").toDate()
+    ) {
       addActivity(asset, "Check-in", asset.checkinDate, asset.checkedInBy);
     }
   });
