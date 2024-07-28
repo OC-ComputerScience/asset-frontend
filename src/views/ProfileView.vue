@@ -14,6 +14,7 @@ import moment from "moment-timezone";
 const message = ref("");
 const serializedAssets = ref([]);
 const assetProfiles = ref([]);
+const profileData = ref([]);
 const selectedStatus = ref("Active");
 const selectedProfileId = ref("");
 const showAddSerializedAssetDialog = ref(false);
@@ -472,40 +473,17 @@ const archivedSerializedAssetHeaders = computed(() => {
   return headers;
 });
 
-// Misc Section
-// const fixProfileField = (profileField) => {
-//   if (profileField === profileField.toUpperCase()) {
-//     return profileField;
-//   }
-
-//   let field = profileField.split(/(?=[A-Z])/);
-
-//   return field
-//     .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
-//     .join(" ");
-// };
-
 const profileDetails = ref({ profileName: "Loading..." });
 
 const retrieveProfileDetails = async () => {
   try {
     const response = await AssetProfileServices.getById(props.profileId);
     profileDetails.value = response.data;
+    profileData.value = response.data.profileData;
+    console.log(profileData.value)
   } catch (error) {
     console.error("Error loading profile details:", error);
     message.value = "Failed to load profile details.";
-  }
-};
-
-const profileData = ref({ profileName: "Loading..." });
-
-const retrieveProfileData = async () => {
-  try {
-    const response = await ProfileDataServices.getByProfileId(props.profileId);
-    profileData.value = response.data;
-  } catch (error) {
-    console.error("Error loading profile data:", error);
-    message.value = "Failed to load profile data.";
   }
 };
 
@@ -671,7 +649,6 @@ watch(
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await retrieveProfileDetails();
-  await retrieveProfileData();
   await retrieveAssetsForProfile();
 });
 </script>
@@ -707,38 +684,10 @@ onMounted(async () => {
                 </div>
               </div>
             </v-col>
-          </v-row>
-          <v-row>
-            <v-col cols="12" sm="6" md="4">
+            <v-col cols="12" sm="6" md="4" v-for="data in profileData">
               <div class="asset-detail">
-                <strong>Features</strong>
-                <div>
-                  <v-textarea
-                    v-model="profileDetails.features"
-                    rows="1"
-                    variant="filled"
-                    auto-grow
-                    bg-color="background"
-                    base-color="background"
-                    readonly
-                    flat
-                  ></v-textarea>
-                </div>
-              </div>
-            </v-col>
-            <v-col cols="12" sm="6" md="4">
-              <div class="asset-detail">
-                <strong>Accessories</strong>
-                <v-textarea
-                  readonly
-                  v-model="profileDetails.accessories"
-                  rows="1"
-                  variant="filled"
-                  auto-grow
-                  bg-color="background"
-                  base-color="background"
-                  flat
-                ></v-textarea>
+                <strong>{{ data.customFieldValue.customField.name }}</strong>
+                <div>{{ data.customFieldValue.value }}</div>
               </div>
             </v-col>
           </v-row>
@@ -1142,25 +1091,6 @@ onMounted(async () => {
         </v-card-actions>
       </v-card>
     </v-dialog>
-
-    <!-- Confirm Archive Dialog -->
-    <!-- <v-dialog v-model="showArchiveDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Archive</v-card-title
-        >
-        <v-card-text>Are you sure you want to archive this item? </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="cancelgrey" text @click="showArchiveDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="saveblue" text @click="confirmArchive">Archive</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog> -->
-
-    <!-- Confirm Archive Dialog -->
     <v-dialog v-model="showArchiveDialog" max-width="600px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title>Confirm Archive</v-card-title>
