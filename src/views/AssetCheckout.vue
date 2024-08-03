@@ -234,11 +234,11 @@ const retrievePersonAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      response = await PersonAssetServices.getAll();
+      response = await PersonAssetServices.getAllRecent();
     } else {
       // Fetch person assets by specific category ID
 
-      response = await PersonAssetServices.getPersonAssetsByCategoryId(
+      response = await PersonAssetServices.getRecnetByCategoryId(
         userRole.value.data.categoryId
       );
     }
@@ -520,10 +520,10 @@ const retrieveBuildingAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      response = await BuildingAssetServices.getAll();
+      response = await BuildingAssetServices.getAllRecent();
     } else {
       // Fetch building assets by specific category ID
-      response = await BuildingAssetServices.getBuildingAssetsByCategoryId(
+      response = await BuildingAssetServices.getRecentByCategoryId(
         userRole.value.data.categoryId
       );
     }
@@ -778,10 +778,10 @@ const retrieveRoomAssets = async () => {
     let response;
     // Check if the user's role category ID is 4
     if (userRole.value.data.categoryId === 4) {
-      response = await RoomAssetServices.getAll();
+      response = await RoomAssetServices.getAllRecent();
     } else {
       // Fetch room assets by specific category ID
-      response = await RoomAssetServices.getRoomAssetsByCategoryId(
+      response = await RoomAssetServices.getRecentByCategoryId(
         userRole.value.data.categoryId
       );
     }
