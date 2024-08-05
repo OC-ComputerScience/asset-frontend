@@ -21,8 +21,7 @@ const selectedStatus = ref("Checkout");
 const selectedPersonAsset = ref("");
 const selectedBuildingAsset = ref("");
 const selectedRoomAsset = ref("");
-const serializedAssets = ref([]);
-const assetProfiles = ref([]);
+const availableForCheckoutAssets = ref([]);
 const people = ref([]);
 const personAssets = ref([]);
 const buildings = ref([]);
@@ -238,17 +237,15 @@ const retrievePersonAssets = async () => {
     } else {
       // Fetch person assets by specific category ID
 
-      response = await PersonAssetServices.getRecnetByCategoryId(
+      response = await PersonAssetServices.getRecentByCategoryId(
         userRole.value.data.categoryId
       );
     }
 
     // Process the response data
     personAssets.value = response.data.map((personAsset) => {
-      const person = people.value.find((p) => p.key === personAsset.personId);
-      const serializedAsset = serializedAssets.value.find(
-        (sa) => sa.key === personAsset.serializedAssetId
-      );
+      const person = personAsset.person;
+      const serializedAsset = personAsset.serializedAsset;
 
       // Constructing a combined title with person's full name and asset's title
       const combinedTitle = person
@@ -297,7 +294,8 @@ const savePersonCheckout = async () => {
     }
 
     const personAssetData = {
-      serializedAssetId: newPersonAsset.value.serializedAssetId.key,
+      serializedAssetId:
+        newPersonAsset.value.serializedAssetId.serializedAssetId,
       personId: newPersonAsset.value.personId.key,
       checkoutDate: formattedCheckoutDate,
       checkoutStatus: true,
@@ -311,7 +309,7 @@ const savePersonCheckout = async () => {
 
       // Update the checkoutStatus of the SerializedAsset to true
       await SerializedAssetServices.updateCheckoutStatus(
-        newPersonAsset.value.serializedAssetId.key,
+        newPersonAsset.value.serializedAssetId.serializedAssetId,
         true
       );
 
@@ -321,7 +319,8 @@ const savePersonCheckout = async () => {
           checkOutBy: personAssetData.checkedOutBy,
           fullName: newPersonAsset.value.personId.title,
           expectedCheckinDate: personAssetData.expectedCheckinDate,
-          serializedAssetName: newPersonAsset.value.serializedAssetId.title,
+          serializedAssetName:
+            newPersonAsset.value.serializedAssetId.serializedAssetName,
         },
         "notify"
       );
@@ -332,7 +331,8 @@ const savePersonCheckout = async () => {
           to: newPersonAsset.value.personId.email,
           fullName: newPersonAsset.value.personId.title,
           expectedCheckinDate: personAssetData.expectedCheckinDate,
-          serializedAssetName: newPersonAsset.value.serializedAssetId.title,
+          serializedAssetName:
+            newPersonAsset.value.serializedAssetId.serializedAssetName,
         },
         "confirm"
       );
@@ -342,7 +342,6 @@ const savePersonCheckout = async () => {
 
       closePersonCheckoutDialog();
       await retrievePersonAssets();
-      await retrieveSerializedAssets(); // Refresh serialized assets to reflect the checkout status update
     } catch (error) {
       console.error("Error saving checkout:", error);
       snackbarText.value = "Failed to check out the asset.";
@@ -411,7 +410,6 @@ const savePersonCheckin = async () => {
       snackbar.value = true;
       closePersonCheckinDialog();
       await retrievePersonAssets();
-      await retrieveSerializedAssets(); // Refresh to show updated statuses
     } catch (error) {
       console.error("Error saving check-in:", error);
       snackbarText.value = "Failed to check in the asset.";
@@ -475,16 +473,19 @@ const personAssetCheckinHeaders = ref([
 ]);
 
 // Computed property for assets available for checkout (checkoutStatus = false)
-const availableForCheckoutPersonAssets = computed(() => {
-  return serializedAssets.value
-    .filter((asset) => !asset.checkoutStatus) // Filter assets that are not checked out
-    .sort((a, b) => {
+
+const getAvailableForCheckoutAssets = () => {
+  SerializedAssetServices.getAll(true, false).then((response) => {
+    availableForCheckoutAssets.value = response.data;
+
+    availableForCheckoutAssets.value.sort((a, b) => {
       // Handle cases where serializedAssetName might be undefined or null
       const nameA = a.serializedAssetName || ""; // Default to empty string if serializedAssetName is undefined or null
       const nameB = b.serializedAssetName || ""; // Default to empty string if serializedAssetName is undefined or null
       return nameA.localeCompare(nameB); // Use localeCompare to sort by serializedAssetName
     });
-});
+  });
+};
 
 // Computed property for assets available for check-in (checkoutStatus = true)
 const availableForCheckinPersonAssets = computed(() => {
@@ -530,23 +531,19 @@ const retrieveBuildingAssets = async () => {
 
     // Process the response data
     buildingAssets.value = response.data.map((buildingAsset) => {
-      const building = buildings.value.find(
-        (b) => b.key === buildingAsset.buildingId
-      );
-      const serializedAsset = serializedAssets.value.find(
-        (ba) => ba.key === buildingAsset.serializedAssetId
-      );
+      const building = buildingAsset.building;
+      const serializedAsset = buildingAsset.serializedAsset;
 
       // Creating a combined title with building's name and asset's title
       const combinedTitle = `${
-        building ? building.title : "Unknown Building"
+        building ? building.name : "Unknown Building"
       }: ${
         serializedAsset ? serializedAsset.serializedAssetName : "Unknown Asset"
       }`;
 
       return {
         ...buildingAsset,
-        name: building ? building.title : "Unknown",
+        name: building ? building.name : "Unknown",
         assetName: serializedAsset
           ? serializedAsset.serializedAssetName
           : "Unknown Asset",
@@ -578,7 +575,8 @@ const saveBuildingCheckout = async () => {
     }
 
     const buildingAssetData = {
-      serializedAssetId: newBuildingAsset.value.serializedAssetId.key,
+      serializedAssetId:
+        newBuildingAsset.value.serializedAssetId.serializedAssetId,
       buildingId: newBuildingAsset.value.buildingId.key,
       checkoutDate: formattedCheckoutDate,
       checkoutStatus: true,
@@ -592,7 +590,7 @@ const saveBuildingCheckout = async () => {
 
       // Update the checkoutStatus of the SerializedAsset to true
       await SerializedAssetServices.updateCheckoutStatus(
-        newBuildingAsset.value.serializedAssetId.key,
+        newBuildingAsset.value.serializedAssetId.serializedAssetId,
         true
       );
 
@@ -601,7 +599,6 @@ const saveBuildingCheckout = async () => {
 
       closeBuildingCheckoutDialog();
       await retrieveBuildingAssets();
-      await retrieveSerializedAssets(); // Refresh serialized assets to reflect the checkout status update
     } catch (error) {
       console.error("Error saving checkout:", error);
       snackbarText.value = "Failed to check out the asset.";
@@ -646,7 +643,6 @@ const saveBuildingCheckin = async () => {
       snackbar.value = true;
       closeBuildingCheckinDialog();
       await retrieveBuildingAssets();
-      await retrieveSerializedAssets(); // Refresh to show updated statuses
     } catch (error) {
       console.error("Error saving check-in:", error);
       snackbarText.value = "Failed to check in the asset.";
@@ -733,17 +729,6 @@ const buildingAssetCheckinHeaders = ref([
   { title: "Check-in Date", key: "checkinDate" },
 ]);
 
-// Computed property for assets available for checkout (checkoutStatus = false)
-const availableForCheckoutBuildingAssets = computed(() => {
-  return serializedAssets.value
-    .filter((asset) => !asset.checkoutStatus) // Filter assets that are not checked out
-    .sort((a, b) => {
-      const nameA = a.serializedAssetName || ""; // Default to empty string if serializedAssetName is undefined or null
-      const nameB = b.serializedAssetName || ""; // Default to empty string if serializedAssetName is undefined or null
-      return nameA.localeCompare(nameB); // Use localeCompare to sort by serializedAssetName
-    });
-});
-
 // Computed property for assets available for check-in (checkoutStatus = true)
 const availableForCheckinBuildingAssets = computed(() => {
   return buildingAssets.value
@@ -788,19 +773,17 @@ const retrieveRoomAssets = async () => {
 
     // Process the response data
     roomAssets.value = response.data.map((roomAsset) => {
-      const room = rooms.value.find((r) => r.key === roomAsset.roomId);
-      const serializedAsset = serializedAssets.value.find(
-        (ra) => ra.key === roomAsset.serializedAssetId
-      );
+      const room = roomAsset.room;
+      const serializedAsset = roomAsset.serializedAsset;
 
       // Creating a combined title with room's name and asset's title
-      const combinedTitle = `${room ? room.title : "Unknown Room"}: ${
+      const combinedTitle = `${room ? room.roomName : "Unknown Room"}: ${
         serializedAsset ? serializedAsset.serializedAssetName : "Unknown Asset"
       }`;
 
       return {
         ...roomAsset,
-        name: room ? room.title : "Unknown",
+        roomName: room ? room.roomName : "Unknown",
         assetName: serializedAsset
           ? serializedAsset.serializedAssetName
           : "Unknown Asset",
@@ -829,7 +812,7 @@ const saveRoomCheckout = async () => {
     }
 
     const roomAssetData = {
-      serializedAssetId: newRoomAsset.value.serializedAssetId.key,
+      serializedAssetId: newRoomAsset.value.serializedAssetId.serializedAssetId,
       roomId: newRoomAsset.value.roomId.key,
       checkoutDate: formattedCheckoutDate,
       checkoutStatus: true,
@@ -843,7 +826,7 @@ const saveRoomCheckout = async () => {
 
       // Update the checkoutStatus of the SerializedAsset to true
       await SerializedAssetServices.updateCheckoutStatus(
-        newRoomAsset.value.serializedAssetId.key,
+        newRoomAsset.value.serializedAssetId.serializedAssetId,
         true
       );
 
@@ -852,7 +835,6 @@ const saveRoomCheckout = async () => {
 
       closeRoomCheckoutDialog();
       await retrieveRoomAssets();
-      await retrieveSerializedAssets(); // Refresh serialized assets to reflect the checkout status update
     } catch (error) {
       console.error("Error saving checkout:", error);
       snackbarText.value = "Failed to check out the asset.";
@@ -897,7 +879,6 @@ const saveRoomCheckin = async () => {
       snackbar.value = true;
       closeRoomCheckinDialog();
       await retrieveRoomAssets();
-      await retrieveSerializedAssets(); // Refresh to show updated statuses
     } catch (error) {
       console.error("Error saving check-in:", error);
       snackbarText.value = "Failed to check in the asset.";
@@ -917,6 +898,19 @@ const filteredRoomAssets = computed(() => {
   }
   return roomAssets.value;
 });
+
+const setShowPersonCheckoutDialog = () => {
+  getAvailableForCheckoutAssets();
+  showPersonCheckoutDialog.value = true;
+};
+const setShowBuildingCheckoutDialog = () => {
+  getAvailableForCheckoutAssets();
+  showBuildingCheckoutDialog.value = true;
+};
+const setShowRoomCheckoutDialog = () => {
+  getAvailableForCheckoutAssets();
+  showRoomCheckoutDialog.value = true;
+};
 
 const closeRoomCheckoutDialog = () => {
   showRoomCheckoutDialog.value = false;
@@ -944,7 +938,7 @@ const closeRoomCheckinDialog = () => {
 
 // Define headers for the data table
 const roomAssetCheckoutHeaders = ref([
-  { title: "Room", key: "name" },
+  { title: "Room", key: "roomName" },
   { title: "Asset", key: "assetName" },
   { title: "Checked-out By", key: "checkedOutBy" },
   { title: "Expected Check-in Date", key: "expectedCheckinDate" },
@@ -953,23 +947,12 @@ const roomAssetCheckoutHeaders = ref([
 
 // Define headers for the data table
 const roomAssetCheckinHeaders = ref([
-  { title: "Room", key: "name" },
+  { title: "Room", key: "roomName" },
   { title: "Asset", key: "assetName" },
   { title: "Checked-in By", key: "checkedInBy" },
   { title: "Expected Check-in Date", key: "expectedCheckinDate" },
   { title: "Check-in Date", key: "checkinDate" },
 ]);
-
-// Computed property for assets available for checkout (checkoutStatus = false)
-const availableForCheckoutRoomAssets = computed(() => {
-  return serializedAssets.value
-    .filter((asset) => !asset.checkoutStatus) // Filter assets that are not checked out
-    .sort((a, b) => {
-      const nameA = a.serializedAssetName || ""; // Default to empty string if serializedAssetName is undefined or null
-      const nameB = b.serializedAssetName || ""; // Default to empty string if serializedAssetName is undefined or null
-      return nameA.localeCompare(nameB); // Use localeCompare to sort by serializedAssetName
-    });
-});
 
 // Computed property for assets available for check-in (checkoutStatus = true).
 const availableForCheckinRoomAssets = computed(() => {
@@ -979,44 +962,6 @@ const availableForCheckinRoomAssets = computed(() => {
 });
 
 // *** Misc Section ***
-
-// Retrieve SerializedAssets from Database
-const retrieveSerializedAssets = async () => {
-  try {
-    let response;
-    // Check if the user's role category ID is 4
-    if (userRole.value.data.categoryId === 4) {
-      response = await SerializedAssetServices.getAll();
-    } else {
-      // Fetch assets by specific category ID
-      response = await SerializedAssetServices.getSerializedAssetsByCategoryId(
-        userRole.value.data.categoryId
-      );
-    }
-
-    // Process the response data
-    serializedAssets.value = response.data
-      .filter((asset) => asset.activeStatus !== false) // Filter out archived assets
-      .map((serializedAsset) => {
-        const profile = assetProfiles.value.find(
-          (t) => t.key === serializedAsset.profileId
-        );
-        return {
-          ...serializedAsset,
-          title: serializedAsset.serializedAssetName,
-          profileName: profile ? profile.profileName : "Unknown Profile",
-          key: serializedAsset.serializedAssetId,
-        };
-      });
-  } catch (error) {
-    console.error("Error loading serialized assets:", error);
-    message.value = "Failed to load serializedAssets.";
-  }
-};
-
-const translateStatus = (status) => {
-  return status ? "Checked Out" : "Checked In";
-};
 
 const formatDate = (dateString) => {
   if (!dateString) return "Indefinite";
@@ -1037,12 +982,12 @@ const convertToUtcForStorage = (localDate) => {
 };
 
 // Computed property for display
-const formattedCheckinDate = computed(() => {
-  if (expectedCheckinDate.value) {
-    return format(expectedCheckinDate.value, "MMM dd, yyyy");
-  }
-  return "";
-});
+// const formattedCheckinDate = computed(() => {
+//   if (expectedCheckinDate.value) {
+//     return format(expectedCheckinDate.value, "MMM dd, yyyy");
+//   }
+//   return "";
+// });
 
 const resetFields = () => {
   // Reset date related stuff
@@ -1064,17 +1009,14 @@ watch(
   async (current) => {
     switch (current.tab) {
       case "People":
-        await retrieveSerializedAssets();
         await retrievePeople();
         await retrievePersonAssets();
         break;
       case "Buildings":
-        await retrieveSerializedAssets();
         await retrieveBuildings();
         await retrieveBuildingAssets();
         break;
       case "Rooms":
-        await retrieveSerializedAssets();
         await retrieveRooms();
         await retrieveRoomAssets();
         break;
@@ -1131,7 +1073,7 @@ watch(
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await getUserRole();
-  await retrieveSerializedAssets();
+
   await retrievePeople();
   await retrievePersonAssets();
 });
@@ -1202,7 +1144,7 @@ onMounted(async () => {
                   <v-btn
                     color="saveblue"
                     class="ma-2"
-                    @click="showPersonCheckoutDialog = true"
+                    @click="setShowPersonCheckoutDialog()"
                   >
                     Checkout
                   </v-btn>
@@ -1278,7 +1220,7 @@ onMounted(async () => {
                   <v-btn
                     color="saveblue"
                     class="ma-2"
-                    @click="showBuildingCheckoutDialog = true"
+                    @click="setShowBuildingCheckoutDialog()"
                   >
                     Checkout
                   </v-btn>
@@ -1354,7 +1296,7 @@ onMounted(async () => {
                   <v-btn
                     color="saveblue"
                     class="ma-2"
-                    @click="showRoomCheckoutDialog = true"
+                    @click="setShowRoomCheckoutDialog()"
                   >
                     Checkout
                   </v-btn>
@@ -1438,7 +1380,7 @@ onMounted(async () => {
                     v-model="newPersonAsset.personId"
                     :items="people"
                     variant="outlined"
-                    item-text="title"
+                    item-title="title"
                     item-value="key"
                     :rules="[rules.required]"
                     return-object
@@ -1450,13 +1392,13 @@ onMounted(async () => {
                   <v-autocomplete
                     label="Select Asset"
                     v-model="newPersonAsset.serializedAssetId"
-                    :items="availableForCheckoutPersonAssets"
-                    item-text="title"
+                    :items="availableForCheckoutAssets"
+                    item-title="serializedAssetName"
                     variant="outlined"
-                    item-value="key"
+                    item-value="serializedAssetId"
                     :rules="[rules.required]"
-                    return-object
                     clearable
+                    return-object
                     prepend-icon="mdi-cellphone-settings"
                   ></v-autocomplete>
                 </v-col>
@@ -1587,7 +1529,7 @@ onMounted(async () => {
                     v-model="selectedPersonAsset"
                     variant="outlined"
                     :items="availableForCheckinPersonAssets"
-                    item-text="formatPersonAssetText"
+                    item-title="title"
                     item-value="personAssetId"
                     :rules="[rules.required]"
                     return-object
@@ -1643,10 +1585,10 @@ onMounted(async () => {
                   <v-autocomplete
                     label="Select Asset"
                     v-model="newBuildingAsset.serializedAssetId"
-                    :items="availableForCheckoutBuildingAssets"
+                    :items="availableForCheckoutAssets"
                     variant="outlined"
-                    item-text="title"
-                    item-value="key"
+                    item-title="serializedAssetName"
+                    item-value="serializedAssetId"
                     :rules="[rules.required]"
                     return-object
                     clearable
@@ -1706,7 +1648,7 @@ onMounted(async () => {
                     v-model="selectedBuildingAsset"
                     :items="availableForCheckinBuildingAssets"
                     variant="outlined"
-                    item-text="title"
+                    item-title="title"
                     item-value="buildingAssetId"
                     :rules="[rules.required]"
                     return-object
@@ -1763,10 +1705,10 @@ onMounted(async () => {
                   <v-autocomplete
                     label="Select Asset"
                     v-model="newRoomAsset.serializedAssetId"
-                    :items="availableForCheckoutRoomAssets"
+                    :items="availableForCheckoutAssets"
                     variant="outlined"
-                    item-text="title"
-                    item-value="key"
+                    item-title="serializedAssetName"
+                    item-value="serializedAssetId"
                     :rules="[rules.required]"
                     return-object
                     clearable
@@ -1826,7 +1768,7 @@ onMounted(async () => {
                     v-model="selectedRoomAsset"
                     :items="availableForCheckinRoomAssets"
                     variant="outlined"
-                    item-text="title"
+                    item-title="title"
                     item-value="roomAssetId"
                     :rules="[rules.required]"
                     return-object
