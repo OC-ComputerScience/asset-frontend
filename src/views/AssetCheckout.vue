@@ -28,6 +28,9 @@ const buildings = ref([]);
 const buildingAssets = ref([]);
 const rooms = ref([]);
 const roomAssets = ref([]);
+const availableForRooomCheckinAssets = ref([]);
+const availableForBuildingCheckinAssets = ref([]);
+const availableForPersonCheckinAssets = ref([]);
 const showAddNewPersonDialog = ref(false);
 const showPersonCheckoutDialog = ref(false);
 const showPersonCheckinDialog = ref(false);
@@ -474,8 +477,8 @@ const personAssetCheckinHeaders = ref([
 
 // Computed property for assets available for checkout (checkoutStatus = false)
 
-const getAvailableForCheckoutAssets = () => {
-  SerializedAssetServices.getAll(true, false).then((response) => {
+const getAvailableForCheckoutAssets = async () => {
+  await SerializedAssetServices.getAll(true, false).then((response) => {
     availableForCheckoutAssets.value = response.data;
 
     availableForCheckoutAssets.value.sort((a, b) => {
@@ -488,11 +491,25 @@ const getAvailableForCheckoutAssets = () => {
 };
 
 // Computed property for assets available for check-in (checkoutStatus = true)
-const availableForCheckinPersonAssets = computed(() => {
-  return personAssets.value
-    .filter((asset) => asset.checkoutStatus) // Filter assets that are checked out
-    .sort((a, b) => new Date(b.checkoutDate) - new Date(a.checkoutDate)); // Sort by checkoutDate in descending order
-});
+const getAvailableForPersonCheckinAssets = async () => {
+  await PersonAssetServices.getAll(true).then((response) => {
+    availableForPersonCheckinAssets.value = response.data;
+    availableForPersonCheckinAssets.value.forEach((asset) => {
+      const title =
+        asset.person.fullNameWithId +
+        ": " +
+        asset.serializedAsset.serializedAssetName;
+      asset.title = title;
+    });
+
+    availableForPersonCheckinAssets.value.sort((a, b) => {
+      // Handle cases where serializedAssetName might be undefined or null
+      const nameA = a.title || ""; // Default to empty string if serializedAssetName is undefined or null
+      const nameB = b.title || ""; // Default to empty string if serializedAssetName is undefined or null
+      return nameA.localeCompare(nameB); // Use localeCompare to sort by serializedAssetName
+    });
+  });
+};
 
 // *** Buildings Section ***
 // Retrieve Buildings from Database
@@ -730,11 +747,23 @@ const buildingAssetCheckinHeaders = ref([
 ]);
 
 // Computed property for assets available for check-in (checkoutStatus = true)
-const availableForCheckinBuildingAssets = computed(() => {
-  return buildingAssets.value
-    .filter((asset) => asset.checkoutStatus) // Filter assets that are checked out
-    .sort((a, b) => new Date(b.checkoutDate) - new Date(a.checkoutDate)); // Sort by checkoutDate in descending order
-});
+const getAvailableForBuildingCheckinAssets = async () => {
+  await BuildingAssetServices.getAll(true).then((response) => {
+    availableForBuildingCheckinAssets.value = response.data;
+    availableForBuildingCheckinAssets.value.forEach((asset) => {
+      const title =
+        asset.building.name + ": " + asset.serializedAsset.serializedAssetName;
+      asset.title = title;
+    });
+
+    availableForBuildingCheckinAssets.value.sort((a, b) => {
+      // Handle cases where serializedAssetName might be undefined or null
+      const nameA = a.title || ""; // Default to empty string if serializedAssetName is undefined or null
+      const nameB = b.title || ""; // Default to empty string if serializedAssetName is undefined or null
+      return nameA.localeCompare(nameB); // Use localeCompare to sort by serializedAssetName
+    });
+  });
+};
 
 // *** Rooms Section ***
 
@@ -899,19 +928,6 @@ const filteredRoomAssets = computed(() => {
   return roomAssets.value;
 });
 
-const setShowPersonCheckoutDialog = () => {
-  getAvailableForCheckoutAssets();
-  showPersonCheckoutDialog.value = true;
-};
-const setShowBuildingCheckoutDialog = () => {
-  getAvailableForCheckoutAssets();
-  showBuildingCheckoutDialog.value = true;
-};
-const setShowRoomCheckoutDialog = () => {
-  getAvailableForCheckoutAssets();
-  showRoomCheckoutDialog.value = true;
-};
-
 const closeRoomCheckoutDialog = () => {
   showRoomCheckoutDialog.value = false;
   resetFields();
@@ -955,13 +971,53 @@ const roomAssetCheckinHeaders = ref([
 ]);
 
 // Computed property for assets available for check-in (checkoutStatus = true).
-const availableForCheckinRoomAssets = computed(() => {
-  return roomAssets.value
-    .filter((asset) => asset.checkoutStatus) // Filter assets that are checked out
-    .sort((a, b) => new Date(b.checkoutDate) - new Date(a.checkoutDate)); // Sort by checkoutDate in descending order
-});
+const getAvailableForRoomCheckinAssets = async () => {
+  await RoomAssetServices.getAll(true).then((response) => {
+    availableForRooomCheckinAssets.value = response.data;
+    availableForRooomCheckinAssets.value.forEach((asset) => {
+      const title =
+        asset.room.roomName + ": " + asset.serializedAsset.serializedAssetName;
+      asset.title = title;
+    });
+
+    availableForRooomCheckinAssets.value.sort((a, b) => {
+      // Handle cases where serializedAssetName might be undefined or null
+      const nameA = a.title || ""; // Default to empty string if serializedAssetName is undefined or null
+      const nameB = b.title || ""; // Default to empty string if serializedAssetName is undefined or null
+      return nameA.localeCompare(nameB); // Use localeCompare to sort by serializedAssetName
+    });
+  });
+};
 
 // *** Misc Section ***
+
+const setShowPersonCheckoutDialog = async () => {
+  await getAvailableForCheckoutAssets();
+  showPersonCheckoutDialog.value = true;
+};
+const setShowBuildingCheckoutDialog = async () => {
+  await getAvailableForCheckoutAssets();
+  showBuildingCheckoutDialog.value = true;
+};
+const setShowRoomCheckoutDialog = async () => {
+  await getAvailableForCheckoutAssets();
+  showRoomCheckoutDialog.value = true;
+};
+
+const openRoomCheckinDialog = async () => {
+  await getAvailableForRoomCheckinAssets();
+  showRoomCheckinDialog.value = true;
+};
+
+const openBuildingCheckinDialog = async () => {
+  await getAvailableForBuildingCheckinAssets();
+  showBuildingCheckinDialog.value = true;
+};
+
+const openPersonCheckinDialog = async () => {
+  await getAvailableForPersonCheckinAssets();
+  showPersonCheckinDialog.value = true;
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return "Indefinite";
@@ -980,14 +1036,6 @@ const convertToUtcForStorage = (localDate) => {
   const timeZone = "America/Chicago"; // Adjust to your local time zone as needed
   return zonedTimeToUtc(localDate, timeZone);
 };
-
-// Computed property for display
-// const formattedCheckinDate = computed(() => {
-//   if (expectedCheckinDate.value) {
-//     return format(expectedCheckinDate.value, "MMM dd, yyyy");
-//   }
-//   return "";
-// });
 
 const resetFields = () => {
   // Reset date related stuff
@@ -1181,7 +1229,7 @@ onMounted(async () => {
                   <v-btn
                     color="saveblue"
                     class="ma-2"
-                    @click="showPersonCheckinDialog = true"
+                    @click="openPersonCheckinDialog"
                   >
                     Check-in
                   </v-btn>
@@ -1259,7 +1307,7 @@ onMounted(async () => {
                   <v-btn
                     color="saveblue"
                     class="ma-2"
-                    @click="showBuildingCheckinDialog = true"
+                    @click="openBuildingCheckinDialog"
                   >
                     Check-in
                   </v-btn>
@@ -1333,7 +1381,7 @@ onMounted(async () => {
                   <v-btn
                     color="saveblue"
                     class="ma-2"
-                    @click="showRoomCheckinDialog = true"
+                    @click="openRoomCheckinDialog"
                   >
                     Check-in
                   </v-btn>
@@ -1528,9 +1576,8 @@ onMounted(async () => {
                     label="Select Asset for Check-in"
                     v-model="selectedPersonAsset"
                     variant="outlined"
-                    :items="availableForCheckinPersonAssets"
+                    :items="availableForPersonCheckinAssets"
                     item-title="title"
-                    item-value="personAssetId"
                     :rules="[rules.required]"
                     return-object
                     clearable
@@ -1646,7 +1693,7 @@ onMounted(async () => {
                   <v-autocomplete
                     label="Select Asset for Check-in"
                     v-model="selectedBuildingAsset"
-                    :items="availableForCheckinBuildingAssets"
+                    :items="availableForBuildingCheckinAssets"
                     variant="outlined"
                     item-title="title"
                     item-value="buildingAssetId"
@@ -1766,7 +1813,7 @@ onMounted(async () => {
                   <v-autocomplete
                     label="Select Asset for Check-in"
                     v-model="selectedRoomAsset"
-                    :items="availableForCheckinRoomAssets"
+                    :items="availableForRooomCheckinAssets"
                     variant="outlined"
                     item-title="title"
                     item-value="roomAssetId"
