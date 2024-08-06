@@ -6,7 +6,10 @@ export default {
   create(data) {
     return apiClient.post(baseURL, data);
   },
-  getAll() {
+  getAll(checkedOut) {
+    if (checkedOut === true) {
+      return apiClient.get(baseURL + "?checkedOut=true");
+    }
     return apiClient.get(baseURL);
   },
   getAllRecent() {
