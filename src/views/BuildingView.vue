@@ -98,17 +98,20 @@ const retrieveBuildings = async () => {
     buildings.value = response.data.map((building) => ({
       title: building.name,
       key: building.buildingId,
+      function: building.function,
       abbreviation: building.abbreviation,
-      noOfRooms: building.noOfRooms,
       yearBuilt: building.yearBuilt,
       squareFeet: building.squareFeet,
       numStories: building.numStories,
       hasElevator: building.hasElevator,
       hasFireMonitor: building.hasFireMonitor,
       hasSmokeAlarm: building.hasSmokeAlarm,
+      fireSmokeNotes: building.fireSmokeNotes,
       constructionType: building.constructionType,
+      roofType: building.roofType,
       buildingValue: building.buildingValue,
       buildingBPP: building.buildingBPP,
+      renovationNotes: building.renovationNotes,
       activeStatus: building.activeStatus,
     }));
   } catch (error) {
@@ -428,6 +431,7 @@ onMounted(async () => {
         <v-col cols="4">
           Abreviation : {{ buildingDetails.abbreviation }}
         </v-col>
+        <v-col cols="4"> Function : {{ buildingDetails.function }} </v-col>
         <v-col cols="4"> Year Built : {{ buildingDetails.yearBuilt }} </v-col>
         <v-col cols="4"> Square Feet: {{ buildingDetails.squareFeet }} </v-col>
         <v-col cols="4">
@@ -443,14 +447,24 @@ onMounted(async () => {
           Smoke Alarm: {{ buildingDetails.hasSmokeAlarm ? "Yes" : "No" }}
         </v-col>
         <v-col cols="4">
+          Smoke Alarm Notes: {{ buildingDetails.fireSmokeNotes }}
+        </v-col>
+        <v-col cols="4">
           Construction Type:
           {{ buildingDetails.constructionType }}
+        </v-col>
+        <v-col cols="4">
+          Roof Type:
+          {{ buildingDetails.roofType }}
         </v-col>
         <v-col cols="4">
           Building Value: {{ buildingDetails.buildingValue }}
         </v-col>
         <v-col cols="4">
           Building BPP: {{ buildingDetails.buildingBPP }}
+        </v-col>
+        <v-col cols="12">
+          Renovation Notes: {{ buildingDetails.renovationNotes }}
         </v-col>
       </v-row>
 

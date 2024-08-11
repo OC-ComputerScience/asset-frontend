@@ -36,6 +36,7 @@ const canAdd = computed(() => {
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) => value.length <= 80,
+  maxNotesLength: (value) => value.length <= 255,
   roomNumber: (value) =>
     /^[a-zA-Z0-9]{2,4}$/.test(value) ||
     "Room number must be between 2 and 4 characters long.",
@@ -68,16 +69,19 @@ const newBuilding = ref({
   title: "",
   abbreviation: "",
   activeStatus: true,
-  noOfRooms: "",
+  function: "",
   yearBuilt: "",
   squareFeet: "",
   numStories: "",
   hasElevator: false,
   hasFireMonitor: false,
   hasSmokeAlarm: false,
+  fireSmokeNotes: "",
   constructionType: null,
+  roofType: null,
   buildingValue: "",
   buildingBPP: "",
+  renovationNotes: "",
 });
 const newRoom = ref({
   title: "",
@@ -96,16 +100,20 @@ const retrieveBuildings = async () => {
         key: building.buildingId,
         abbreviation: building.abbreviation,
         activeStatus: building.activeStatus,
+        function: building.function,
         yearBuilt: building.yearBuilt,
         squareFeet: building.squareFeet,
         numStories: building.numStories,
         hasElevator: building.hasElevator,
         hasFireMonitor: building.hasFireMonitor,
+        fireSmokeNotes: building.fireSmokeNotes,
         hasSmokeAlarm: building.hasSmokeAlarm,
         constructionType: building.constructionType,
+        roofType: building.roofType,
         buildingValue: building.buildingValue,
         buildingBPP: building.buildingBPP,
         noOfRooms: building.noOfRooms,
+        renovationNotes: building.renovationNotes,
       }))
       .sort((a, b) => a.title.localeCompare(b.title)); // Sorting buildings by name
   } catch (error) {
@@ -118,17 +126,20 @@ const editBuilding = async (building) => {
     title: building.title,
     abbreviation: building.abbreviation,
     activeStatus: building.activeStatus,
+    function: building.function,
     buildingId: building.key,
-
     yearBuilt: building.yearBuilt,
     squareFeet: building.squareFeet,
     numStories: building.numStories,
     hasElevator: building.hasElevator,
     hasFireMonitor: building.hasFireMonitor,
+    fireSmokeNotes: building.fireSmokeNotes,
     hasSmokeAlarm: building.hasSmokeAlarm,
     constructionType: building.constructionType,
+    roofType: building.roofType,
     buildingValue: building.buildingValue,
     buildingBPP: building.buildingBPP,
+    renovationNotes: building.renovationNotes,
   };
   editingBuilding.value = true;
   showAddBuildingDialog.value = true;
@@ -140,17 +151,20 @@ const saveBuilding = async () => {
     name: newBuilding.value.title,
     abbreviation: newBuilding.value.abbreviation,
     activeStatus: newBuilding.value.activeStatus,
+    function: newBuilding.value.function,
     buildingId: newBuilding.value.key,
-
     yearBuilt: newBuilding.value.yearBuilt,
     squareFeet: newBuilding.value.squareFeet,
     numStories: newBuilding.value.numStories,
     hasElevator: newBuilding.value.hasElevator,
     hasFireMonitor: newBuilding.value.hasFireMonitor,
+    fireSmokeNotes: newBuilding.value.fireSmokeNotes,
     hasSmokeAlarm: newBuilding.value.hasSmokeAlarm,
     constructionType: newBuilding.value.constructionType,
+    roofType: newBuilding.value.roofType,
     buildingValue: newBuilding.value.buildingValue,
     buildingBPP: newBuilding.value.buildingBPP,
+    renovationNotes: newBuilding.value.renovationNotes,
   };
 
   try {
@@ -181,15 +195,19 @@ const saveBuilding = async () => {
       abbreviation: "",
       title: "",
       activeStatus: true,
+      function: "",
       yearBuilt: "",
       squareFeet: "",
       numStories: "",
       hasElevator: false,
       hasFireMonitor: false,
+      fireSmokeNotes: "",
       hasSmokeAlarm: false,
       constructionType: null,
+      roofType: null,
       buildingValue: "",
       buildingBPP: "",
+      renovationNotes: "",
     };
   }
 };
@@ -242,6 +260,7 @@ function viewBuilding(buildingId) {
 const baseBuildingHeaders = ref([
   { title: "Building Name", key: "title" },
   { title: "Abbreviation", key: "abbreviation" },
+  { title: "Function", key: "function" },
   { title: "No. of Rooms", key: "noOfRooms" },
   { title: "View Building", key: "view" },
 ]);
@@ -950,8 +969,25 @@ onMounted(async () => {
                     counter
                   ></v-text-field>
                 </v-col>
-
                 <v-col cols="6">
+                  <v-combobox
+                    label="Function"
+                    v-model="newBuilding.function"
+                    variant="outlined"
+                    :items="[
+                      'Admin',
+                      'Academic',
+                      'Athletic',
+                      'Misc',
+                      'Mixed',
+                      'Plant',
+                      'Residential',
+                      'Other',
+                    ]"
+                  ></v-combobox>
+                </v-col>
+
+                <v-col cols="4">
                   <v-text-field
                     label="Year Built"
                     v-model="newBuilding.yearBuilt"
@@ -960,7 +996,7 @@ onMounted(async () => {
                     :rules="[rules.numberic]"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="4">
                   <v-text-field
                     label="Square Feet"
                     v-model="newBuilding.squareFeet"
@@ -969,7 +1005,7 @@ onMounted(async () => {
                     :rules="[rules.numberic]"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="6">
+                <v-col cols="4">
                   <v-text-field
                     label="Number of Stories"
                     v-model="newBuilding.numStories"
@@ -1000,11 +1036,34 @@ onMounted(async () => {
                   ></v-checkbox>
                 </v-col>
                 <v-col cols="12">
+                  <v-text-field
+                    label="Fire/Smoke Notes"
+                    v-model="newBuilding.fireSmokeNotes"
+                    variant="outlined"
+                    :rules="[rules.maxNotesLength]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
                   <v-combobox
                     label="Construction Type"
                     v-model="newBuilding.constructionType"
                     variant="outlined"
-                    :items="['Brick & Motar', 'Siding', 'Other']"
+                    :items="[
+                      'Brick & Motar',
+                      'Metal',
+                      'Steel Frame / Brick',
+                      'Wood Frame',
+                      'Wood Frame/ Brick',
+                      'Other',
+                    ]"
+                  ></v-combobox>
+                </v-col>
+                <v-col cols="6">
+                  <v-combobox
+                    label="Roof Type"
+                    v-model="newBuilding.roofType"
+                    variant="outlined"
+                    :items="['Metal', 'Tar', 'TPO', 'Other']"
                   ></v-combobox>
                 </v-col>
                 <v-col cols="6">
@@ -1022,6 +1081,14 @@ onMounted(async () => {
                     variant="outlined"
                     :rules="[rules.money]"
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-area
+                    label="Renovation Notes"
+                    v-model="newBuilding.renovationNotes"
+                    variant="outlined"
+                    :rules="[rules.maxNotesLength]"
+                  ></v-text-area>
                 </v-col>
               </v-row>
             </v-container>
