@@ -40,13 +40,7 @@ const rules = {
   roomNumber: (value) =>
     /^[a-zA-Z0-9]{2,4}$/.test(value) ||
     "Room number must be between 2 and 4 characters long.",
-  numberOfRooms: (value) => {
-    const intValue = parseInt(value);
-    return (
-      (Number.isInteger(intValue) && intValue >= 0 && intValue <= 400) ||
-      "Number of rooms cannot be greater than 400"
-    );
-  },
+
   buildingAbbreviation: (value) => {
     const pattern = /^[a-zA-Z]{2,3}$/;
     return (
@@ -54,7 +48,7 @@ const rules = {
     );
   },
   numberic: (value) => {
-    return /^[0-9]*$/.test(value) || "Value must be a number";
+    return null || /^[0-9]*$/.test(value) || "Value must be a number";
   },
   money: (value) => {
     return (
@@ -70,17 +64,17 @@ const newBuilding = ref({
   abbreviation: "",
   activeStatus: true,
   function: "",
-  yearBuilt: "",
-  squareFeet: "",
-  numStories: "",
+  yearBuilt: null,
+  squareFeet: null,
+  numStories: null,
   hasElevator: false,
   hasFireMonitor: false,
   hasSmokeAlarm: false,
   fireSmokeNotes: "",
-  constructionType: null,
-  roofType: null,
-  buildingValue: "",
-  buildingBPP: "",
+  constructionType: "",
+  roofType: "",
+  buildingValue: null,
+  buildingBPP: null,
   renovationNotes: "",
 });
 const newRoom = ref({
@@ -153,17 +147,26 @@ const saveBuilding = async () => {
     activeStatus: newBuilding.value.activeStatus,
     function: newBuilding.value.function,
     buildingId: newBuilding.value.key,
-    yearBuilt: newBuilding.value.yearBuilt,
-    squareFeet: newBuilding.value.squareFeet,
-    numStories: newBuilding.value.numStories,
+    yearBuilt:
+      newBuilding.value.yearBuilt == "" ? null : newBuilding.value.yearBuilt,
+    squareFeet:
+      newBuilding.value.squareFeet == "" ? null : newBuilding.value.squareFeet,
+    numStories:
+      newBuilding.value.numStories == "" ? null : newBuilding.value.numStories,
     hasElevator: newBuilding.value.hasElevator,
     hasFireMonitor: newBuilding.value.hasFireMonitor,
     fireSmokeNotes: newBuilding.value.fireSmokeNotes,
     hasSmokeAlarm: newBuilding.value.hasSmokeAlarm,
     constructionType: newBuilding.value.constructionType,
     roofType: newBuilding.value.roofType,
-    buildingValue: newBuilding.value.buildingValue,
-    buildingBPP: newBuilding.value.buildingBPP,
+    buildingValue:
+      newBuilding.value.buildingValue == ""
+        ? null
+        : newBuilding.value.buildingValue,
+    buildingBPP:
+      newBuilding.value.buildingBPP == ""
+        ? null
+        : newBuilding.value.buildingBPP,
     renovationNotes: newBuilding.value.renovationNotes,
   };
 
@@ -196,17 +199,17 @@ const saveBuilding = async () => {
       title: "",
       activeStatus: true,
       function: "",
-      yearBuilt: "",
-      squareFeet: "",
-      numStories: "",
+      yearBuilt: null,
+      squareFeet: null,
+      numStories: null,
       hasElevator: false,
       hasFireMonitor: false,
       fireSmokeNotes: "",
       hasSmokeAlarm: false,
       constructionType: null,
       roofType: null,
-      buildingValue: "",
-      buildingBPP: "",
+      buildingValue: null,
+      buildingBPP: null,
       renovationNotes: "",
     };
   }
@@ -382,6 +385,9 @@ const editRoom = (room) => {
     title: room.title,
     buildingId: room.buildingId,
     roomId: room.roomId,
+    roomNo: room.roomNo,
+    roomDescription: room.roomDescription,
+    roomType: room.roomType,
   };
   editingRoom.value = true;
   showAddRoomDialog.value = true;
@@ -405,6 +411,8 @@ const saveRoom = async () => {
   const roomData = {
     roomNo: newRoom.value.title,
     buildingId: selectedBuildingId.value.key, // Make sure this is getting set correctly
+    roomType: newRoom.value.roomType,
+    roomDescription: newRoom.value.roomDescription,
   };
 
   try {
@@ -497,7 +505,7 @@ function viewRoom(roomId) {
 }
 
 const baseRoomHeaders = ref([
-  { title: "Room No.", key: "title" },
+  { title: "Room No.", key: "roomName" },
   { title: "Building", key: "buildingName" },
   { title: "View Room Details", key: "view" },
 ]);
@@ -1131,7 +1139,6 @@ onMounted(async () => {
                     :rules="[rules.required]"
                     clearable
                     return-object
-                    prepend-icon="mdi-domain"
                   ></v-autocomplete>
                 </v-col>
                 <v-col cols="12">
@@ -1142,8 +1149,42 @@ onMounted(async () => {
                     :rules="[rules.required, rules.roomNumber]"
                     maxlength="4"
                     counter
-                    prepend-icon="mdi-pound"
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    label="Room Description"
+                    variant="outlined"
+                    v-model="newRoom.roomDescription"
+                    maxlength="45"
+                    counter
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-combobox
+                    label="Room Type"
+                    v-model="newRoom.roomType"
+                    variant="outlined"
+                    :items="[
+                      'Auditorium',
+                      'Classroom',
+                      'Conference Room',
+                      'Kitchen',
+                      'Laboratory',
+                      'Lobby',
+                      'Lounge',
+                      'Gym',
+                      'Meeting Room',
+                      'Office',
+                      'Practice Room',
+                      'Reception',
+                      'Storage',
+                      'Study Room',
+                      'Therapy Room',
+                      'Workroom',
+                      'Other',
+                    ]"
+                  ></v-combobox>
                 </v-col>
               </v-row>
             </v-container>
