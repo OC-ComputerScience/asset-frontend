@@ -98,8 +98,20 @@ const retrieveBuildings = async () => {
     buildings.value = response.data.map((building) => ({
       title: building.name,
       key: building.buildingId,
+      function: building.function,
       abbreviation: building.abbreviation,
-      noOfRooms: building.noOfRooms,
+      yearBuilt: building.yearBuilt,
+      squareFeet: building.squareFeet,
+      numStories: building.numStories,
+      hasElevator: building.hasElevator,
+      hasFireMonitor: building.hasFireMonitor,
+      hasSmokeAlarm: building.hasSmokeAlarm,
+      fireSmokeNotes: building.fireSmokeNotes,
+      constructionType: building.constructionType,
+      roofType: building.roofType,
+      buildingValue: building.buildingValue,
+      buildingBPP: building.buildingBPP,
+      renovationNotes: building.renovationNotes,
       activeStatus: building.activeStatus,
     }));
   } catch (error) {
@@ -410,9 +422,49 @@ onMounted(async () => {
             <v-btn icon @click="goBack">
               <v-icon>mdi-arrow-left</v-icon>
             </v-btn>
-            <v-toolbar-title>{{ buildingDetails.name }}</v-toolbar-title>
+            <v-toolbar-title>{{ buildingDetails.name }} x</v-toolbar-title>
           </v-toolbar>
           <v-divider style="width: 80%; height: 3px"></v-divider>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col cols="4">
+          Abreviation : {{ buildingDetails.abbreviation }}
+        </v-col>
+        <v-col cols="4"> Function : {{ buildingDetails.function }} </v-col>
+        <v-col cols="4"> Year Built : {{ buildingDetails.yearBuilt }} </v-col>
+        <v-col cols="4"> Square Feet: {{ buildingDetails.squareFeet }} </v-col>
+        <v-col cols="4">
+          Number of Stories: {{ buildingDetails.numStories }}
+        </v-col>
+        <v-col cols="4">
+          Elevator: {{ buildingDetails.elevator ? "Yes" : "No" }}
+        </v-col>
+        <v-col cols="4">
+          Fire Monitor: {{ buildingDetails.hasFireMonitor ? "Yes" : "No" }}
+        </v-col>
+        <v-col cols="4">
+          Smoke Alarm: {{ buildingDetails.hasSmokeAlarm ? "Yes" : "No" }}
+        </v-col>
+        <v-col cols="4">
+          Smoke Alarm Notes: {{ buildingDetails.fireSmokeNotes }}
+        </v-col>
+        <v-col cols="4">
+          Construction Type:
+          {{ buildingDetails.constructionType }}
+        </v-col>
+        <v-col cols="4">
+          Roof Type:
+          {{ buildingDetails.roofType }}
+        </v-col>
+        <v-col cols="4">
+          Building Value: {{ buildingDetails.buildingValue }}
+        </v-col>
+        <v-col cols="4">
+          Building BPP: {{ buildingDetails.buildingBPP }}
+        </v-col>
+        <v-col cols="12">
+          Renovation Notes: {{ buildingDetails.renovationNotes }}
         </v-col>
       </v-row>
 
