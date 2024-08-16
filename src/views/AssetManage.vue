@@ -6,6 +6,7 @@ import SerializedAssetServices from "../services/serializedAssetServices";
 import UserRoleServices from "../services/userRoleServices";
 import WarrantyServices from "../services/warrantyServices";
 import BarcodeServices from "../services/barcodeServices";
+import SearchAssets from "../components/SearchAssets.vue";
 import ProfileDialog from "../components/ProfileDialog.vue";
 import EditType from "../components/EditType.vue";
 import { ref, onMounted, watch, computed, toRaw } from "vue";
@@ -1298,7 +1299,7 @@ onMounted(async () => {
       <v-row class="my-1"></v-row>
       <!-- Adjust 'my-1' class for desired spacing -->
 
-      <div v-if="selectedTab != 'Categories'">
+      <div v-if="selectedTab != 'Categories' && selectedTab != 'SerializedAssets'">
         <v-row>
           <v-col cols="12">
             <v-tabs
@@ -1321,52 +1322,21 @@ onMounted(async () => {
       </div>
       <!-- Serialized Assets section with added space after tabs -->
       <div v-if="selectedTab === 'SerializedAssets'">
-        <v-row class="mt-3">
-          <!-- Added margin-top class here -->
 
-          <!-- Assets filter section with added space after tabs -->
-          <v-col cols="12" md="4">
-            <v-autocomplete
-              v-model="selectedFilterProfileId"
-              :items="filteredProfilesForAssetAutocomplete"
-              variant="outlined"
-              item-text="title"
-              item-value="key"
-              F
-              label="Filter by Profile"
-              return-object
-              clearable
-            ></v-autocomplete>
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-autocomplete
-              v-model="selectedFilterTypeId"
-              :items="filteredTypesForAssetAutocomplete"
-              variant="outlined"
-              item-text="title"
-              item-value="key"
-              label="Filter by Type"
-              return-object
-              clearable
-              @clear="onTypeClear"
-            ></v-autocomplete>
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-autocomplete
-              v-model="selectedFilterCategoryId"
-              :items="assetCategories"
-              variant="outlined"
-              item-text="title"
-              item-value="key"
-              label="Filter by Category"
-              return-object
-              clearable
-              @clear="onCategoryClear"
-            ></v-autocomplete>
-          </v-col>
-        </v-row>
+        <v-btn
+          v-if="canAdd"
+          color="primary"
+          class="mb-2"
+          @click="openAddSerializedAssetDialog"
+        >
+          Add New Asset
+        </v-btn>
+
+        <SearchAssets 
+          :profiles="assetProfiles"
+          :types="assetTypes"
+        />
       </div>
-
       <!-- Profiles filter section with added space after tabs -->
       <div v-if="selectedTab === 'Profiles'">
         <v-row class="mt-3">
