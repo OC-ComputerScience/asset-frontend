@@ -22,6 +22,15 @@ export default {
     return apiClient.get(baseURL + serializedAssetId);
   },
 
+  getBySearchFilters(searchKey = null, profileId = null, typeId = null){
+    let qString = "?";
+    if(searchKey) qString += `searchKey=${searchKey}&`
+    if(profileId) qString += `profileId=${profileId}&`
+    if(typeId) qString += `typeId=${typeId}&`
+
+    return apiClient.get(baseURL + `/search${qString}`);
+  },
+
   getSerializedAssetsByCategoryId(categoryId,activeStatus, checkoutStatus) {
     let qString = "";
     if (activeStatus || checkoutStatus) qString="?";
