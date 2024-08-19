@@ -612,30 +612,6 @@ const openAddSerializedAssetDialog = () => {
 };
 
 // Computed property for display
-const formattedAcquisitionDate = computed(() => {
-  if (rawAcquisitionDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawAcquisitionDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-const formattedWarrStartDate = computed(() => {
-  if (rawWarrStartDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrStartDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
-const formattedWarrEndDate = computed(() => {
-  if (rawWarrEndDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawWarrEndDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
-// Computed property for display
 const formattedDisposalDate = computed(() => {
   if (rawDisposalDate.value) {
     // Display the date in a readable format
@@ -823,42 +799,6 @@ const editSerializedAsset = (serializedAsset) => {
   );
 };
 
-const filteredSerializedAssets = computed(() => {
-  return serializedAssets.value.filter((asset) => {
-    let statusMatch =
-      selectedStatus.value === "Active"
-        ? asset.activeStatus
-        : !asset.activeStatus;
-
-    let profileMatch = true;
-    if (selectedFilterProfileId.value) {
-      profileMatch = asset.profileId === selectedFilterProfileId.value.key;
-    }
-
-    let typeMatch = true;
-    if (selectedFilterTypeId.value) {
-      const profile = assetProfiles.value.find(
-        (p) => p.key === asset.profileId
-      );
-      typeMatch = profile && profile.typeId === selectedFilterTypeId.value.key;
-    }
-
-    let categoryMatch = true;
-    if (selectedFilterCategoryId.value) {
-      const profile = assetProfiles.value.find(
-        (p) => p.key === asset.profileId
-      );
-      if (profile) {
-        const type = assetTypes.value.find((t) => t.key === profile.typeId);
-        categoryMatch =
-          type && type.categoryId === selectedFilterCategoryId.value.key;
-      }
-    }
-
-    return statusMatch && profileMatch && typeMatch && categoryMatch;
-  });
-});
-
 const archiveSerializedAsset = async (serializedAssetId) => {
   let formattedDisposalDate = null;
   if (rawDisposalDate.value) {
@@ -941,30 +881,6 @@ const baseSerializedAssetHeaders = ref([
   { title: "View Asset Details", key: "view", sortable: false },
 ]);
 
-const activeSerializedAssetHeaders = computed(() => {
-  const headers = [...baseSerializedAssetHeaders.value];
-
-  if (store.getters.canEdit) {
-    headers.push({ title: "Edit", key: "edit", sortable: false });
-  }
-
-  if (store.getters.canArchive) {
-    headers.push({ title: "Archive", key: "archive", sortable: false });
-  }
-
-  return headers;
-});
-
-const archivedSerializedAssetHeaders = computed(() => {
-  const headers = [...baseSerializedAssetHeaders.value];
-
-  if (store.getters.canActivate) {
-    headers.push({ title: "Activate", key: "activate", sortable: false });
-  }
-
-  return headers;
-});
-
 const hasSerializedAssetChanged = computed(() => {
   return (
     newSerializedAsset.value.serialNumber !==
@@ -979,10 +895,6 @@ const hasSerializedAssetChanged = computed(() => {
 });
 
 // *** Misc Section ***
-
-const translateStatus = (status) => {
-  return status ? "Checked Out" : "Available";
-};
 
 const openArchiveDialog = (item) => {
   if (item && item.type === "serializedAsset" && item.checkoutStatus === true) {
