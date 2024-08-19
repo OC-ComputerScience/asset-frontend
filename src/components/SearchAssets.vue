@@ -1,7 +1,10 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
+import SerializedAssetServices from "../services/serializedAssetServices";
+import router from "../router";
 
 const props = defineProps(["profiles", "types"]);
+const emit = defineEmits(["viewSerializedAsset", "openArchiveDialog"]);
 
 const filteredProfiles = computed(() => {
     return selectedTypeId.value ? props.profiles.filter((profile) => 
@@ -15,23 +18,47 @@ const searchKey = ref(null);
 
 const displayedAssets = ref([]);
 
+const headers = ref([
+    { title: "Asset", key: "serializedAssetName" },
+    { title: "Status", key: "checkoutStatus" },
+    { title: "View Asset Details", key: "view", sortable: false },
+    { title: "Edit", key: "edit", sortable: false },
+    { title: "archive", key: "archive", sortable: false }
+]);
+const assetsSortBy = ref([{ key: "serializedAssetName", order: "asc" }]);
+
 const clearProfile = () => {
     selectedProfileId.value = null;
-}
+};
 const clearType =() => {
     selectedTypeId.value = null;
-}
+};
 const clearFilters = () => {
     clearProfile();
     clearType();
-}
+};
 
 const searchAssets = async() => {
+    const response = await SerializedAssetServices.getBySearchFilters(searchKey.value, selectedProfileId.value, selectedTypeId.value);
+    displayedAssets.value = response.data;
+};
 
+const translateStatus = (status) => {
+  return status ? "Checked Out" : "Available";
+};
+
+const viewSerializedAsset = (serializedAssetId) => {
+  const sourcePage = "assetManage";
+  router.push({
+    name: "serializedAssetView",
+    params: { serializedAssetId: serializedAssetId },
+    query: { sourcePage: sourcePage },
+  });
 }
 
 </script>
 <template>
+<div>
 <v-row class="ma-1 mb-4">
     <v-expansion-panels>
         <v-expansion-panel title="Filters">
@@ -93,4 +120,62 @@ const searchAssets = async() => {
         </v-btn>
     </v-col>
 </v-row>
+
+<v-card v-if="displayedAssets.length > 0">
+    <v-data-table
+        :headers="headers"
+        :items="displayedAssets"
+        item-key="serializedAssetId"
+        class="elevation-1"
+        :items-per-page="5"
+        :items-per-page-options="[5, 10, 20, 50, -1]"
+        v-model:sort-by="assetsSortBy"
+        >
+        <template v-slot:item.checkoutStatus="{ item }">
+            <td>{{ translateStatus(item.checkoutStatus) }}</td>
+        </template>
+        <template v-slot:item.view="{ item }">
+            <div
+            class="d-flex align-center justify-start"
+            style="padding-left: 10%"
+            >
+            <v-btn
+                icon
+                class="table-icons"
+                @click="viewSerializedAsset(item.serializedAssetId)"
+            >
+                <v-icon>mdi-eye</v-icon>
+            </v-btn>
+            </div>
+        </template>
+
+        <template v-slot:item.edit="{ item }">
+            <v-btn
+                icon
+                class="table-icons"
+                @click="$emit('editSerializedAsset', item)"
+            >
+            <v-icon>mdi-pencil</v-icon>
+            </v-btn>
+        </template>
+        <template v-slot:item.archive="{ item }">
+            <v-btn
+                icon
+                class="table-icons"
+                @click="$emit(
+                    'openArchiveDialog',
+                    {
+                        id: item.key,
+                        type: 'serializedAsset',
+                        checkoutStatus: item.checkoutStatus,
+                    }
+                )"
+            >
+            <v-icon>mdi-arrow-down-box</v-icon>
+            </v-btn>
+        </template>
+        </v-data-table>
+</v-card>
+</div>
+
 </template>

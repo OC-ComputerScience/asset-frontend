@@ -57,14 +57,10 @@ const snackbarText = ref("");
 const categoriesSortBy = ref([{ key: "title", order: "asc" }]);
 const typesSortBy = ref([{ key: "title", order: "asc" }]);
 const profilesSortBy = ref([{ key: "profileName", order: "asc" }]);
-const assetsSortBy = ref([{ key: "serializedAssetName", order: "asc" }]);
 const rawAcquisitionDate = ref(null);
 const rawWarrStartDate = ref(null);
 const rawWarrEndDate = ref(null);
 const rawDisposalDate = ref(null);
-const acquisitionDateMenu = ref(false);
-const warrStartDateMenu = ref(false);
-const warrEndDateMenu = ref(false);
 const disposalDateMenu = ref(false);
 const disposalValueLabel = ref("Disposal Value"); // Default label
 const serialNumberLabel = ref("Serial Number"); // Default label
@@ -516,15 +512,6 @@ function viewProfile(profileId) {
   router.push({ name: "profileView", params: { profileId: profileId } });
 }
 
-function viewSerializedAsset(serializedAssetId) {
-  const sourcePage = "assetManage";
-  router.push({
-    name: "serializedAssetView",
-    params: { serializedAssetId: serializedAssetId },
-    query: { sourcePage: sourcePage },
-  });
-}
-
 const filteredAssetProfiles = computed(() => {
   return assetProfiles.value.filter((profile) => {
     let statusMatch =
@@ -546,30 +533,6 @@ const filteredAssetProfiles = computed(() => {
 
     return statusMatch && typeMatch && categoryMatch;
   });
-});
-
-const filteredTypesForAssetAutocomplete = computed(() => {
-  // This checks if a category is selected. If not, it returns all types.
-  if (selectedFilterCategoryId.value) {
-    return assetTypes.value.filter(
-      (type) => type.categoryId === selectedFilterCategoryId.value.key
-    );
-  } else {
-    return assetTypes.value; // Return all types if no category is selected
-  }
-});
-
-const filteredProfilesForAssetAutocomplete = computed(() => {
-  // This checks if a type is selected. If not, it returns all profiles.
-  if (selectedFilterTypeId.value) {
-    return assetProfiles.value.filter(
-      (profile) => profile.typeId === selectedFilterTypeId.value.key
-    );
-  } else {
-    // When no type is selected, it should return all profiles.
-    // This adjustment ensures all profiles are displayed when no type is selected.
-    return assetProfiles.value;
-  }
 });
 
 const archiveProfile = async (profileId) => {
@@ -641,50 +604,6 @@ const archivedProfileHeaders = computed(() => {
 });
 
 // *** Serialized Asset Section ***
-
-// Retrieve SerializedAssets from Database
-const retrieveSerializedAssets = async () => {
-  try {
-    let response;
-    if (userRole.value.data.categoryId === 4) {
-      response = await SerializedAssetServices.getAll(); // Method to get all serialized assets
-    } else {
-      response = await SerializedAssetServices.getSerializedAssetsByCategoryId(
-        userRole.value.data.categoryId
-      );
-    }
-
-    if (response && response.data) {
-      const serializedAssetsData = response.data;
-
-      if (Array.isArray(serializedAssetsData)) {
-        const enrichedSerializedAssets = serializedAssetsData.map(
-          (serializedAsset) => {
-            const profile = assetProfiles.value.find(
-              (p) => p.key === serializedAsset.profileId
-            );
-            return {
-              ...serializedAsset,
-              profileName: profile ? profile.profileName : "Unknown Profile",
-              key: serializedAsset.serializedAssetId,
-              title: serializedAsset.serializedAssetName,
-              profileId: serializedAsset.profileId,
-              checkoutStatus: serializedAsset.checkoutStatus,
-            };
-          }
-        );
-        serializedAssets.value = enrichedSerializedAssets;
-      } else {
-        throw new Error("Data is not an array");
-      }
-    } else {
-      throw new Error("Invalid response structure");
-    }
-  } catch (error) {
-    console.error("Error loading serialized assets:", error);
-    message.value = "Failed to load serializedAssets.";
-  }
-};
 
 // Open dialog to add a new profile
 const openAddSerializedAssetDialog = () => {
@@ -854,7 +773,6 @@ const saveSerializedAsset = async () => {
           snackbarText.value = "Asset added successfully.";
           snackbar.value = true; // Show the snackbar
           message.value = "Asset saved successfully.";
-          await retrieveSerializedAssets();
           await retrieveAssetProfiles();
         }
       );
@@ -971,7 +889,6 @@ const archiveSerializedAsset = async (serializedAssetId) => {
     snackbarText.value = "Asset archived successfully.";
     snackbar.value = true;
     resetSerializedAssetArchive();
-    retrieveSerializedAssets();
   } catch (error) {
     console.error("Error archiving asset:", error);
     message.value = "Error archiving asset.";
@@ -1009,7 +926,6 @@ const activateSerializedAsset = async (serializedAssetId) => {
     snackbarText.value = "Asset activated successfully.";
     snackbar.value = true; // Show the snackbar
     // Refresh the list of categories after successful deletion
-    retrieveSerializedAssets();
     serializedAssets.value = serializedAssets.value.filter(
       (c) => c.id !== serializedAssetId
     );
@@ -1251,7 +1167,6 @@ onMounted(async () => {
   await retrieveAssetCategories();
   await retrieveAssetTypes();
   await retrieveAssetProfiles();
-  await retrieveSerializedAssets();
 });
 </script>
 
@@ -1335,6 +1250,8 @@ onMounted(async () => {
         <SearchAssets 
           :profiles="assetProfiles"
           :types="assetTypes"
+          @edit-serialized-asset="editSerializedAsset"
+          @open-archive-dialog="openArchiveDialog"
         />
       </div>
       <!-- Profiles filter section with added space after tabs -->
@@ -1624,139 +1541,7 @@ onMounted(async () => {
                 </v-card-text>
               </v-card>
             </div>
-            <!-- Active serialized assets Section -->
-            <div
-              v-if="
-                selectedTab === 'SerializedAssets' &&
-                selectedStatus === 'Active'
-              "
-            >
-              <v-card>
-                <v-card-title class="d-flex justify-space-between align-center">
-                  <span>Active Assets</span>
-                  <template v-if="canAdd">
-                    <v-btn
-                      color="primary"
-                      class="ma-2"
-                      @click="openAddSerializedAssetDialog"
-                    >
-                      Add New Asset
-                    </v-btn>
-                  </template>
-                </v-card-title>
-                <v-card-text>
-                  <v-data-table
-                    :headers="activeSerializedAssetHeaders"
-                    :items="filteredSerializedAssets"
-                    item-key="serializedAssetId"
-                    class="elevation-1"
-                    :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
-                    v-model:sort-by="assetsSortBy"
-                  >
-                    <template v-slot:item.checkoutStatus="{ item }">
-                      <td>{{ translateStatus(item.checkoutStatus) }}</td>
-                    </template>
-                    <template v-slot:item.view="{ item }">
-                      <div
-                        class="d-flex align-center justify-start"
-                        style="padding-left: 10%"
-                      >
-                        <v-btn
-                          icon
-                          class="table-icons"
-                          @click="viewSerializedAsset(item.serializedAssetId)"
-                        >
-                          <v-icon>mdi-eye</v-icon>
-                        </v-btn>
-                      </div>
-                    </template>
-
-                    <template v-slot:item.edit="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="editSerializedAsset(item)"
-                      >
-                        <v-icon>mdi-pencil</v-icon>
-                      </v-btn>
-                    </template>
-                    <template v-slot:item.archive="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openArchiveDialog({
-                            id: item.key,
-                            type: 'serializedAsset',
-                            checkoutStatus: item.checkoutStatus,
-                          })
-                        "
-                      >
-                        <v-icon>mdi-arrow-down-box</v-icon>
-                      </v-btn>
-                    </template>
-                  </v-data-table>
-                </v-card-text>
-              </v-card>
-            </div>
-
             <!-- Archived serialized assets Section -->
-            <div
-              v-if="
-                selectedTab === 'SerializedAssets' &&
-                selectedStatus === 'Archived'
-              "
-            >
-              <v-card>
-                <v-card-title class="d-flex justify-space-between align-center">
-                  <span>Archived Assets</span>
-                </v-card-title>
-                <v-card-text>
-                  <v-data-table
-                    :headers="archivedSerializedAssetHeaders"
-                    :items="filteredSerializedAssets"
-                    item-key="serializedAssetId"
-                    class="elevation-1"
-                    :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
-                    v-model:sort-by="assetsSortBy"
-                  >
-                    <template v-slot:item.checkoutStatus="{ item }">
-                      <td>{{ translateStatus(item.checkoutStatus) }}</td>
-                    </template>
-                    <template v-slot:item.view="{ item }">
-                      <div
-                        class="d-flex align-center justify-start"
-                        style="padding-left: 10%"
-                      >
-                        <v-btn
-                          icon
-                          class="table-icons"
-                          @click="viewSerializedAsset(item.serializedAssetId)"
-                        >
-                          <v-icon>mdi-eye</v-icon>
-                        </v-btn>
-                      </div>
-                    </template>
-                    <template v-slot:item.activate="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openActivateDialog({
-                            id: item.key,
-                            type: 'serializedAsset',
-                          })
-                        "
-                      >
-                        <v-icon>mdi-arrow-up-box</v-icon>
-                      </v-btn>
-                    </template>
-                  </v-data-table>
-                </v-card-text>
-              </v-card>
-            </div>
           </v-fade-transition>
         </v-col>
       </v-row>
