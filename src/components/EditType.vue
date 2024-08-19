@@ -107,7 +107,7 @@ const removeField = async (index, field) => {
 };
 
 const updateFieldValue = (field) => {
-  if (!field.customField.id) {
+  if (!field.customField || !field.customField.id) {
     field.customField = {
       id: null,
       name: field.customField,
@@ -127,7 +127,6 @@ const updateSequenceCount = (field) => {
     fieldSequence.value.sort((a, b) => {
       return a - b;
     });
-    console.log(fieldSequence.value);
   }
   field.backupSequence = field.sequence;
 };
