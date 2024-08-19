@@ -50,7 +50,6 @@ const searchAssets = async() => {
             snackbar.value = true;
         }
     }
-
 };
 
 const translateStatus = (status) => {
