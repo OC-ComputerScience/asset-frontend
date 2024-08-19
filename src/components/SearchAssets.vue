@@ -15,8 +15,9 @@ const filteredProfiles = computed(() => {
 const selectedProfileId = ref(null);
 const selectedTypeId = ref(null);
 const searchKey = ref(null);
-
 const displayedAssets = ref([]);
+const snackbar = ref(false);
+const snackbarText = ref("");
 
 const headers = ref([
     { title: "Asset", key: "serializedAssetName" },
@@ -39,8 +40,17 @@ const clearFilters = () => {
 };
 
 const searchAssets = async() => {
-    const response = await SerializedAssetServices.getBySearchFilters(searchKey.value, selectedProfileId.value, selectedTypeId.value);
-    displayedAssets.value = response.data;
+    try{
+        const response = await SerializedAssetServices.getBySearchFilters(searchKey.value, selectedProfileId.value, selectedTypeId.value);
+        displayedAssets.value = response.data;
+    }
+    catch(err){
+        if(err.response.status === 404){
+            snackbarText.value = "No Assets found matching those filters";
+            snackbar.value = true;
+        }
+    }
+
 };
 
 const translateStatus = (status) => {
@@ -54,6 +64,10 @@ const viewSerializedAsset = (serializedAssetId) => {
     params: { serializedAssetId: serializedAssetId },
     query: { sourcePage: sourcePage },
   });
+};
+
+const editAsset = async(item) => {
+    emit('editSerializedAsset', item.serializedAssetId);
 }
 
 </script>
@@ -153,7 +167,7 @@ const viewSerializedAsset = (serializedAssetId) => {
             <v-btn
                 icon
                 class="table-icons"
-                @click="$emit('editSerializedAsset', item)"
+                @click="editAsset(item)"
             >
             <v-icon>mdi-pencil</v-icon>
             </v-btn>
@@ -176,6 +190,9 @@ const viewSerializedAsset = (serializedAssetId) => {
         </template>
         </v-data-table>
 </v-card>
+<v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
+      {{ snackbarText }}
+    </v-snackbar>
 </div>
 
 </template>

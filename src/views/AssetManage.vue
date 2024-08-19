@@ -751,7 +751,7 @@ const saveSerializedAsset = async () => {
           message.value = "Asset saved successfully.";
           await retrieveAssetProfiles();
         }
-      );
+      ); 
     }
   } catch (error) {
     console.error("Error saving asset:", error);
@@ -764,8 +764,17 @@ const saveSerializedAsset = async () => {
 };
 
 // Edit asset
-const editSerializedAsset = (serializedAsset) => {
+const editSerializedAsset = async(serializedAssetId) => {
   // Assign existing assets properties, including its unique identifier
+  let serializedAsset = {};
+  try{
+    const response = await SerializedAssetServices.getById(serializedAssetId);
+    serializedAsset = response.data;
+    
+  }
+  catch(err){
+    console.error(err);
+  }
   newSerializedAsset.value = {
     serialNumber: serializedAsset.serialNumber,
     profileId: serializedAsset.profileId,
