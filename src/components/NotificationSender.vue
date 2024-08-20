@@ -13,7 +13,7 @@ export default {
     async sendEmail(emailDetails, type) {
       try {
         const response = await axios.post(
-          `${baseurl}/asset-t1/sendEmail/${type}`,
+          `${baseurl}sendEmail/${type}`,
           emailDetails
         );
         console.log("Email sent successfully:", response.data);
