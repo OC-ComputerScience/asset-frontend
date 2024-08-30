@@ -22,11 +22,13 @@ export default {
     return apiClient.get(baseURL + serializedAssetId);
   },
 
-  getBySearchFilters(searchKey = null, profileId = null, typeId = null){
+  getBySearchFilters(searchKey = null, profileId = null, typeId = null, showArchived = false, categoryId = null){
     let qString = "?";
     if(searchKey) qString += `searchKey=${searchKey}&`
     if(profileId) qString += `profileId=${profileId}&`
     if(typeId) qString += `typeId=${typeId}&`
+    if(categoryId) qString += `categoryId=${categoryId}&`
+    qString += `showArchived=${showArchived}`
 
     return apiClient.get(baseURL + `/search${qString}`);
   },
