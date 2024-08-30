@@ -14,7 +14,6 @@ import router from "../router";
 import { useStore } from "vuex";
 import { vMaska } from "maska";
 import { format, max } from "date-fns";
-import moment from "moment-timezone";
 import { parseISO } from "date-fns";
 
 const userRole = ref({});
@@ -28,7 +27,6 @@ const assetTypes = ref([]);
 const activeAssetTypes = ref([]);
 const assetProfiles = ref([]);
 const activeAssetProfiles = ref([]);
-const serializedAssets = ref([]);
 const showAddTypeDialog = ref(false);
 const showAddProfileDialog = ref(false);
 const showAddSerializedAssetDialog = ref(false);
@@ -45,7 +43,6 @@ const selectedFilterProfileId = ref("");
 const validType = ref(false);
 const validProfile = ref(false);
 const validSerializedAsset = ref(false);
-const validSerializedAssetDisposal = ref(false);
 const showArchiveDialog = ref(false);
 const showSerialArchiveDialog = ref(false);
 const showCannotArchiveDialog = ref(false);
@@ -60,8 +57,6 @@ const profilesSortBy = ref([{ key: "profileName", order: "asc" }]);
 const rawAcquisitionDate = ref(null);
 const rawWarrStartDate = ref(null);
 const rawWarrEndDate = ref(null);
-const rawDisposalDate = ref(null);
-const disposalDateMenu = ref(false);
 const disposalValueLabel = ref("Disposal Value"); // Default label
 const serialNumberLabel = ref("Serial Number"); // Default label
 const barcodes = ref([]);
@@ -611,15 +606,6 @@ const openAddSerializedAssetDialog = () => {
   showAddSerializedAssetDialog.value = true;
 };
 
-// Computed property for display
-const formattedDisposalDate = computed(() => {
-  if (rawDisposalDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawDisposalDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
 const closeSerializedAssetDialog = () => {
   resetSerializedAssetForm(); // Resets form when closing or canceling the dialog
   showAddSerializedAssetDialog.value = false;
@@ -647,16 +633,6 @@ const resetSerializedAssetForm = () => {
   barcodes.value = [];
 };
 
-// Reset Archive for serializedAsset
-const resetSerializedAssetArchive = () => {
-  newSerializedAsset.value.disposalDate = null;
-  newSerializedAsset.value.disposalMethod = "";
-  newSerializedAsset.value.disposalPrice = "";
-  newSerializedAsset.value.disposalNotes = "";
-  disposalValueLabel.value = "Disposal Value"; // Reset label to default
-  validSerializedAssetDisposal.value = false; // Reset validation state if used
-  rawDisposalDate.value = null; // Reset the internal date value if used
-};
 function monthDiff(d1, d2) {
   var months;
   months = (d2.getFullYear() - d1.getFullYear()) * 12;
@@ -808,42 +784,6 @@ const editSerializedAsset = async(serializedAssetId) => {
   );
 };
 
-const archiveSerializedAsset = async (serializedAssetId) => {
-  let formattedDisposalDate = null;
-  if (rawDisposalDate.value) {
-    // Convert local date to UTC before storing
-    formattedDisposalDate = format(
-      new Date(rawDisposalDate.value),
-      "MMM dd, yyyy"
-    );
-  }
-
-  let disposalPrice = newSerializedAsset.value.disposalPrice.replace(
-    /[^0-9.-]+/g,
-    ""
-  );
-  if (disposalPrice === "") {
-    disposalPrice = null; // Treat empty string as null
-  }
-
-  const archiveData = {
-    activeStatus: false,
-    disposalMethod: newSerializedAsset.value.disposalMethod,
-    disposalDate: formattedDisposalDate,
-    disposalNotes: newSerializedAsset.value.disposalNotes,
-    disposalPrice: disposalPrice,
-  };
-  try {
-    await SerializedAssetServices.update(serializedAssetId, archiveData);
-    snackbarText.value = "Asset archived successfully.";
-    snackbar.value = true;
-    resetSerializedAssetArchive();
-  } catch (error) {
-    console.error("Error archiving asset:", error);
-    message.value = "Error archiving asset.";
-  }
-};
-
 const updateDisposalValueLabel = () => {
   if (newSerializedAsset.value.disposalMethod === "Sold") {
     disposalValueLabel.value = "Sale Price";
@@ -865,30 +805,6 @@ const updateSerialNumberLabel = () => {
     serialNumberLabel.value = "Serial Number";
   }
 };
-
-const activateSerializedAsset = async (serializedAssetId) => {
-  const activateData = {
-    activeStatus: true, // The new value for the activeStatus field
-  };
-  try {
-    await SerializedAssetServices.update(serializedAssetId, activateData);
-    snackbarText.value = "Asset activated successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of categories after successful deletion
-    serializedAssets.value = serializedAssets.value.filter(
-      (c) => c.id !== serializedAssetId
-    );
-  } catch (error) {
-    console.error(error);
-    message.value = "Error archiving asset.";
-  }
-};
-
-const baseSerializedAssetHeaders = ref([
-  { title: "Asset", key: "serializedAssetName" },
-  { title: "Status", key: "checkoutStatus" },
-  { title: "View Asset Details", key: "view", sortable: false },
-]);
 
 const hasSerializedAssetChanged = computed(() => {
   return (
@@ -929,9 +845,7 @@ const confirmArchive = async () => {
     await archiveType(itemToArchive.value.id);
   } else if (itemToArchive.value.type === "profile") {
     await archiveProfile(itemToArchive.value.id);
-  } else if (itemToArchive.value.type === "serializedAsset") {
-    await archiveSerializedAsset(itemToArchive.value.id);
-  }
+  } 
   showArchiveDialog.value = false;
   showSerialArchiveDialog.value = false;
   itemToArchive.value = null; // Reset after deletion
@@ -949,8 +863,6 @@ const confirmActivate = async () => {
     await activateType(itemToActivate.value.id);
   } else if (itemToActivate.value.type === "profile") {
     await activateProfile(itemToActivate.value.id);
-  } else if (itemToActivate.value.type === "serializedAsset") {
-    await activateSerializedAsset(itemToActivate.value.id);
   }
   showActivateDialog.value = false;
   showSerialArchiveDialog.value = false;
@@ -1171,6 +1083,7 @@ onMounted(async () => {
         <SearchAssets 
           :profiles="assetProfiles"
           :types="assetTypes"
+          :user-category="userRole.categoryId"
           @edit-serialized-asset="editSerializedAsset"
           @open-archive-dialog="openArchiveDialog"
         />
@@ -1665,119 +1578,6 @@ onMounted(async () => {
             @click="saveSerializedAsset"
             :disabled="!validSerializedAsset || !hasSerializedAssetChanged"
             >Save</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Confirm Archive Dialog -->
-    <v-dialog v-model="showSerialArchiveDialog" max-width="600px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title>Confirm Archive</v-card-title>
-        <v-card-text>
-          <v-form
-            ref="formSerializedAssetDisposal"
-            v-model="validSerializedAssetDisposal"
-          >
-            <v-container id="attachDisposal">
-              <v-row>
-                <v-col>
-                  <v-menu
-                    v-model="disposalDateMenu"
-                    attach="#attachDisposal"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedDisposalDate"
-                        label="Disposal Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="disposalDateMenu = !disposalDateMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawDisposalDate"
-                      @input="disposalDateMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
-                </v-col>
-                <v-col cols="12">
-                  <!-- Disposal Method Selection -->
-                  <v-select
-                    v-model="newSerializedAsset.disposalMethod"
-                    :items="[
-                      'Sold',
-                      'Scrapped',
-                      'Donated',
-                      'Recycled',
-                      'Other',
-                    ]"
-                    label="Disposal Method"
-                    variant="outlined"
-                    dense
-                    prepend-icon="mdi-recycle"
-                    :rules="[rules.required]"
-                    @change="updateDisposalValueLabel"
-                  ></v-select>
-                </v-col>
-
-                <v-col cols="12">
-                  <!-- Disposal Value or Sale Price Field -->
-                  <v-text-field
-                    :label="disposalValueLabel"
-                    hint="Enter the price at which the asset was disposed of, if applicable."
-                    variant="outlined"
-                    v-model="newSerializedAsset.disposalPrice"
-                    maxlength="12"
-                    v-maska:[options]
-                    data-maska="0.99"
-                    data-maska-tokens="0:\d:multiple|9:\d:optional"
-                    inputmode="numeric"
-                    type="text"
-                    prepend-icon="mdi-cash-multiple"
-                  ></v-text-field>
-                </v-col>
-
-                <v-col cols="12">
-                  <v-textarea
-                    label="Disposal Notes"
-                    variant="outlined"
-                    v-model="newSerializedAsset.disposalNotes"
-                    :rules="[rules.maxDescLength]"
-                    maxlength="255"
-                    :counter="255"
-                    prepend-icon="mdi-note"
-                  ></v-textarea>
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="
-              resetSerializedAssetArchive();
-              showSerialArchiveDialog = false;
-            "
-          >
-            Cancel
-          </v-btn>
-          <v-btn
-            color="saveblue"
-            text
-            @click="confirmArchive"
-            :disabled="!validSerializedAssetDisposal"
-            >Archive</v-btn
           >
         </v-card-actions>
       </v-card>

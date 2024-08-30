@@ -561,7 +561,7 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                     v-model="rawAcquisitionDate"
                     clearable
-                    label="Aquisition Date"
+                    label="Acquisition Date"
                     variant="outlined"
                     color="blue"
                   ></v-date-input>
