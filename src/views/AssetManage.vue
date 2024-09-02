@@ -60,6 +60,8 @@ const rawWarrEndDate = ref(null);
 const disposalValueLabel = ref("Disposal Value"); // Default label
 const serialNumberLabel = ref("Serial Number"); // Default label
 const barcodes = ref([]);
+const originalBarcodes = ref([]);
+const deletedBarcodes = ref([]);
 const store = useStore();
 const originalProfileId = ref(""); // Stores the original profile ID when editing an asset
 const canAdd = computed(() => {
@@ -640,6 +642,7 @@ function monthDiff(d1, d2) {
   months += d2.getMonth();
   return months <= 0 ? 0 : months;
 }
+
 // Save asset (add or edit)
 const saveSerializedAsset = async () => {
   let formattedAcquisitionDate = null;
@@ -681,10 +684,32 @@ const saveSerializedAsset = async () => {
     // Check if editing an existing serializedAsset (i.e., `id` is present)
     if (editingSerializedAsset.value && newSerializedAsset.value.id) {
       // Call update service if editing
-      await SerializedAssetServices.update(
-        newSerializedAsset.value.id,
-        serializedAssetData
-      );
+      if(hasSerializedAssetChanged.value){
+        await SerializedAssetServices.update(
+          newSerializedAsset.value.id,
+          serializedAssetData
+        );
+      }
+      if(barcodes.value !== originalBarcodes.value){
+        barcodes.value.forEach(async(barcode, index) => {
+          if(!barcode.barcodeId){
+            let newBarcode = {
+              barcode: barcode.barcode,
+              barcodeType: barcode.barcodeType,
+              serializedAssetId: newSerializedAsset.value.id
+            }
+            await BarcodeServices.create(newBarcode)
+          }
+          else if(barcode != originalBarcodes.value[index]){
+            await BarcodeServices.update(barcode.barcodeId, barcode);
+          }
+        })
+        deletedBarcodes.value.forEach(async(barcode, index) => {
+          if(barcode.barcodeId){
+            await BarcodeServices.delete(barcode.barcodeId)
+          }
+        })
+      }
       snackbarText.value = "Asset updated successfully.";
       snackbar.value = true; // Show the snackbar
       message.value = "Asset saved successfully.";
@@ -716,8 +741,8 @@ const saveSerializedAsset = async () => {
 
           barcodes.value.forEach((barcode) => {
             let newBarcode = {
-              barcodeType: barcode.type,
-              barcode: barcode.code,
+              barcodeType: barcode.barcodeType,
+              barcode: barcode.barcode,
               serializedAssetId: newSerializedAsset.value.id,
             };
             BarcodeServices.create(newBarcode);
@@ -746,7 +771,6 @@ const editSerializedAsset = async(serializedAssetId) => {
   try{
     const response = await SerializedAssetServices.getById(serializedAssetId);
     serializedAsset = response.data;
-    
   }
   catch(err){
     console.error(err);
@@ -759,6 +783,8 @@ const editSerializedAsset = async(serializedAssetId) => {
     notes: serializedAsset.notes,
     id: serializedAsset.serializedAssetId,
   };
+  barcodes.value = serializedAsset.barcodes.map(e => e);
+  originalBarcodes.value = serializedAsset.barcodes.map(e => e)
 
   const profileObject = assetProfiles.value.find(
     (p) => p.key === serializedAsset.profileId
@@ -807,17 +833,39 @@ const updateSerialNumberLabel = () => {
 };
 
 const hasSerializedAssetChanged = computed(() => {
+  let purchasePrice = newSerializedAsset.value.purchasePrice.replace(
+    /[^0-9.-]+/g,
+    ""
+  )
+  let formattedAcquisitionDate = null;
+  if (rawAcquisitionDate.value) {
+    // Convert local date to UTC before storing
+    let date = new Date(rawAcquisitionDate.value)
+    let offset = date.getTimezoneOffset() * 60000
+    let localDate = new Date(date.getTime() - offset)
+    formattedAcquisitionDate = localDate.toISOString()
+  }
   return (
     newSerializedAsset.value.serialNumber !==
       originalSerializedAsset.value.serialNumber ||
     newSerializedAsset.value.notes !== originalSerializedAsset.value.notes ||
-    newSerializedAsset.value.purchasePrice !==
-      originalSerializedAsset.value.purchasePrice ||
-    newSerializedAsset.value.acquisitionDate !==
-      originalSerializedAsset.value.acquisitionDate ||
+    purchasePrice !== originalSerializedAsset.value.purchasePrice ||
+    formattedAcquisitionDate !== originalSerializedAsset.value.acquisitionDate ||
     selectedProfileId.value !== originalSerializedAsset.value.profileId
   );
 });
+
+const haveBarcodesChanged = computed(() => {
+  return barcodes.value !== originalBarcodes.value;
+})
+
+const hasAssetFormChanged = computed(() => {
+  return hasSerializedAssetChanged.value || haveBarcodesChanged.value;
+})
+
+const canSaveAsset = computed(() => {
+  return validSerializedAsset.value || hasAssetFormChanged.value
+})
 
 // *** Misc Section ***
 
@@ -938,12 +986,13 @@ watch(
 
 const addBarCode = () => {
   barcodes.value.push({
-    type: null,
-    code: null,
+    barcodeType: null,
+    barcode: null,
   });
 };
 
 const removeBarCode = (index) => {
+  deletedBarcodes.value.push(barcodes.value[index])
   barcodes.value.splice(index, 1);
 };
 
@@ -1506,11 +1555,11 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
                 </v-col>
-                <v-col v-if="!editingSerializedAsset">
+                <v-col>
                   <v-row v-for="(barcode, index) in barcodes">
                     <v-col cols="4">
                       <v-select
-                        v-model="barcode.type"
+                        v-model="barcode.barcodeType"
                         :items="['MAC', 'Wireless NIC', 'Onboard NIC']"
                         label="Barcode Type"
                         variant="outlined"
@@ -1523,7 +1572,7 @@ onMounted(async () => {
                       <v-text-field
                         label="Barcode"
                         variant="outlined"
-                        v-model="barcode.code"
+                        v-model="barcode.barcode"
                         :rules="[rules.required]"
                         maxlength="30"
                       ></v-text-field>
@@ -1536,7 +1585,7 @@ onMounted(async () => {
                   </v-row>
                 </v-col>
 
-                <v-col cols="12" v-if="!editingSerializedAsset">
+                <v-col cols="12">
                   <v-tooltip bottom>
                     <template v-slot:activator="{ attrs }">
                       <v-btn
@@ -1576,7 +1625,7 @@ onMounted(async () => {
           <v-btn
             color="saveblue"
             @click="saveSerializedAsset"
-            :disabled="!validSerializedAsset || !hasSerializedAssetChanged"
+            :disabled="!canSaveAsset"
             >Save</v-btn
           >
         </v-card-actions>
