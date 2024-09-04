@@ -1,8 +1,10 @@
 <script setup>
-import {ref, onMounted, computed} from "vue";
+import {ref, onMounted, computed, watch} from "vue";
 import AssignmentServices from "../services/assignment.services.js";
 import UserRoleServices from "../services/userRoleServices";
 import store from "../store/store.js";
+import CheckoutTable from "../components/CheckoutTable.vue";
+import CheckinTable from "../components/CheckinTable.vue";
 
 const selectedTab = ref("People");
 const selectedStatus = ref("Checkout");
@@ -11,40 +13,70 @@ const userRole = ref({});
 const recentCheckouts = ref([]);
 const recentCheckins = ref([]);
 const assignees = ref([]);
+const renderKey = ref(0);
 
 const userRoleId = computed(() => {
   return store.getters.getUserRole;
 });
 
 const getUserRole = async() => {
-    let response = await UserRoleServices.get(userRoleId.value);
-    userRole.value = response.data;
+  let response = await UserRoleServices.get(userRoleId.value);
+  userRole.value = response.data;
 }
 
 const retrieveData = async() => {
-    let assignee = selectedTab.value.toLocaleLowerCase();
-    let categoryId = userRole.value.categoryId;
-    let response;
-    if(categoryId === 4){
-        response = await AssignmentServices.getRecent(assignee);
+  recentCheckins.value = [];
+  recentCheckouts.value = [];
+  let assignee = selectedTab.value.toLocaleLowerCase();
+  let categoryId = userRole.value.categoryId;
+  let response;
+  if(categoryId === 4){
+      response = await AssignmentServices.getRecent(assignee);
+  }
+  else {
+      response = await AssignmentServices.getRecentByCategory(assignee, categoryId);
+  }
+  let data = response.data;
+  splitAssignments(data);
+  forceRender();
+}
+
+const splitAssignments = (data) => {
+  data.forEach(element => {
+    element = {
+      ...element,
+      name: findAssignmentName(element)
     }
-    else {
-        response = await AssignmentServices.getRecentByCategory(assignee, categoryId);
+    if(element.checkoutStatus){
+        recentCheckouts.value.push(element)
     }
-    let data = response.data;
-    data.forEach(element => {
-        if(element.checkoutStatus){
-            recentCheckouts.value.push(element);
-        }
-        else{
-            recentCheckins.value.push(element);
-        }
-    });
+    else{
+        recentCheckins.value.push(element);
+    }
+  });
+  recentCheckouts.value.sort((a,b) => {
+    return new Date(b.checkoutDate) - new Date(a.checkoutDate);
+  })
+  recentCheckins.value.sort((a,b) => {
+    return new Date(b.checkinDate) - new Date(a.checkinDate);
+  })
+}
+
+const findAssignmentName = (assignment) => {
+  let name;
+  if(assignment.person) name = assignment.person.fullName;
+  else if(assignment.building) name = assignment.building.name;
+  else if(assignment.room) name = assignment.room.building.abbreviation + " " + assignment.room.roomNo;
+  return name;
+}
+
+const forceRender = () => {
+  renderKey.value += 1;
 }
 
 onMounted(async() => {
-    await getUserRole();
-    await retrieveData();
+  await getUserRole();
+  await retrieveData();
 })
 
 </script>
@@ -64,7 +96,7 @@ onMounted(async() => {
 
       <v-row>
         <v-col cols="12">
-          <v-tabs v-model="selectedTab" background-color="primary" dark dense>
+          <v-tabs v-model="selectedTab" background-color="primary" dark dense @update:modelValue="retrieveData">
             <v-tab value="People" color="primary">
               <v-icon left class="mr-2">mdi-account-multiple</v-icon>
               People
@@ -98,6 +130,24 @@ onMounted(async() => {
               Check-in
             </v-tab>
           </v-tabs>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col cols="12">
+          <v-fade-transition mode="out-in">
+            <CheckoutTable
+              v-if="selectedStatus === 'Checkout'"
+              :assignee="selectedTab"
+              :checkouts="recentCheckouts"
+              :key="renderKey"
+            />
+            <CheckinTable 
+              v-if="selectedStatus === 'Check-in'"
+              :assignee="selectedTab"
+              :checkins="recentCheckins"
+              :key="renderKey"
+            />
+          </v-fade-transition>
         </v-col>
       </v-row>
     </v-container>

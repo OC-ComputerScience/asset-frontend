@@ -1,4 +1,3 @@
-import { getRecentByCategoryId } from "../../../asset-backend/app/controllers/personAsset.controller";
 import apiClient from "./services";
 
 const baseURL = "/assignment/";
