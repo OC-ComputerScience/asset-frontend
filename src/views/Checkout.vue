@@ -12,8 +12,9 @@ const userRole = ref({});
 
 const recentCheckouts = ref([]);
 const recentCheckins = ref([]);
-const assignees = ref([]);
 const renderKey = ref(0);
+const snackbar = ref(false);
+const snackbarText = ref("");
 
 const userRoleId = computed(() => {
   return store.getters.getUserRole;
@@ -72,6 +73,12 @@ const findAssignmentName = (assignment) => {
 
 const forceRender = () => {
   renderKey.value += 1;
+}
+
+const onCheckout = async(responseText) => {
+  snackbar.value = true;
+  snackbarText.value = responseText;
+  await retrieveData();
 }
 
 onMounted(async() => {
@@ -140,6 +147,7 @@ onMounted(async() => {
               :assignee="selectedTab"
               :checkouts="recentCheckouts"
               :key="renderKey"
+              @checkout="onCheckout"
             />
             <CheckinTable 
               v-if="selectedStatus === 'Check-in'"
@@ -151,5 +159,8 @@ onMounted(async() => {
         </v-col>
       </v-row>
     </v-container>
+    <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
+      {{ snackbarText }}
+    </v-snackbar>
 </div>
 </template>

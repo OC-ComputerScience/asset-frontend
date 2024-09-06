@@ -16,6 +16,9 @@ export default {
         return apiClient.get(baseURL + assignee + id);
     },
     update(assignee, id, data){
-        return apiClient.put(baseURL + assignee + id, data);
+        return apiClient.put(`${baseURL}${assignee}/${id}`, data);
+    },
+    getAssignees(assignee){
+        return apiClient.get(`${baseURL}assignee/${assignee}`);
     }
 }
