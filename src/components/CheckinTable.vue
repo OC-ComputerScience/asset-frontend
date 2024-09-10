@@ -1,9 +1,13 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import moment from "moment-timezone";
+import CheckinDialog from "./CheckinDialog.vue";
 
-const props = defineProps(["assignee", "checkins", "key"])
+const props = defineProps(["assignee", "checkins", "key"]);
+const emit = defineEmits(["checkin"]);
 const checkins = ref({});
+const activeCheckin = ref(null);
+const checkinDialog = ref(false);
 
 const displayAssignee = computed(() => {
     let display = {
@@ -27,6 +31,7 @@ const headers = computed(() => [
     { title: "Checked-in By", key: "checkedInBy" },
     { title: "Expected Check-in Date", key: "expectedCheckinDate" },
     { title: "Check-in Date", key: "checkinDate" },
+    { title: "Edit", key: 'edit' }
 ])
 
 const formatDate = (dateString) => {
@@ -46,12 +51,35 @@ onMounted(() => {
     checkins.value = props.checkins
 })
 
+const editCheckin = (item) => {
+    activeCheckin.value = item;
+    showCheckinDialog();
+}
+const showCheckinDialog = () => {
+    checkinDialog.value = true;
+}
+const saveCheckin = (responseText) => {
+    checkinDialog.value = false;
+    emit('checkin', responseText);
+}
+const closeCheckinDialog = () => {
+    checkinDialog.value = false;
+    activeCheckin.value = null;
+}
+
 </script>
 <template>
 <div>
     <v-card>
         <v-card-title class="d-flex justify-space-between align-center">
             <span>Recent {{ displayAssignee.title }} Check-ins</span>
+            <v-btn
+                color="saveblue"
+                class="ma-2"
+                @click="showCheckinDialog()"
+            >
+                Checkin
+            </v-btn>
         </v-card-title>
         <v-card-text>
             <v-data-table v-if="checkins.length > 0"
@@ -68,9 +96,26 @@ onMounted(() => {
                     <template v-slot:item.checkinDate="{ item }">
                     <td>{{ formatDate(item.checkinDate) }}</td>
                 </template>
+                <template v-slot:item.edit="{ item }">
+                    <v-btn
+                        icon
+                        class="table-icons"
+                        @click="editCheckin(item)"
+                    >
+                        <v-icon>mdi-pencil</v-icon>
+                    </v-btn>
+                </template>
             </v-data-table>
         </v-card-text>
     </v-card>
+    <v-dialog v-model="checkinDialog" persistent max-width="600px">
+        <CheckinDialog 
+            :assignee="props.assignee"
+            :active-checkin="activeCheckin"
+            @cancel-checkin="closeCheckinDialog"
+            @save-checkin="saveCheckin"
+        />
+    </v-dialog>
 </div>
 
 </template>

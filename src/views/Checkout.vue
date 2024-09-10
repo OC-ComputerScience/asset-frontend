@@ -154,6 +154,7 @@ onMounted(async() => {
               :assignee="selectedTab"
               :checkins="recentCheckins"
               :key="renderKey"
+              @checkin="onCheckout"
             />
           </v-fade-transition>
         </v-col>

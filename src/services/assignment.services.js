@@ -6,8 +6,12 @@ export default {
     create(assignee, data) {
         return apiClient.post(baseURL + assignee, data);
     },
+    getAll(assignee, checkedOut){
+        let query = checkedOut ? "?checkedOut=true" : "";
+        return apiClient.get(baseURL + assignee + query);
+    },
     getRecent(assignee) {
-        return apiClient.get(baseURL + assignee);
+        return apiClient.get(`${baseURL}${assignee}/recent`);
     },
     getRecentByCategory(assignee, categoryId){
         return apiClient.get(`${baseURL}${assignee}/category/${categoryId}`);
