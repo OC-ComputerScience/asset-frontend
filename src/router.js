@@ -15,7 +15,6 @@ import SerializedAssetView from "./views/SerializedAssetView.vue";
 import BuildingView from "./views/BuildingView.vue";
 import RoomView from "./views/RoomView.vue";
 import PersonView from "./views/PersonView.vue";
-import AssetCheckout from "./views/AssetCheckout.vue";
 import Reports from "./views/Reports.vue";
 import ReportGeneration from "./views/ReportGeneration.vue";
 import Maintenance from "./views/Maintenance.vue";
