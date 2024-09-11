@@ -109,8 +109,11 @@ const saveCheckin = async() => {
               "checkinNotify"
             );
           }
+          responseText = "Asset checked in successfully.";
+        }else{
+          responseText = "Checkin updated successfully.";
         }
-        responseText = "Asset checked in successfully.";
+
     }
     catch(err){
         console.error(err);
