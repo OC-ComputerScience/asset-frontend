@@ -67,6 +67,7 @@ const translateStatus = (status) => {
 
 const viewSerializedAsset = (serializedAssetId) => {
   const sourcePage = "assetManage";
+  console.log(serializedAssetId)
   router.push({
     name: "serializedAssetView",
     params: { serializedAssetId: serializedAssetId },
