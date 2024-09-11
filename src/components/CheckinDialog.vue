@@ -5,6 +5,8 @@ import { format } from "date-fns";
 import { zonedTimeToUtc } from "date-fns-tz";
 import serializedAssetServices from "../services/serializedAssetServices";
 import store from "../store/store.js";
+import NotificationSender from "../components/NotificationSender.vue";
+
 
 const props = defineProps(["assignee", "activeCheckin"]);
 const emit = defineEmits(["saveCheckin", "cancelCheckin"]);
@@ -16,6 +18,7 @@ const checkinNote = ref("");
 const oldNote = ref("");
 const loginUser = computed(() => store.getters.getLoginUserInfo);
 const currentUser = `${loginUser.value.fName} ${loginUser.value.lName}`;
+const notificationSender = ref(null);
 
 const hasNoteChanged = computed(() => {
     return checkinNote.value !== oldNote.value;
@@ -34,12 +37,26 @@ onMounted(async() => {
     if(!props.activeCheckin){
         let response = await assignmentServices.getAll(props.assignee, true);
         availableCheckins.value = response.data;
+        availableCheckins.value.forEach((asset) => {
+          makeTitle(asset);
+        })
     }
     else{
         activeCheckin.value = props.activeCheckin;
+        makeTitle(activeCheckin.value);
         oldNote.value = activeCheckin.value.checkinNote;
+        checkinNote.value = activeCheckin.value.checkinNote;
     }
 })
+
+const makeTitle = (asset) => {
+  let title = "";
+  if(props.assignee === "People") title += asset.person.fullNameWithId;
+  else if(props.assignee === "Buildings") title += asset.building.name;
+  else if(props.assignee === "Rooms") title += asset.room.roomName;
+  title += `: ${asset.serializedAsset.serializedAssetName}`;
+  asset.title = title;
+}
 
 const convertToUtcForStorage = (localDate) => {
     const timeZone = "America/Chicago"; 
@@ -68,7 +85,31 @@ const saveCheckin = async() => {
 
     try{
         await assignmentServices.update(props.assignee, key, checkinData);
-        await serializedAssetServices.updateCheckoutStatus(activeCheckin.value.serializedAssetId, false);
+        if(!props.activeCheckin){
+          await serializedAssetServices.updateCheckoutStatus(activeCheckin.value.serializedAssetId, false);
+          if(props.assignee === 'People'){
+            notificationSender.value.sendEmail(
+              {
+                to: activeCheckin.value.person.email,
+                fullName: activeCheckin.value.person.fullNameWithId,
+                checkinDate: formattedCheckinDate,
+                serializedAssetName: activeCheckin.value.serializedAsset.serializedAssetName
+              },
+              "receipt"
+            );
+
+            // Send admin notification email
+            notificationSender.value.sendEmail(
+              {
+                checkedInBy: currentUser,
+                fullName: activeCheckin.value.person.fullNameWithId,
+                expectedCheckinDate: formattedCheckinDate,
+                serializedAssetName: activeCheckin.value.serializedAsset.serializedAssetName
+              },
+              "checkinNotify"
+            );
+          }
+        }
         responseText = "Asset checked in successfully.";
     }
     catch(err){
@@ -84,58 +125,59 @@ const saveCheckin = async() => {
 
 <template>
 <div>
-    <v-card class="pa-4 rounded-xl">
-        <v-card-title>
-          <span class="headline">Check-in Asset</span>
-        </v-card-title>
-        <v-form ref="checkinForm" v-model="checkinFormValid">
-          <v-card-text>
-            <v-container>
-              <v-row>
-                <v-col cols="12">
-                  <v-autocomplete
-                    label="Select Asset for Check-in"
-                    v-model="activeCheckin"
-                    :items="availableCheckins"
-                    variant="outlined"
-                    item-title="serializedAsset.serializedAssetName"
-                    item-value="key"
-                    :rules="[rules.required]"
-                    return-object
-                    clearable
-                    prepend-icon="mdi-cellphone-settings"
-                    :disabled="props.activeCheckin !== null"
-                  ></v-autocomplete>
-                </v-col>
-                <v-col cols="12" v-if="activeCheckin">
-                  <v-textarea
-                    label="Notes"
-                    variant="outlined"
-                    v-model="checkinNote"
-                    :rules="[rules.maxNotesLength]"
-                    maxlength="255"
-                    :counter="255"
-                    prepend-icon="mdi-note"
-                  ></v-textarea>
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="cancelgrey" text @click="$emit('cancelCheckin')"
-              >Cancel</v-btn
-            >
-            <v-btn
-              color="saveblue"
-              class="ma-2"
-              text
-              @click="saveCheckin"
-              :disabled="!isFormValid"
-              >Check-in</v-btn
-            >
-          </v-card-actions>
-        </v-form>
-      </v-card>
+  <v-card class="pa-4 rounded-xl">
+      <v-card-title>
+        <span class="headline">Check-in Asset</span>
+      </v-card-title>
+      <v-form ref="checkinForm" v-model="checkinFormValid">
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12">
+                <v-autocomplete
+                  label="Select Asset for Check-in"
+                  v-model="activeCheckin"
+                  :items="availableCheckins"
+                  variant="outlined"
+                  item-title="title"
+                  item-value="key"
+                  :rules="[rules.required]"
+                  return-object
+                  clearable
+                  prepend-icon="mdi-cellphone-settings"
+                  :disabled="props.activeCheckin !== null"
+                ></v-autocomplete>
+              </v-col>
+              <v-col cols="12" v-if="activeCheckin">
+                <v-textarea
+                  label="Notes"
+                  variant="outlined"
+                  v-model="checkinNote"
+                  :rules="[rules.maxNotesLength]"
+                  maxlength="255"
+                  :counter="255"
+                  prepend-icon="mdi-note"
+                ></v-textarea>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="cancelgrey" text @click="$emit('cancelCheckin')"
+            >Cancel</v-btn
+          >
+          <v-btn
+            color="saveblue"
+            class="ma-2"
+            text
+            @click="saveCheckin"
+            :disabled="!isFormValid"
+            >Check-in</v-btn
+          >
+        </v-card-actions>
+      </v-form>
+    </v-card>
+    <NotificationSender ref="notificationSender" />
 </div>
 </template>

@@ -6,6 +6,8 @@
     import store from "../store/store.js";
     import { format } from "date-fns";
     import { zonedTimeToUtc } from "date-fns-tz";
+    import AddPerson from "./AddPerson.vue";
+    import NotificationSender from "../components/NotificationSender.vue";
 
     const props = defineProps(["assignee", "activeCheckout"]);
     const emit = defineEmits(["cancelCheckout", "saveCheckout"]);
@@ -20,6 +22,10 @@
     const checkoutFormValid = ref(false);
     const loginUser = computed(() => store.getters.getLoginUserInfo);
     const currentUser = `${loginUser.value.fName} ${loginUser.value.lName}`;
+    const showAddNewPersonDialog = ref(false);
+    const snackbar = ref(false);
+    const snackbarText = ref(null);
+    const notificationSender = ref(null);
 
     const userRoleId = computed(() => {
         return store.getters.getUserRole;
@@ -46,6 +52,10 @@
             expectedCheckinDate.value !== checkout.expectedCheckinDate ||
             checkoutNotes.value !== checkout.checkoutNote
         )
+    })
+
+    const isFormValid = computed(() => {
+        return props.activeCheckout ? hasCheckoutChanged.value : checkoutFormValid.value;
     })
 
     const rules = {
@@ -142,7 +152,28 @@
             checkoutNote: checkoutNotes.value,
             checkedOutBy: currentUser
         };
-        if(props.assignee === "People") newCheckout.personId = selectedAssignee.value.personId;
+        if(props.assignee === "People") {
+            newCheckout.personId = selectedAssignee.value.personId;
+            notificationSender.value.sendEmail(
+                {
+                    checkOutBy: newCheckout.checkedOutBy,
+                    fullName: selectedAssignee.value.fullName,
+                    expectedCheckinDate: newCheckout.expectedCheckinDate,
+                    serializedAssetName: selectedAsset.value.serializedAssetName,
+                },
+                "notify"
+            );
+
+            notificationSender.value.sendEmail(
+                {
+                    to: selectedAssignee.value.email,
+                    fullName: selectedAssignee.value.fullName,
+                    expectedCheckinDate: newCheckout.expectedCheckinDate,
+                    serializedAssetName: selectedAsset.value.serializedAssetName,
+                },
+                "confirm"
+            );
+        }
         else if(props.assignee === "Buildings") newCheckout.buildingId = selectedAssignee.value.buildingId;
         else if(props.assignee === "Rooms") newCheckout.roomId = selectedAssignee.value.roomId;
 
@@ -186,10 +217,26 @@
     const getAssignmentId = () => {
         let id;
         let checkout = props.activeCheckout
-        if(props.assignee === "People") id = checkout.peronAssetId;
+        if(props.assignee === "People") id = checkout.personAssetId;
         else if(props.assignee === "Buildings") id = checkout.buildingAssetId;
         else if(props.assignee === "Rooms") id = checkout.roomAssetId;
         return id;
+    }
+
+    const openAddNewPersonDialog = () => {
+        showAddNewPersonDialog.value = true;
+    }
+
+    const saveNewPerson = async(person, responseText) => {
+        selectedAssignee.value = person;
+        await retrieveAssignees();
+        snackbarText.value = responseText;
+        snackbar.value = true;
+        closeAddNewPersonDialog();
+    }
+
+    const closeAddNewPersonDialog = () => {
+        showAddNewPersonDialog.value = false;
     }
 
 </script>
@@ -277,12 +324,22 @@
                 class="ma-2"
                 text
                 @click="saveCheckout"
-                :disabled="!checkoutFormValid || !hasCheckoutChanged"
+                :disabled="!isFormValid"
             >   
                 Checkout
             </v-btn>
             </v-card-actions>
         </v-form>
     </v-card>
+    <v-dialog v-model="showAddNewPersonDialog" persistet max-width="600px">
+        <AddPerson 
+            @save-person="saveNewPerson"
+            @close-dialog="closeAddNewPersonDialog"
+        />
+    </v-dialog>
+    <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
+      {{ snackbarText }}
+    </v-snackbar>
+    <NotificationSender ref="notificationSender" />
 </div>
 </template>
