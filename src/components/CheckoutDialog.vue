@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, onMounted, computed } from "vue";
+    import { ref, onMounted, computed, onBeforeMount } from "vue";
     import AssignmentServices from "../services/assignment.services.js";
     import SerializedAssetServices from "../services/serializedAssetServices.js";
     import UserRoleServices from "../services/userRoleServices.js";
@@ -94,6 +94,20 @@
     }
 
     onMounted(async() => {
+        // if(props.activeCheckout){
+        //     expectedCheckinDate.value = props.activeCheckout.expectedCheckinDate;
+        //     checkoutNotes.value = props.activeCheckout.checkoutNote;
+        //     selectedAsset.value = props.activeCheckout.serializedAsset;
+        //     selectedAssignee.value = getSelectedAssignee();
+        // }
+        // else{
+        //     await getUserRole();
+        //     await retrieveAssets();
+        //     await retrieveAssignees();
+        // }
+    })
+
+    onBeforeMount(async() => {
         if(props.activeCheckout){
             expectedCheckinDate.value = props.activeCheckout.expectedCheckinDate;
             checkoutNotes.value = props.activeCheckout.checkoutNote;
