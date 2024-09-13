@@ -77,23 +77,11 @@
     }
 
     const retrieveAssets = async() => {
-        let response;
-        if(userRole.value.categoryId === 4){
-            response = await SerializedAssetServices.getAll(true, false);
-        }
-        else{
-            response = await SerializedAssetServices.getSerializedAssetsByCategoryId(
-                userRole.value.categoryId,
-                true,
-                false
-            );
-        }
-        availableAssets.value = response.data;
+        availableAssets.value = store.getters.getAssets;
     }
 
     const retrieveAssignees = async() => {
-        let response = await AssignmentServices.getAssignees(props.assignee.toLocaleLowerCase());
-        assignees.value = response.data;
+        assignees.value = store.getters.getAssignees;
     }
 
     const getSelectedAssignee = () => {

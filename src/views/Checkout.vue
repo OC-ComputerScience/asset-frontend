@@ -5,6 +5,7 @@ import UserRoleServices from "../services/userRoleServices";
 import store from "../store/store.js";
 import CheckoutTable from "../components/CheckoutTable.vue";
 import CheckinTable from "../components/CheckinTable.vue";
+import serializedAssetServices from "../services/serializedAssetServices.js";
 
 const selectedTab = ref("People");
 const selectedStatus = ref("Checkout");
@@ -31,15 +32,48 @@ const retrieveData = async() => {
   let assignee = selectedTab.value.toLocaleLowerCase();
   let categoryId = userRole.value.categoryId;
   let response;
-  if(categoryId === 4){
+  try {
+    if(categoryId === 4){
       response = await AssignmentServices.getRecent(assignee);
-  }
-  else {
+    }
+    else {
       response = await AssignmentServices.getRecentByCategory(assignee, categoryId);
+    }
+    let data = response.data;
+    splitAssignments(data);
+    await retrieveCheckins(assignee);
+    response = await AssignmentServices.getAssignees(assignee);
+    data = response.data;
+    store.commit("setAssignees", data);
+    forceRender();
   }
-  let data = response.data;
-  splitAssignments(data);
-  forceRender();
+  catch(err){
+    console.error(err);
+  }
+  
+}
+
+const retrieveAssets = async() => {
+  let categoryId = userRole.value.categoryId;
+  let response;
+  try {
+    if(categoryId === 4){
+      response = await serializedAssetServices.getAll(true, false);
+    }
+    else {
+      response = await serializedAssetServices.getSerializedAssetsByCategoryId(categoryId, true, false);
+    }
+    let data = response.data;
+    store.commit("setAssets", data);
+  }
+  catch(err){
+    console.error(err);
+  }
+}
+
+const retrieveCheckins = async(assignee) => {
+  let response = await AssignmentServices.getAll(assignee, true);
+  store.commit("setCheckins", response.data);
 }
 
 const splitAssignments = (data) => {
@@ -84,6 +118,7 @@ const onCheckout = async(responseText) => {
 onMounted(async() => {
   await getUserRole();
   await retrieveData();
+  await retrieveAssets();
 })
 
 </script>

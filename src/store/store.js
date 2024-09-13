@@ -2,16 +2,34 @@ import { createStore } from "vuex";
 import Utils from "../config/utils";
 
 const user = Utils.getStore("user");
+const assignees = Utils.getStore("assignees");
+const assets = Utils.getStore("assets");
+const checkins = Utils.getStore("checkins");
 
 const store = createStore({
   state: {
     loginUser: user,
+    assignees: assignees,
+    assets: assets,
+    checkins: checkins,
   },
   mutations: {
     setLoginUser(state, user) {
       state.loginUser = user;
       Utils.setStore("user", user);
     },
+    setAssignees(state, assignees) {
+      state.assignees = assignees;
+      Utils.setStore("assignees", assignees);
+    },
+    setAssets(state, assets) {
+      state.assets = assets;
+      Utils.setStore("assets", assets);
+    },
+    setCheckins(state, checkins) {
+      state.checkins = checkins;
+      Utils.setStore("checkins", checkins);
+    }
   },
   actions: {
     login({ commit }, user) {
@@ -19,6 +37,15 @@ const store = createStore({
     },
   },
   getters: {
+    getAssignees(state) {
+      return state.assignees;
+    },
+    getAssets(state) {
+      return state.assets;
+    },
+    getCheckins(state) {
+      return state.checkins;
+    },
     getLoginUserInfo(state) {
       return state.loginUser;
     },
