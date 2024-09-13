@@ -35,8 +35,7 @@ const rules = {
 
 onMounted(async() => {
     if(!props.activeCheckin){
-        let response = await assignmentServices.getAll(props.assignee, true);
-        availableCheckins.value = response.data;
+        availableCheckins.value = store.getters.getCheckins;
         availableCheckins.value.forEach((asset) => {
           makeTitle(asset);
         })
