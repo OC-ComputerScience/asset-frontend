@@ -8,7 +8,7 @@ import store from "../store/store.js";
 import NotificationSender from "../components/NotificationSender.vue";
 
 
-const props = defineProps(["assignee", "activeCheckin", "checkouts"]);
+const props = defineProps(["assignee", "activeCheckin", "checkouts", "editMode"]);
 const emit = defineEmits(["saveCheckin", "cancelCheckin"]);
 
 const availableCheckins = ref([]);
@@ -25,7 +25,7 @@ const hasNoteChanged = computed(() => {
 })
 
 const isFormValid = computed(() => {
-    return props.activeCheckin ? hasNoteChanged.value : checkinFormValid.value;
+    return props.editMode ? hasNoteChanged.value : checkinFormValid.value;
 })
 
 const rules = {

@@ -8,6 +8,7 @@ const emit = defineEmits(["checkin"]);
 const recentCheckins = ref({});
 const activeCheckin = ref(null);
 const checkinDialog = ref(false);
+const checkinEditMode = ref(false);
 
 const displayAssignee = computed(() => {
     let display = {
@@ -53,16 +54,19 @@ onMounted(() => {
 
 const editCheckin = (item) => {
     activeCheckin.value = item;
+    checkinEditMode.value = true;
     showCheckinDialog();
 }
 const showCheckinDialog = () => {
     checkinDialog.value = true;
 }
 const saveCheckin = (responseText) => {
+    checkinEditMode.value = false;
     checkinDialog.value = false;
     emit('checkin', responseText);
 }
 const closeCheckinDialog = () => {
+    checkinEditMode.value = false;
     checkinDialog.value = false;
     activeCheckin.value = null;
 }
@@ -113,6 +117,7 @@ const closeCheckinDialog = () => {
             :assignee="props.assignee"
             :active-checkin="activeCheckin"
             :checkouts="props.checkouts"
+            :edit-mode="checkinEditMode"
             @cancel-checkin="closeCheckinDialog"
             @save-checkin="saveCheckin"
         />
