@@ -16,6 +16,9 @@ const recentCheckins = ref([]);
 const renderKey = ref(0);
 const snackbar = ref(false);
 const snackbarText = ref("");
+const assignees = ref([]);
+const assets = ref([]);
+const checkouts = ref([]);
 
 const userRoleId = computed(() => {
   return store.getters.getUserRole;
@@ -41,10 +44,10 @@ const retrieveData = async() => {
     }
     let data = response.data;
     splitAssignments(data);
-    await retrieveCheckins(assignee);
+    await retrieveCheckouts(assignee);
     response = await AssignmentServices.getAssignees(assignee);
     data = response.data;
-    store.commit("setAssignees", data);
+    assignees.value = data;
     forceRender();
   }
   catch(err){
@@ -64,16 +67,16 @@ const retrieveAssets = async() => {
       response = await serializedAssetServices.getSerializedAssetsByCategoryId(categoryId, true, false);
     }
     let data = response.data;
-    store.commit("setAssets", data);
+    assets.value = data;
   }
   catch(err){
     console.error(err);
   }
 }
 
-const retrieveCheckins = async(assignee) => {
+const retrieveCheckouts = async(assignee) => {
   let response = await AssignmentServices.getAll(assignee, true);
-  store.commit("setCheckins", response.data);
+  checkouts.value = response.data;
 }
 
 const splitAssignments = (data) => {
@@ -182,12 +185,15 @@ onMounted(async() => {
               :assignee="selectedTab"
               :checkouts="recentCheckouts"
               :key="renderKey"
+              :assignees="assignees"
+              :assets="assets"
               @checkout="onCheckout"
             />
             <CheckinTable 
               v-if="selectedStatus === 'Check-in'"
               :assignee="selectedTab"
-              :checkins="recentCheckins"
+              :recent-checkins="recentCheckins"
+              :checkouts="checkouts"
               :key="renderKey"
               @checkin="onCheckout"
             />

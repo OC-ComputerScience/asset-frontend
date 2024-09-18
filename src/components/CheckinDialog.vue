@@ -8,7 +8,7 @@ import store from "../store/store.js";
 import NotificationSender from "../components/NotificationSender.vue";
 
 
-const props = defineProps(["assignee", "activeCheckin"]);
+const props = defineProps(["assignee", "activeCheckin", "checkouts"]);
 const emit = defineEmits(["saveCheckin", "cancelCheckin"]);
 
 const availableCheckins = ref([]);
@@ -35,7 +35,7 @@ const rules = {
 
 onMounted(async() => {
     if(!props.activeCheckin){
-        availableCheckins.value = store.getters.getCheckins;
+        availableCheckins.value = props.checkouts;
         availableCheckins.value.forEach((asset) => {
           makeTitle(asset);
         })
