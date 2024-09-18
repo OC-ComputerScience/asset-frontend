@@ -27,6 +27,9 @@ export default {
   getRecentByCategoryId(categoryId) {
     return apiClient.get(baseURL + "byCategoryId/recent/" + `${categoryId}`);
   },
+  getByPersonId(personId) {
+    return apiClient.get(`${baseURL}person/${personId}`);
+  },
   update(personAssetId, data) {
     return apiClient.put(baseURL + `${personAssetId}`, data);
   },

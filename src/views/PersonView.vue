@@ -4,10 +4,15 @@ import PersonAssetServices from "../services/personAssetServices";
 import { ref, onMounted, watch, computed, defineProps } from "vue";
 import router from "../router";
 import moment from "moment";
+import CheckinDialog from "../components/CheckinDialog.vue";
 
 const personAssets = ref([]);
 const message = ref("");
 const selectedTime = ref("Current");
+const showCheckin = ref(false);
+const activeCheckin = ref({});
+const snackbar = ref(false);
+const snackbarText = ref("");
 
 const assetSortBy = ref([{ key: "checkoutDate", order: "desc" }]);
 
@@ -21,18 +26,9 @@ const props = defineProps({
 
 const retrievePersonAssets = async () => {
   try {
-    const response = await PersonAssetServices.getAll();
-    personAssets.value = response.data.map((personAsset) => ({
-      key: personAsset.personAssetId,
-      name: personAsset.serializedAsset.serializedAssetName,
-      personId: personAsset.personId,
-      checkoutDate: personAsset.checkoutDate,
-      checkedOutBy: personAsset.checkedOutBy,
-      checkinDate: personAsset.checkinDate,
-      checkedInBy: personAsset.checkedInBy,
-      expectedCheckinDate: personAsset.expectedCheckinDate,
-      checkoutStatus: personAsset.checkoutStatus,
-    }));
+    const response = await PersonAssetServices.getByPersonId(props.personId);
+    personAssets.value = response.data;
+    console.log(personAssets.value)
   } catch (error) {
     console.error("Error loading personAssets:", error);
   }
@@ -62,14 +58,15 @@ const filterPersonAssetsByPersonId = () => {
 //Person Section
 
 const currentPersonHeaders = ref([
-  { title: "Name", key: "name" },
+  { title: "Name", key: "serializedAsset.serializedAssetName" },
   { title: "Check Out Date", key: "checkoutDate" },
   { title: "Checked Out By", key: "checkedOutBy" },
   { title: "Expected Check In", key: "expectedCheckinDate" },
+  { title: "Check Asset In", key: "checkin" }
 ]);
 
 const pastPersonHeaders = ref([
-  { title: "Name", key: "name" },
+  { title: "Name", key: "serializedAsset.serializedAssetName" },
   { title: "Check Out Date", key: "checkoutDate" },
   { title: "Checked Out By", key: "checkedOutBy" },
   { title: "Check In Date", key: "checkinDate" },
@@ -87,6 +84,24 @@ const formatExpectedDate = (dateString) => {
   // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY ");
 };
+
+const showCheckinDialog = (item) => {
+  console.log(item);
+  activeCheckin.value = item;
+  showCheckin.value = true;
+}
+
+const closeCheckinDialog = () => {
+  showCheckin.value = false;
+  activeCheckin.value = {};
+}
+
+const saveCheckin = async(responseText) => {
+  closeCheckinDialog();
+  await retrievePersonAssets();
+  snackbarText.value = responseText;
+  snackbar.value = true;
+}
 
 const formatCheckinDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -185,7 +200,7 @@ onMounted(async () => {
                   <v-data-table
                     :headers="currentPersonHeaders"
                     :items="filterPersonAssetsByPersonId()"
-                    item-key="key"
+                    item-key="personAssetId"
                     class="elevation-1"
                     :items-per-page="5"
                     :items-per-page-options="[5, 10, 20, 50, -1]"
@@ -198,6 +213,15 @@ onMounted(async () => {
                       <td>
                         {{ formatExpectedDate(item.expectedCheckinDate) }}
                       </td>
+                    </template>
+                    <template v-slot:item.checkin="{ item }">
+                      <v-btn
+                        icon
+                        class="table-icons"
+                        @click="showCheckinDialog(item)"
+                      >
+                        <v-icon>mdi-arrow-down-box</v-icon>
+                      </v-btn>
                     </template>
                   </v-data-table>
                 </v-card-text>
@@ -235,5 +259,17 @@ onMounted(async () => {
         </v-col>
       </v-row>
     </v-container>
+    <v-dialog v-model="showCheckin" persistent max-width="600px">
+        <CheckinDialog 
+            assignee="People"
+            :active-checkin="activeCheckin"
+            :edit-mode="false"
+            @cancel-checkin="closeCheckinDialog"
+            @save-checkin="saveCheckin"
+        />
+    </v-dialog>
+    <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
+      {{ snackbarText }}
+    </v-snackbar>
   </div>
 </template>
