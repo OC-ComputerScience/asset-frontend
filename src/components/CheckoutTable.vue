@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from "vue";
 import moment from "moment-timezone";
 import CheckoutDialog from "../components/CheckoutDialog.vue";
 
-const props = defineProps(["assignee", "checkouts", "key"]);
+const props = defineProps(["assignee", "checkouts", "key", "assignees", "assets"]);
 const emit = defineEmits(["checkout"]);
 const checkouts = ref({});
 const checkoutDialog = ref(false);
@@ -112,6 +112,8 @@ const closeCheckoutDialog = () => {
         <CheckoutDialog 
             :assignee="props.assignee"
             :active-checkout="activeCheckout"
+            :assignees="props.assignees"
+            :assets="props.assets"
             @cancel-checkout="closeCheckoutDialog"
             @save-checkout="saveCheckout"
         />

@@ -9,7 +9,7 @@
     import AddPerson from "./AddPerson.vue";
     import NotificationSender from "../components/NotificationSender.vue";
 
-    const props = defineProps(["assignee", "activeCheckout"]);
+    const props = defineProps(["assignee", "activeCheckout", "assignees", "assets"]);
     const emit = defineEmits(["cancelCheckout", "saveCheckout"]);
     const userRole = ref({});
     const availableAssets = ref([]);
@@ -77,11 +77,11 @@
     }
 
     const retrieveAssets = async() => {
-        availableAssets.value = store.getters.getAssets;
+        availableAssets.value = props.assets;
     }
 
     const retrieveAssignees = async() => {
-        assignees.value = store.getters.getAssignees;
+        assignees.value = props.assignees;
     }
 
     const getSelectedAssignee = () => {

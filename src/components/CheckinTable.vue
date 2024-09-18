@@ -3,9 +3,9 @@ import { ref, computed, onMounted } from "vue";
 import moment from "moment-timezone";
 import CheckinDialog from "./CheckinDialog.vue";
 
-const props = defineProps(["assignee", "checkins", "key"]);
+const props = defineProps(["assignee", "recentCheckins", "key", "checkouts"]);
 const emit = defineEmits(["checkin"]);
-const checkins = ref({});
+const recentCheckins = ref({});
 const activeCheckin = ref(null);
 const checkinDialog = ref(false);
 
@@ -48,7 +48,7 @@ const formatExpectedDate = (dateString) => {
 
 
 onMounted(() => {
-    checkins.value = props.checkins
+    recentCheckins.value = props.recentCheckins
 })
 
 const editCheckin = (item) => {
@@ -82,9 +82,9 @@ const closeCheckinDialog = () => {
             </v-btn>
         </v-card-title>
         <v-card-text>
-            <v-data-table v-if="checkins.length > 0"
+            <v-data-table v-if="recentCheckins.length > 0"
                 :headers="headers"
-                :items="checkins"
+                :items="recentCheckins"
                 :items-per-page="5"
                 :items-per-page-options="[5, 10, 20, 50, -1]"
             >
@@ -112,6 +112,7 @@ const closeCheckinDialog = () => {
         <CheckinDialog 
             :assignee="props.assignee"
             :active-checkin="activeCheckin"
+            :checkouts="props.checkouts"
             @cancel-checkin="closeCheckinDialog"
             @save-checkin="saveCheckin"
         />
