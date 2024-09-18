@@ -471,7 +471,7 @@ onMounted(async () => {
                 <v-card-text>
                   <v-data-table
                     :headers="activeWarrantyHeaders"
-                    :items="highlightedWarranties"
+                    :items="activeWarranties"
                     item-key="key"
                     class="elevation-1"
                     :items-per-page="5"

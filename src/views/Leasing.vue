@@ -470,7 +470,7 @@ onMounted(async () => {
                 <v-card-text>
                   <v-data-table
                     :headers="activeLeaseHeaders"
-                    :items="highlightedLeases"
+                    :items="activeLeases"
                     item-key="key"
                     class="elevation-1"
                     :items-per-page="5"
