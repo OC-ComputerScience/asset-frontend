@@ -10,6 +10,7 @@ import logServices from "../services/logServices";
 
 const message = ref("");
 const logs = ref([]);
+const logsCopy = ref([]);
 const serializedAssets = ref([]);
 const showAddLogDialog = ref(false);
 const selectedSerializedAssetId = ref("");
@@ -22,6 +23,7 @@ const snackbar = ref(false);
 const snackbarText = ref("");
 const logSortBy = ref([{ key: "serviceDate", order: "desc" }]);
 const searchQuery = ref("");
+const searchDate = ref(null);
 const store = useStore();
 const menu = ref(false);
 const selectPrev = ref(false);
@@ -84,6 +86,7 @@ const retrieveLogs = async () => {
       isRepair: log.isRepair,
       isUpgrade: log.isUpgrade,
     }));
+    logsCopy.value = logs.value;
   } catch (error) {
     console.error("Error loading Logs:", error);
   }
@@ -253,7 +256,7 @@ const dynamicHeaders = computed(() => {
 });
 
 const filteredLogs = computed(() => {
-  let result = logs.value;
+  let result = logsCopy.value;
 
   // Further filter by search query if present
   if (searchQuery.value || selectPrev.value) {
@@ -284,23 +287,6 @@ const scrollToLog = () => {
   }
 };
 
-const highlightText = (text) => {
-  if (!text) return "";
-  const lowerSearchQuery = searchQuery.value.toLowerCase();
-  if (!lowerSearchQuery) return text;
-  const regex = new RegExp(`(${lowerSearchQuery})`, "gi");
-  return text.replace(regex, '<mark class="custom-highlight">$1</mark>');
-};
-
-const highlightedLogs = computed(() => {
-  return filteredLogs.value.map((log) => ({
-    ...log,
-    serializedAssetName: highlightText(log.serializedAssetName),
-  }));
-});
-
-// Misc Section
-
 const formatDate = (dateString) => {
   return moment.utc(dateString).format("MMM DD, YYYY");
 };
@@ -320,6 +306,16 @@ const deleteLog = async() => {
   await logServices.delete(id);
   showDeleteDialog.value = false;
   await retrieveLogs()
+}
+
+const searchByDate = () => {
+  logsCopy.value = logs.value.filter((log) => {
+    return formatDate(log.serviceDate) === formatDate(searchDate.value)
+  })
+
+}
+const clearDate = () => {
+  logsCopy.value = logs.value;
 }
 
 // Call this once to load the default tab's data when the component mounts
@@ -365,6 +361,18 @@ onMounted(async () => {
           >
           </v-checkbox>
         </v-col>
+        <v-col cols="12" md="4">
+          <v-date-input
+            v-model="searchDate"
+            clearable
+            label="Search by Date Performed"
+            variant="outlined"
+            color="blue"
+            prepend-icon="mdi-calendar"
+            @update:modelValue="searchByDate"
+            @click:clear="clearDate"
+          ></v-date-input>
+        </v-col>
       </v-row>
 
       <v-row class="ma-0">
@@ -387,7 +395,7 @@ onMounted(async () => {
                 <v-card-text>
                   <v-data-table
                     :headers="dynamicHeaders"
-                    :items="highlightedLogs"
+                    :items="filteredLogs"
                     item-key="key"
                     class="elevation-1"
                     :items-per-page="5"
