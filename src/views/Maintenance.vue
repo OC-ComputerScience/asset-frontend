@@ -6,6 +6,7 @@ import { useStore } from "vuex";
 import { format } from "date-fns";
 import { zonedTimeToUtc } from "date-fns-tz";
 import moment from "moment-timezone";
+import logServices from "../services/logServices";
 
 const message = ref("");
 const logs = ref([]);
@@ -27,6 +28,7 @@ const selectPrev = ref(false);
 const menuScheduled = ref(false);
 const rawServiceDate = ref(null);
 const rawScheduledDate = ref(null);
+const showDeleteDialog = ref(false);
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
@@ -232,7 +234,6 @@ const baseMaintenanceHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
   { title: "Scheduled Date", key: "scheduledDate" },
   { title: "Date Performed", key: "serviceDate" },
-  { title: "Description", key: "description" },
   { title: "Performed By", key: "performedBy" },
   { title: "Type", key: "type" },
   { title: "View Notes", key: "view" },
@@ -243,6 +244,9 @@ const dynamicHeaders = computed(() => {
 
   if (store.getters.canEdit) {
     headers.push({ title: "Edit", key: "edit", sortable: false });
+  }
+  if(store.getters.canDelete) {
+    headers.push({title: "Delete", key: "delete", sortable: false});
   }
 
   return headers;
@@ -306,21 +310,17 @@ const openShowNotesDialog = (item) => {
   showNotesDialog.value = true;
 };
 
-// Computed property for display
-const formattedServiceDate = computed(() => {
-  if (rawServiceDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawServiceDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-const formattedScheduledDate = computed(() => {
-  if (rawScheduledDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawScheduledDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
+const openDeleteDialog = (item) => {
+  itemToDisplay.value = item;
+  showDeleteDialog.value = true;
+}
+
+const deleteLog = async() => {
+  const id = itemToDisplay.value.key;
+  await logServices.delete(id);
+  showDeleteDialog.value = false;
+  await retrieveLogs()
+}
 
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
@@ -446,6 +446,11 @@ onMounted(async () => {
                         <v-icon>mdi-pencil</v-icon>
                       </v-btn>
                     </template>
+                    <template v-slot:item.delete="{ item }">
+                      <v-btn icon class="table-icons" @click="openDeleteDialog(item)">
+                        <v-icon>mdi-trash-can</v-icon>
+                      </v-btn>
+                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
@@ -495,7 +500,7 @@ onMounted(async () => {
                 </v-col>
                 <v-row>
                   <v-col cols="12">
-                    <v-radio-group v-model="newLog.type" row>
+                    <v-radio-group v-model="newLog.type" inline :disabled="editingLog">
                       <v-radio
                         label="Preventative"
                         value="preventative"
@@ -601,6 +606,22 @@ onMounted(async () => {
           <v-btn color="cancelgrey" text @click="showNotesDialog = false">
             Close
           </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card class="pa-4 rounded-xl">
+        <v-card-title class="justify-space-between"
+          >Confirm Archive</v-card-title
+        >
+        <v-card-text>Are you sure you want to delete this log? </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="cancelgrey" text @click="showDeleteDialog = false"
+            >Cancel</v-btn
+          >
+          <v-btn color="saveblue" text @click="deleteLog">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
