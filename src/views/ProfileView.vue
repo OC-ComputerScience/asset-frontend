@@ -488,7 +488,7 @@ const retrieveProfileDetails = async () => {
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return "Indefinite";
+  if (!dateString) return "N/A";
   // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY");
 };
