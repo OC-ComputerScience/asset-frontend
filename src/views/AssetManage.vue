@@ -708,10 +708,10 @@ const saveSerializedAsset = async () => {
     } else {
       const response = await SerializedAssetServices.create(serializedAssetData)
       newSerializedAsset.value.id = response.data.serializedAssetId;
-      if(rawWarrStartDate.value && rawWarrEndDate.value){
+      if(rawWarrStartDate.value && rawWarrEndDate.value && showAssetWarranty.value){
         await addAssetWarranty();
       }
-      if(assetMaintenanceDate.value){
+      if(assetMaintenanceDate.value && showAssetMaintenance){
         await addAssetMaintenance();
       }
       await addAssetBarcodes();
@@ -961,6 +961,7 @@ watch(
           (p) => p.key === newProfileId.key
         );
         if (profile) {
+          if(profile.warrantyStartDate) showAssetWarranty.value = true;
           newSerializedAsset.value.purchasePrice = profile.purchasePrice || "";
           newSerializedAsset.value.warrantyDescription =
             profile.warrantyDescription || "";

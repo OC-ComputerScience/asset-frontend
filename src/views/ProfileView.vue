@@ -206,10 +206,10 @@ const saveSerializedAsset = async () => {
     } else {
       const response = await SerializedAssetServices.create(serializedAssetData)
       newSerializedAsset.value.id = response.data.serializedAssetId;
-      if (rawWarrStartDate.value && rawWarrEndDate.value) {
+      if (rawWarrStartDate.value && rawWarrEndDate.value && showAssetWarranty.value) {
         await addAssetWarranty();
       }
-      if(assetMaintenanceDate.value && assetMaintenanceDesc.value){
+      if(assetMaintenanceDate.value && assetMaintenanceDesc.value && showAssetMaintenance.value){
         await addAssetMaintenance();
       }
       await addAssetBarcodes();
@@ -302,6 +302,7 @@ const openAddSerializedAssetDialog = () => {
     targetTime1.getTime() + tzDifference1 * 60 * 1000
   );
 
+  if(profileDetails.value.warrantyStartDate) showAssetWarranty.value = true;
   targetTime1 = parseISO(profileDetails.value.warrantyStartDate);
   tzDifference1 = targetTime1.getTimezoneOffset();
   const tempWarrStartDate = new Date(

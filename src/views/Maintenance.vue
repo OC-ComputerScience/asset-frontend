@@ -11,6 +11,8 @@ import logServices from "../services/logServices";
 const message = ref("");
 const logs = ref([]);
 const logsCopy = ref([]);
+const upcomingLogs = ref([]);
+const pastLogs = ref([]);
 const serializedAssets = ref([]);
 const showAddLogDialog = ref(false);
 const selectedSerializedAssetId = ref("");
@@ -31,6 +33,7 @@ const menuScheduled = ref(false);
 const rawServiceDate = ref(null);
 const rawScheduledDate = ref(null);
 const showDeleteDialog = ref(false);
+const selectedTab = ref("Upcoming");
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
@@ -70,6 +73,8 @@ const newLog = ref({
 
 // Retrieve People from Database
 const retrieveLogs = async () => {
+  pastLogs.value = [];
+  upcomingLogs.value = [];
   try {
     const response = await LogServices.getAll();
     logs.value = response.data.map((log) => ({
@@ -86,7 +91,15 @@ const retrieveLogs = async () => {
       isRepair: log.isRepair,
       isUpgrade: log.isUpgrade,
     }));
-    logsCopy.value = logs.value;
+    logs.value.forEach((log) => {
+      if(!log.serviceDate && log.isPreventative){
+        upcomingLogs.value.push(log);
+      }
+      else{
+        pastLogs.value.push(log);
+      }
+    })
+    logsCopy.value = selectedTab.value === "Upcoming" ? upcomingLogs.value : pastLogs.value;
   } catch (error) {
     console.error("Error loading Logs:", error);
   }
@@ -233,17 +246,25 @@ const closeLogDialog = () => {
   editingLog.value = false;
 };
 
-const baseMaintenanceHeaders = ref([
+const pastHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
-  { title: "Scheduled Date", key: "scheduledDate" },
   { title: "Date Performed", key: "serviceDate" },
   { title: "Performed By", key: "performedBy" },
   { title: "Type", key: "type" },
   { title: "View Notes", key: "view" },
 ]);
 
+const upcomingHeaders = ref([
+  { title: "Serialized Asset", key: "serializedAssetName" },
+  { title: "Scheduled Date", key: "scheduledDate" },
+  { title: "Type", key: "type" },
+  { title: "View Description", key: "view" },
+]);
+
 const dynamicHeaders = computed(() => {
-  const headers = [...baseMaintenanceHeaders.value];
+  const headers = selectedTab.value === "Upcoming" ? 
+    [...upcomingHeaders.value] :
+    [...pastHeaders.value];
 
   if (store.getters.canEdit) {
     headers.push({ title: "Edit", key: "edit", sortable: false });
@@ -252,6 +273,7 @@ const dynamicHeaders = computed(() => {
     headers.push({title: "Delete", key: "delete", sortable: false});
   }
 
+  console.log(selectedTab)
   return headers;
 });
 
@@ -310,12 +332,21 @@ const deleteLog = async() => {
 
 const searchByDate = () => {
   logsCopy.value = logs.value.filter((log) => {
-    return formatDate(log.serviceDate) === formatDate(searchDate.value)
+    if(selectedTab.value === "Upcoming"){
+      return formatDate(log.scheduledDate) === formatDate(searchDate.value)
+    }
+    else{
+      return formatDate(log.serviceDate) === formatDate(searchDate.value)
+    }
   })
 
 }
 const clearDate = () => {
-  logsCopy.value = logs.value;
+  switchTab();
+}
+
+const switchTab = () => {
+  logsCopy.value = selectedTab.value === "Upcoming" ? upcomingLogs.value : pastLogs.value;
 }
 
 // Call this once to load the default tab's data when the component mounts
@@ -338,7 +369,31 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row class="my-1"></v-row>
+      <v-row class="my-1">
+        <v-col cols="6">
+            <v-tabs v-model="selectedTab" background-color="primary" dark dense @update:modelValue="switchTab">
+              <v-tab value="Upcoming" color="primary">
+                <v-icon left class="mr-2">mdi-lightning-bolt</v-icon>
+                Upcoming
+              </v-tab>
+              <v-tab value="Completed" color="primary">
+                <v-icon left class="mr-2">mdi-archive</v-icon>
+                Completed
+              </v-tab>
+            </v-tabs>
+            
+          </v-col>
+          <v-col cols="6" align="right">
+            <v-btn
+              v-if="canAdd"
+              color="primary"
+              class="ma-2"
+              @click="openAddLogDialog()"
+            >
+              Record Maintenance
+            </v-btn>
+          </v-col>
+      </v-row>
 
       <v-row class="ma-0">
         <!-- Right align the search filter by using offset -->
@@ -353,19 +408,12 @@ onMounted(async () => {
             @input="scrollToLog"
             class="pa-0"
           ></v-text-field>
-          <v-checkbox
-            class="ml-5 mt-0 mb-0 pa-0"
-            v-model="selectPrev"
-            label="Only Preventative Not Done"
-            density="compact"
-          >
-          </v-checkbox>
         </v-col>
         <v-col cols="12" md="4">
           <v-date-input
             v-model="searchDate"
             clearable
-            label="Search by Date Performed"
+            label="Search by Date"
             variant="outlined"
             color="blue"
             prepend-icon="mdi-calendar"
@@ -381,15 +429,11 @@ onMounted(async () => {
             <div>
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
-                  <span>Full Maintenance History</span>
+                  <span v-if="selectedTab === 'Upcoming'">Upcoming Maintenance</span>
+                  <span v-else>Completed Maintenance</span>
+
                   <template v-if="canAdd">
-                    <v-btn
-                      color="primary"
-                      class="ma-2"
-                      @click="openAddLogDialog()"
-                    >
-                      Record Maintenance
-                    </v-btn>
+                    
                   </template>
                 </v-card-title>
                 <v-card-text>
@@ -397,7 +441,6 @@ onMounted(async () => {
                     :headers="dynamicHeaders"
                     :items="filteredLogs"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
                     :items-per-page-options="[5, 10, 20, 50, -1]"
                     v-model:sort-by="logSortBy"
@@ -601,13 +644,16 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showNotesDialog" max-width="500px">
+    <v-dialog v-model="showNotesDialog" max-width="600px">
       <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between">
+        <v-card-title class="justify-space-between" v-if="selectedTab === 'Upcoming'">
+          Description for {{ itemToDisplay.serializedAssetName }}
+        </v-card-title>
+        <v-card-title class="justify-space-between" v-else>
           Notes for {{ itemToDisplay.serializedAssetName }}
         </v-card-title>
         <v-card-text>
-          {{ itemToDisplay.notes }}
+          {{ selectedTab === "Upcoming" ? itemToDisplay.description : itemToDisplay.notes }}
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
