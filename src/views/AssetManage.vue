@@ -6,6 +6,7 @@ import SerializedAssetServices from "../services/serializedAssetServices";
 import UserRoleServices from "../services/userRoleServices";
 import WarrantyServices from "../services/warrantyServices";
 import BarcodeServices from "../services/barcodeServices";
+import logServices from "../services/logServices";
 import SearchAssets from "../components/SearchAssets.vue";
 import ProfileDialog from "../components/ProfileDialog.vue";
 import EditType from "../components/EditType.vue";
@@ -64,6 +65,10 @@ const originalBarcodes = ref([]);
 const deletedBarcodes = ref([]);
 const store = useStore();
 const originalProfileId = ref(""); // Stores the original profile ID when editing an asset
+const assetMaintenanceDate = ref(null);
+const assetMaintenanceDesc = ref("");
+const showAssetWarranty = ref(false);
+const showAssetMaintenance = ref(false);
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
@@ -633,6 +638,10 @@ const resetSerializedAssetForm = () => {
   rawWarrEndDate.value = null;
   serialNumberLabel.value = "Serial Number"; // Reset label to default
   barcodes.value = [];
+  showAssetMaintenance.value = false;
+  showAssetWarranty.value = false;
+  assetMaintenanceDate.value = null;
+  assetMaintenanceDesc.value = "";
 };
 
 function monthDiff(d1, d2) {
@@ -653,22 +662,7 @@ const saveSerializedAsset = async () => {
       "MMM dd, yyyy"
     );
   }
-  let formattedWarrStartDate = null;
-  if (rawWarrStartDate.value) {
-    // Convert local date to UTC before storing
-    formattedWarrStartDate = format(
-      new Date(rawWarrStartDate.value),
-      "MMM dd, yyyy"
-    );
-  }
-  let formattedWarrEndDate = null;
-  if (rawWarrEndDate.value) {
-    // Convert local date to UTC before storing
-    formattedWarrEndDate = format(
-      new Date(rawWarrEndDate.value),
-      "MMM dd, yyyy"
-    );
-  }
+  
   const serializedAssetData = {
     serialNumber: newSerializedAsset.value.serialNumber,
     profileId: selectedProfileId.value.key,
@@ -710,59 +704,84 @@ const saveSerializedAsset = async () => {
           }
         })
       }
-      snackbarText.value = "Asset updated successfully.";
-      snackbar.value = true; // Show the snackbar
       message.value = "Asset saved successfully.";
     } else {
-      // Call create service if adding a new profile
-      await SerializedAssetServices.create(serializedAssetData).then(
-        async (data) => {
-          newSerializedAsset.value.id = data.data.serializedAssetId;
-          let lengthMonth = monthDiff(
-            new Date(rawWarrStartDate.value),
-            new Date(rawWarrEndDate.value)
-          );
-          // Create warranty
-
-          if (formattedWarrStartDate != null && formattedWarrEndDate != null) {
-            let newWarranty = {
-              serializedAssetId: newSerializedAsset.value.id,
-              startDate: formattedWarrStartDate,
-              endDate: formattedWarrEndDate,
-              warrantyDescription: newSerializedAsset.value.warrantyDescription,
-              length: lengthMonth,
-              warrantyNotes: newSerializedAsset.value.warrantyNotes,
-            };
-
-            WarrantyServices.create(newWarranty);
-          }
-
-          // Create barcodes
-
-          barcodes.value.forEach((barcode) => {
-            let newBarcode = {
-              barcodeType: barcode.barcodeType,
-              barcode: barcode.barcode,
-              serializedAssetId: newSerializedAsset.value.id,
-            };
-            BarcodeServices.create(newBarcode);
-          });
-          snackbarText.value = "Asset added successfully.";
-          snackbar.value = true; // Show the snackbar
-          message.value = "Asset saved successfully.";
-          await retrieveAssetProfiles();
-        }
-      ); 
+      const response = await SerializedAssetServices.create(serializedAssetData)
+      newSerializedAsset.value.id = response.data.serializedAssetId;
+      if(rawWarrStartDate.value && rawWarrEndDate.value && showAssetWarranty.value){
+        await addAssetWarranty();
+      }
+      if(assetMaintenanceDate.value && showAssetMaintenance){
+        await addAssetMaintenance();
+      }
+      await addAssetBarcodes();
+  
+      message.value = "Asset saved successfully.";
+      await retrieveAssetProfiles();
     }
+      
   } catch (error) {
     console.error("Error saving asset:", error);
     message.value = `Error saving asset: ${error.message || "Unknown error"}`;
   } finally {
+    snackbarText.value = message.value;
+    snackbar.value = true;
     resetSerializedAssetForm();
     showAddSerializedAssetDialog.value = false;
     originalSerializedAsset.value = {}; // Reset original values
   }
 };
+
+const addAssetWarranty = async() => {
+  let formattedWarrStartDate = format(
+    new Date(rawWarrStartDate.value),
+    "MMM dd, yyyy"
+  );
+  let formattedWarrEndDate = format(
+    new Date(rawWarrEndDate.value),
+    "MMM dd, yyyy"
+  );
+  let lengthMonth = monthDiff(
+    new Date(rawWarrStartDate.value),
+    new Date(rawWarrEndDate.value)
+  );
+  let newWarranty = {
+    serializedAssetId: newSerializedAsset.value.id,
+    startDate: formattedWarrStartDate,
+    endDate: formattedWarrEndDate,
+    warrantyDescription: newSerializedAsset.value.warrantyDescription,
+    length: lengthMonth,
+    warrantyNotes: newSerializedAsset.value.warrantyNotes,
+  };
+  await WarrantyServices.create(newWarranty);
+}
+
+const addAssetMaintenance = async() => {
+  let formattedMaintenanceDate = format(
+    new Date(assetMaintenanceDate.value),
+    "MMM dd, yyyy"
+  );
+  let newLog = {
+    serializedAssetId: newSerializedAsset.value.id,
+    scheduledDate: formattedMaintenanceDate,
+    description: assetMaintenanceDesc.value,
+    isPreventative: true,
+    isRepair: false,
+    isUpgrade: false
+  }
+  await logServices.create(newLog);
+}
+
+const addAssetBarcodes = async() => {
+  barcodes.value.forEach((barcode) => {
+    let newBarcode = {
+      barcodeType: barcode.barcodeType,
+      barcode: barcode.barcode,
+      serializedAssetId: newSerializedAsset.value.id,
+    };
+    BarcodeServices.create(newBarcode);
+  });
+}
 
 // Edit asset
 const editSerializedAsset = async(serializedAssetId) => {
@@ -942,6 +961,7 @@ watch(
           (p) => p.key === newProfileId.key
         );
         if (profile) {
+          if(profile.warrantyStartDate) showAssetWarranty.value = true;
           newSerializedAsset.value.purchasePrice = profile.purchasePrice || "";
           newSerializedAsset.value.warrantyDescription =
             profile.warrantyDescription || "";
@@ -1514,8 +1534,14 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
                 </v-col>
-
-                <v-col cols="12" v-if="!editingSerializedAsset">
+                <v-col cols="12" class="mb-n8" v-if="!editingSerializedAsset">
+                  <v-checkbox 
+                    v-model="showAssetWarranty"
+                    color="primary"
+                    label="Add Warranty"
+                  />
+                </v-col>
+                <v-col cols="12" v-if="!editingSerializedAsset && showAssetWarranty">
                   <v-text-field
                     label="Warranty Description"
                     variant="outlined"
@@ -1525,7 +1551,7 @@ onMounted(async () => {
                     prepend-icon="mdi-note"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12" v-if="!editingSerializedAsset">
+                <v-col cols="12" v-if="!editingSerializedAsset && showAssetWarranty">
                   <v-text-field
                     label="Warranty Notes"
                     variant="outlined"
@@ -1535,7 +1561,7 @@ onMounted(async () => {
                     prepend-icon="mdi-note"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="6" v-if="!editingSerializedAsset">
+                <v-col cols="6" v-if="!editingSerializedAsset && showAssetWarranty">
                   <v-date-input
                     v-model="rawWarrStartDate"
                     clearable
@@ -1545,7 +1571,7 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
                 </v-col>
-                <v-col cols="6" v-if="!editingSerializedAsset">
+                <v-col cols="6" v-if="!editingSerializedAsset && showAssetWarranty">
                   <v-date-input
                     v-model="rawWarrEndDate"
                     clearable
@@ -1554,6 +1580,33 @@ onMounted(async () => {
                     color="blue"
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
+                </v-col>
+                <v-col cols="12" class="mb-n8" v-if="!editingSerializedAsset">
+                  <v-checkbox 
+                    v-model="showAssetMaintenance"
+                    color="primary"
+                    label="Schedule Maintenance"
+                  />
+                </v-col>
+                <v-col cols="12" v-if="showAssetMaintenance">
+                  <v-date-input 
+                    v-model="assetMaintenanceDate"
+                    clearable
+                    label="Maintenance Date"
+                    variant="outlined"
+                    color="blue"
+                    prepend-icon="mdi-calendar"
+                  />
+                </v-col>
+                <v-col cols="12" v-if="showAssetMaintenance">
+                  <v-text-field
+                    label="Maintenance Description"
+                    variant="outlined"
+                    v-model="assetMaintenanceDesc"
+                    maxlength="255"
+                    :counter="255"
+                    prepend-icon="mdi-note"
+                  ></v-text-field>
                 </v-col>
                 <v-col>
                   <v-row v-for="(barcode, index) in barcodes">
