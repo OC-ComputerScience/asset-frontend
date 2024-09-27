@@ -97,16 +97,6 @@ const saveCheckin = async() => {
               "receipt"
             );
 
-            // Send admin notification email
-            notificationSender.value.sendEmail(
-              {
-                checkedInBy: currentUser,
-                fullName: activeCheckin.value.person.fullNameWithId,
-                expectedCheckinDate: formattedCheckinDate,
-                serializedAssetName: activeCheckin.value.serializedAsset.serializedAssetName
-              },
-              "checkinNotify"
-            );
           }
           responseText = "Asset checked in successfully.";
         }else{
