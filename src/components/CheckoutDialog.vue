@@ -156,16 +156,7 @@
         };
         if(props.assignee === "People") {
             newCheckout.personId = selectedAssignee.value.personId;
-            notificationSender.value.sendEmail(
-                {
-                    checkOutBy: newCheckout.checkedOutBy,
-                    fullName: selectedAssignee.value.fullName,
-                    expectedCheckinDate: newCheckout.expectedCheckinDate,
-                    serializedAssetName: selectedAsset.value.serializedAssetName,
-                },
-                "notify"
-            );
-
+            
             notificationSender.value.sendEmail(
                 {
                     to: selectedAssignee.value.email,
