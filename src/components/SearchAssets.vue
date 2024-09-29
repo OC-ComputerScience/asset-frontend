@@ -26,6 +26,7 @@ const showArchived = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
 const snackbar = ref(false);
+const searching = ref(false);
 const snackbarText = ref("");
 
 const headers = ref([
@@ -50,7 +51,14 @@ const clearFilters = () => {
 
 const searchAssets = async() => {
     try{
-        const response = await SerializedAssetServices.getBySearchFilters(searchKey.value, selectedProfileId.value, selectedTypeId.value, showArchived.value, categoryId.value);
+        searching.value = true;
+        const response = await SerializedAssetServices.getBySearchFilters(
+            searchKey.value, 
+            selectedProfileId.value, 
+            selectedTypeId.value, 
+            showArchived.value, 
+            categoryId.value
+        );
         displayedAssets.value = response.data;
     }
     catch(err){
@@ -58,6 +66,9 @@ const searchAssets = async() => {
             snackbarText.value = "No Assets found matching those filters";
             snackbar.value = true;
         }
+    }
+    finally {
+        searching.value = false;
     }
 };
 
@@ -183,6 +194,13 @@ const cancelActivate = () => {
             Search
         </v-btn>
     </v-col>
+</v-row>
+<v-row v-if="searching" align="center" justify="center">
+    <v-progress-circular
+        color="blue"
+        indeterminate
+        :size="50"
+    />
 </v-row>
 
 <v-card v-if="displayedAssets.length > 0">

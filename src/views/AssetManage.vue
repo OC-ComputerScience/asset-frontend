@@ -27,6 +27,7 @@ const assetCategories = ref([]);
 const assetTypes = ref([]);
 const activeAssetTypes = ref([]);
 const assetProfiles = ref([]);
+const searchProfile = ref("");
 const activeAssetProfiles = ref([]);
 const showAddTypeDialog = ref(false);
 const showAddProfileDialog = ref(false);
@@ -69,6 +70,7 @@ const assetMaintenanceDate = ref(null);
 const assetMaintenanceDesc = ref("");
 const showAssetWarranty = ref(false);
 const showAssetMaintenance = ref(false);
+const dataLoaded = ref(false);
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
@@ -449,6 +451,9 @@ const retrieveAssetProfiles = async () => {
   } catch (error) {
     console.error("Error loading profiles:", error);
     message.value = "Failed to load profiles.";
+  }
+  finally {
+    dataLoaded.value = true;
   }
 };
 
@@ -1138,7 +1143,7 @@ onMounted(async () => {
         </v-row>
       </div>
       <!-- Serialized Assets section with added space after tabs -->
-      <div v-if="selectedTab === 'SerializedAssets'">
+      <div v-if="selectedTab === 'SerializedAssets' && dataLoaded">
 
         <v-btn
           v-if="canAdd"
@@ -1175,17 +1180,12 @@ onMounted(async () => {
             ></v-autocomplete>
           </v-col>
           <v-col cols="12" md="6">
-            <v-autocomplete
-              v-model="selectedFilterCategoryId"
-              :items="assetCategories"
+            <v-text-field
+              v-model="searchProfile"
               variant="outlined"
-              item-text="title"
-              item-value="key"
-              label="Filter by Category"
-              return-object
+              label="Search Profiles"
               clearable
-              @clear="onCategoryClear"
-            ></v-autocomplete>
+            ></v-text-field>
           </v-col>
         </v-row>
       </div>
@@ -1210,7 +1210,7 @@ onMounted(async () => {
         </v-row>
       </div>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active Categories Section -->
@@ -1340,6 +1340,7 @@ onMounted(async () => {
                   <v-data-table
                     :headers="activeProfileHeaders"
                     :items="filteredAssetProfiles"
+                    :search="searchProfile"
                     item-key="profileId"
                     class="elevation-1"
                     :items-per-page="5"
@@ -1403,6 +1404,7 @@ onMounted(async () => {
                   <v-data-table
                     :headers="archivedProfileHeaders"
                     :items="filteredAssetProfiles"
+                    :search="searchProfile"
                     item-key="profileId"
                     class="elevation-1"
                     :items-per-page="5"
@@ -1447,6 +1449,13 @@ onMounted(async () => {
             <!-- Archived serialized assets Section -->
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 

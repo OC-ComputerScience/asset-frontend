@@ -29,6 +29,7 @@ const snackbarText = ref("");
 const searchQuery = ref("");
 const buildingsSortBy = ref([{ key: "title", order: "asc" }]);
 const roomsSortBy = ref([{ key: "title", order: "asc" }]);
+const dataLoaded = ref(false);
 const store = useStore();
 const canAdd = computed(() => {
   return store.getters.canAdd;
@@ -377,6 +378,9 @@ const retrieveRooms = async () => {
     console.error("Error loading rooms:", error);
     message.value = "Failed to load rooms.";
   }
+  finally {
+    dataLoaded.value = true;
+  }
 };
 
 const editRoom = (room) => {
@@ -711,7 +715,7 @@ onMounted(async () => {
         </v-row>
       </div>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active Buildings Section -->
@@ -942,6 +946,13 @@ onMounted(async () => {
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 
