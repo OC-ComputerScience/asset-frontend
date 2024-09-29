@@ -24,6 +24,7 @@ const snackbar = ref(false);
 const snackbarText = ref("");
 const personSortBy = ref([{ key: "fName", order: "asc" }]);
 const searchQuery = ref("");
+const dataLoaded = ref(false);
 const store = useStore();
 const canAdd = computed(() => {
   return store.getters.canAdd;
@@ -74,6 +75,9 @@ const retrievePeople = async () => {
     }));
   } catch (error) {
     console.error("Error loading people:", error);
+  }
+  finally {
+    dataLoaded.value = true;
   }
 };
 
@@ -458,7 +462,7 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active People Section -->
@@ -592,6 +596,13 @@ onMounted(async () => {
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 

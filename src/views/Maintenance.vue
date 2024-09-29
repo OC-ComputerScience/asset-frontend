@@ -34,6 +34,7 @@ const rawServiceDate = ref(null);
 const rawScheduledDate = ref(null);
 const showDeleteDialog = ref(false);
 const selectedTab = ref("Upcoming");
+const dataLoaded = ref(false);
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
@@ -102,6 +103,9 @@ const retrieveLogs = async () => {
     logsCopy.value = selectedTab.value === "Upcoming" ? upcomingLogs.value : pastLogs.value;
   } catch (error) {
     console.error("Error loading Logs:", error);
+  }
+  finally{
+    dataLoaded.value = true;
   }
 };
 
@@ -423,7 +427,7 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row class="ma-0">
+      <v-row class="ma-0" v-if="dataLoaded"> 
         <v-col class="ma-0" cols="12">
           <v-fade-transition mode="out-in">
             <div>
@@ -508,6 +512,13 @@ onMounted(async () => {
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 

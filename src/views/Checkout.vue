@@ -19,6 +19,7 @@ const snackbarText = ref("");
 const assignees = ref([]);
 const assets = ref([]);
 const checkouts = ref([]);
+const dataLoaded = ref(false);
 
 const userRoleId = computed(() => {
   return store.getters.getUserRole;
@@ -71,6 +72,9 @@ const retrieveAssets = async() => {
   }
   catch(err){
     console.error(err);
+  }
+  finally {
+    dataLoaded.value = true;
   }
 }
 
@@ -158,7 +162,7 @@ onMounted(async() => {
         </v-col>
       </v-row>
 
-      <v-row>
+      <v-row >
         <v-col cols="12">
           <v-tabs
             v-model="selectedStatus"
@@ -177,7 +181,7 @@ onMounted(async() => {
           </v-tabs>
         </v-col>
       </v-row>
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <CheckoutTable
@@ -199,6 +203,13 @@ onMounted(async() => {
             />
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
