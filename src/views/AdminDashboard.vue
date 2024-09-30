@@ -108,9 +108,6 @@ const combinedAssets = computed(() => {
   // Process person assets
 
   personAssets.value.forEach((asset) => {
-    console.log(asset.checkoutDate);
-    console.log(asset.checkinDate);
-    console.log(moment().subtract(28, "days").toDate());
 
     if (
       asset.checkoutDate &&

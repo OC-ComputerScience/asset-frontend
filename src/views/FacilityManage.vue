@@ -403,7 +403,6 @@ const editRoom = (room) => {
 
 const saveRoom = async () => {
   let buildingId = selectedBuildingId.value; // Directly use the selected category ID
-  console.log(buildingId);
 
   if (!buildingId) {
     console.error("Building not selected.");
@@ -421,13 +420,11 @@ const saveRoom = async () => {
 
   try {
     if (editingRoom.value) {
-      console.log(newRoom.value.roomId);
       await RoomServices.update(newRoom.value.roomId, roomData);
       snackbarText.value = "Room updated successfully.";
     } else {
       await RoomServices.create(roomData);
       snackbarText.value = "Room added successfully.";
-      console.log(roomData);
     }
     snackbar.value = true; // Show the snackbar
     message.value = "Room saved successfully.";
@@ -440,7 +437,6 @@ const saveRoom = async () => {
     resetForm(); // Ensure form is reset here
     showAddRoomDialog.value = false; // Close dialog in finally to ensure it closes
   }
-  console.log(roomData);
 };
 
 const resetForm = () => {
@@ -505,7 +501,6 @@ function viewRoom(roomId) {
     params: { roomId: roomId },
     query: { sourcePage: sourcePage },
   });
-  console.log("Facility manage passed sourcePage " + sourcePage);
 }
 
 const baseRoomHeaders = ref([

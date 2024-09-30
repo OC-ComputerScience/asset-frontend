@@ -505,7 +505,6 @@ const retrieveProfileDetails = async () => {
     const response = await AssetProfileServices.getById(props.profileId);
     profileDetails.value = response.data;
     profileData.value = response.data.profileData;
-    console.log(profileData.value)
   } catch (error) {
     console.error("Error loading profile details:", error);
     message.value = "Failed to load profile details.";

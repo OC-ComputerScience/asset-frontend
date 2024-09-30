@@ -28,6 +28,7 @@ const startMenu = ref(false);
 const endMenu = ref(false);
 const startDate = ref(null);
 const endDate = ref(null);
+const dataLoaded = ref(false);
 
 const activeLeases = computed(() => {
   return filteredLeases.value.filter((lease) => lease.activeStatus === true);
@@ -75,6 +76,9 @@ const retrieveLeases = async () => {
     }));
   } catch (error) {
     console.error("Error loading leases:", error);
+  }
+  finally {
+    dataLoaded.value = true;
   }
 };
 
@@ -449,7 +453,7 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active leases -->
@@ -561,6 +565,13 @@ onMounted(async () => {
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 

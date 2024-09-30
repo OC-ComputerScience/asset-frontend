@@ -28,7 +28,6 @@ const retrievePersonAssets = async () => {
   try {
     const response = await PersonAssetServices.getByPersonId(props.personId);
     personAssets.value = response.data;
-    console.log(personAssets.value)
   } catch (error) {
     console.error("Error loading personAssets:", error);
   }
@@ -86,7 +85,6 @@ const formatExpectedDate = (dateString) => {
 };
 
 const showCheckinDialog = (item) => {
-  console.log(item);
   activeCheckin.value = item;
   showCheckin.value = true;
 }
