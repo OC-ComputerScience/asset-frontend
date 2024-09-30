@@ -277,7 +277,6 @@ const dynamicHeaders = computed(() => {
     headers.push({title: "Delete", key: "delete", sortable: false});
   }
 
-  console.log(selectedTab)
   return headers;
 });
 

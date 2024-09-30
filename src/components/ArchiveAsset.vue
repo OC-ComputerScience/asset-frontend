@@ -13,11 +13,7 @@ const rawDisposalPrice = ref("");
 const disposalMethod = ref(null);
 const notes = ref(null);
 const validDisposal = ref(false);
-const rules = {
-    required: (value) => !!value || "Required.",
-    // maxDescLength: (value) => value === null || value.length <= 255,
-
-}
+const rules = { required: (value) => !!value || "Required." }
 const options = {
   preProcess: (val) => val.replace(/[$,]/g, ""),
   postProcess: (val) => {
@@ -42,7 +38,6 @@ onMounted(() => {
 });
 
 const archiveAsset = async() => {
-    console.log('archiving')
     let disposalDate = format(
         new Date(rawDisposalDate.value),
         "MM dd, yyyy"

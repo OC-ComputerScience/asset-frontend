@@ -676,9 +676,6 @@ onMounted(async () => {
                 ></v-text-field>
               </v-col>
             </template>
-            <!-- the prepend-icon here is used to create a spacer for alignment purposes.
-                  Funnily enough, if the name is incorrect it makes a mdi icon sized blank space. -->
-
             <v-col cols="12">
               <v-textarea
                 label="Notes"

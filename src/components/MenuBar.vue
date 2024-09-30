@@ -96,9 +96,6 @@ const logout = async() => {
       Utils.removeItem("user");
       store.commit('setLoginUser', null);
       router.push({ name: "login" }).then(() => {
-        // if (process.env.NODE_ENV === "development") {
-        //   router.go();
-        // }
       });
     })
     .catch((error) => {

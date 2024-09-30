@@ -49,17 +49,6 @@ const route = useRoute();
 const rules = {
   required: (value) => !!value || "Required.",
 };
-// const newReport = ref({
-//   startDate: "",
-//   endDate: "",
-//   typeId: "",
-//   reportDate: "",
-//   dateFilter: "",
-// });
-
-// *** Retrieves ***
-
-// Retrieve PersonAssets from Database
 const retrievePersonAssets = async () => {
   try {
     const response = await PersonAssetServices.getAll();
@@ -78,7 +67,6 @@ const retrievePersonAssets = async () => {
   }
 };
 
-// Retrieve BuildingAssets from Database
 const retrieveBuildingAssets = async () => {
   try {
     const response = await BuildingAssetServices.getAll();
@@ -97,7 +85,6 @@ const retrieveBuildingAssets = async () => {
   }
 };
 
-// Retrieve RoomAssets from Database
 const retrieveRoomAssets = async () => {
   try {
     const response = await RoomAssetServices.getAll();
@@ -116,18 +103,17 @@ const retrieveRoomAssets = async () => {
   }
 };
 
-// Retrieve Types from Database
 const retrieveAssetTypes = async () => {
   try {
     const typesResponse = await AssetTypeServices.getAll();
     assetTypes.value = typesResponse.data
-      .filter((type) => type.activeStatus !== 0) // Filter out types with activeStatus of 0
+      .filter((type) => type.activeStatus !== 0) 
       .map((type) => ({
         ...type,
         key: type.typeId,
         title: type.typeName,
       }))
-      .sort((a, b) => a.title.localeCompare(b.title)); // Sort by typeName
+      .sort((a, b) => a.title.localeCompare(b.title));
 
     // Prepend the "All" option to the list of filtered and sorted asset types
     assetTypes.value = [{ key: "all", title: "All" }, ...assetTypes.value];
@@ -265,25 +251,8 @@ const generateTypeReport = async () => {
     disposalPrice: asset.disposalPrice,
   }));
 
-  // Add a total row at the end of your data
-  // if (typeReportData.value.length > 0) {
-  //   typeReportData.value.push({
-  //     serializedAssetName: "Total Spent",
-  //     acquisitionDate: "",
-  //     purchasePrice: totalSpent.value, // Assuming this computes the total
-  //     disposalDate: "",
-  //     disposalMethod: "",
-  //     isTotalRow: true, // A marker to identify this row
-  //   });
-  // }
-
-  // Enable saving and exporting
   typeReportGenerated.value = true;
-
-  // Re-enable the Save button for the new report
   saveButtonDisabled.value = false;
-
-  // Handle case where no assets match the filter criteria
   if (filteredAssets.length === 0) {
     snackbarText.value = "No assets found with the selected criteria.";
     snackbar.value = true;
@@ -343,7 +312,6 @@ const generateAssignmentReport = async () => {
     assignmentEndDate.value &&
     moment(assignmentEndDate.value).isBefore(assignmentStartDate.value)
   ) {
-    console.log("End date is before start date.");
     snackbarText.value = "Please ensure the end date is after the start date.";
     snackbar.value = true;
     return;
@@ -371,7 +339,6 @@ const generateAssignmentReport = async () => {
         : null,
   }));
 
-  console.log("Combined assets:", combinedAssets);
 
   // Filter by selected type if not 'All'
   if (
@@ -381,7 +348,6 @@ const generateAssignmentReport = async () => {
     combinedAssets = combinedAssets.filter(
       (asset) => asset.typeId === selectedTypeAssignment.value.key
     );
-    console.log("Filtered by type:", combinedAssets);
   }
 
   let filteredAssets = combinedAssets;
@@ -422,7 +388,6 @@ const generateAssignmentReport = async () => {
     });
   }
 
-  console.log("Date filtered assets:", filteredAssets);
 
   assignmentReportData.value = filteredAssets;
   assignmentReportGenerated.value = true;
@@ -526,7 +491,6 @@ const saveTypeReport = async () => {
 
 const saveAssignmentReport = async () => {
   if (!assignmentReportGenerated.value) {
-    console.log("No report generated to save.");
     snackbarText.value = "Please generate the report before saving.";
     snackbar.value = true;
     return;
@@ -556,14 +520,11 @@ const saveAssignmentReport = async () => {
     reportType: "assignment", // This specifies the report as an assignment report
   };
 
-  console.log("Attempting to save report with data:", reportData);
-
   try {
     await ReportServices.create(reportData);
     snackbarText.value = "Report successfully saved!";
     snackbar.value = true;
     saveButtonDisabled.value = true; // Disable the Save button after successful save
-    console.log("Report saved successfully.");
   } catch (error) {
     console.error("Failed to save the report:", error);
     snackbarText.value = "Failed to save the report.";
@@ -803,20 +764,16 @@ const formatCurrencyForCSV = (value) => {
 };
 
 const totalSpent = computed(() => {
-  console.log("Recalculating total");
   const total = typeReportData.value.reduce((acc, asset) => {
     return acc + (parseFloat(asset.purchasePrice) || 0);
   }, 0);
-  console.log("Total Spent:", total);
   return total;
 });
 
 const totalSold = computed(() => {
-  console.log("Recalculating total");
   const total = typeReportData.value.reduce((acc, asset) => {
     return acc + (parseFloat(asset.disposalPrice) || 0);
   }, 0);
-  console.log("Total Spent:", total);
   return total;
 });
 // Define headers for the type table

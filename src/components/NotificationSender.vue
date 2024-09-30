@@ -16,7 +16,6 @@ export default {
           `${baseurl}sendEmail/${type}`,
           emailDetails
         );
-        console.log("Email sent successfully:", response.data);
       } catch (error) {
         console.error("Email could not be sent from frontend:", error);
       }

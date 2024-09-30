@@ -269,7 +269,6 @@ const updateUsersPermissions = async (updatedRole) => {
   const updatePromises = users.value
     .filter((user) => user.userRoleId === updatedRole.id)
     .map((user) => {
-      // Map each permission directly at the root level of the user object
       const updatedUserData = {
         ...user,
         canActivate: updatedRole.canActivate,
@@ -288,7 +287,6 @@ const updateUsersPermissions = async (updatedRole) => {
         viewFacilities: updatedRole.viewFacilities,
         viewPeople: updatedRole.viewPeople,
         viewUsers: updatedRole.viewUsers
-        // Add other permissions as needed
       };
 
       // Call the update API
@@ -454,21 +452,6 @@ watch(newUserRole, (newRole) => {
   if (!newRole.viewAssets & !newRole.viewFacilities & !newRole.viewPeople & !newRole.viewUsers) {
     newRole.viewManage = false;
   }
-
-  // if (newRole.isAdmin) {
-  //   newRole.isManager = false;
-  //   newRole.isWorker = false;
-  // }
-
-  // if (newRole.isManager) {
-  //   newRole.isAdmin = false;
-  //   newRole.isWorker = false;
-  // }
-
-  // if (newRole.isWorker) {
-  //   newRole.isAdmin = false;
-  //   newRole.isManager = false;
-  // }
 
 }, { deep: true });
 

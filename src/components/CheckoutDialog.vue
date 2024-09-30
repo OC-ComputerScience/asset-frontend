@@ -93,20 +93,6 @@
         return assignee;
     }
 
-    onMounted(async() => {
-        // if(props.activeCheckout){
-        //     expectedCheckinDate.value = props.activeCheckout.expectedCheckinDate;
-        //     checkoutNotes.value = props.activeCheckout.checkoutNote;
-        //     selectedAsset.value = props.activeCheckout.serializedAsset;
-        //     selectedAssignee.value = getSelectedAssignee();
-        // }
-        // else{
-        //     await getUserRole();
-        //     await retrieveAssets();
-        //     await retrieveAssignees();
-        // }
-    })
-
     onBeforeMount(async() => {
         if(props.activeCheckout){
             expectedCheckinDate.value = props.activeCheckout.expectedCheckinDate;
