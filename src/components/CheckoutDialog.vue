@@ -62,12 +62,7 @@
         required: (value) => !!value || "Required.",
         maxNotesLength: (value) => value === null || value.length <= 255,
         expectedCheckinDate: (value) => {
-            return (
-                (!indefiniteCheckout.value &&
-                    !!value &&
-                    new Date(value).getDate() >= new Date().getDate()) ||
-                "Required and must be today or in the future."
-            );
+            return new Date(value) >= new Date() || "Date must be today or in the future."
         },
     };
 
@@ -273,7 +268,7 @@
                         label="Expected Check-in Date"
                         variant="outlined"
                         color="blue"
-                        :rules="[rules.expectedCheckinDate]"
+                        :rules="[rules.expectedCheckinDate, rules.required]"
                     ></v-date-input>
                 </v-col>
                 <v-col cols="12">
