@@ -214,7 +214,6 @@ onMounted(async () => {
                 <v-data-table
                   :headers="headers"
                   :items="filteredReports"
-                  class="elevation-1"
                   :items-per-page="10"
                   :items-per-page-options="[5, 10, 20, 50, -1]"
                   v-model:sort-by="reportSortBy"
@@ -268,7 +267,6 @@ onMounted(async () => {
                 <v-data-table
                   :headers="headers"
                   :items="filteredReports"
-                  class="elevation-1"
                   :items-per-page="10"
                   :items-per-page-options="[5, 10, 20, 50, -1]"
                   v-model:sort-by="reportSortBy"

@@ -126,7 +126,6 @@ onMounted(fetchDevUsersAndRoles);
             :headers="headers"
             :items="users"
             item-key="id"
-            class="elevation-1"
             :items-per-page-options="[5, 10, 20, 50, -1]"
             v-model:sort-by="usersSortBy"
           >

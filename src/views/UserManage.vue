@@ -512,7 +512,7 @@ onMounted(async () => {
                   </v-btn>
                 </v-card-title>
                 <v-card-text>
-                  <v-data-table :headers="userHeaders" :items="highlightedUsers" item-key="id" class="elevation-1"
+                  <v-data-table :headers="userHeaders" :items="highlightedUsers" item-key="id" 
                     :items-per-page="5" :items-per-page-options="[5, 10, 20, 50, -1]" v-model:sort-by="usersSortBy">
                     <template v-slot:item="{ item }">
                       <tr :data-user-name="`${item.fName.toLowerCase()} ${item.lName.toLowerCase()}`">
@@ -542,7 +542,7 @@ onMounted(async () => {
                   </v-btn>
                 </v-card-title>
                 <v-card-text>
-                  <v-data-table :headers="userRoleHeaders" :items="roles" item-key="id" class="elevation-1"
+                  <v-data-table :headers="userRoleHeaders" :items="roles" item-key="id" 
                     :items-per-page="10" :items-per-page-options="[5, 10, 20, 50, -1]"
                     v-model:sort-by="userRolesSortBy">
                     <template v-slot:item.actions="{ item }">

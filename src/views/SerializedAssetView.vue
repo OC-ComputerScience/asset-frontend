@@ -251,13 +251,13 @@ const retrieveProfileData = async () => {
 };
 
 const formatDateTime = (dateString) => {
-  if (!dateString) return "Indefinite";
+  if (!dateString) return "N/A";
   // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY - h:mm A");
 };
 
 const formatDate = (dateString) => {
-  if (!dateString) return "Indefinite";
+  if (!dateString) return "N/A";
   // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY");
 };
@@ -458,7 +458,6 @@ onMounted(async () => {
           :headers="assetHistoryHeaders"
           :items="fullAssetHistory"
           item-key="key"
-          class="elevation-1"
           :items-per-page="5"
           :items-per-page-options="[5, 10, 20, 50, -1]"
           v-model:sort-by="assignmentSortBy"
@@ -484,7 +483,6 @@ onMounted(async () => {
           :headers="maintenanceLogHeaders"
           :items="maintenanceLogs"
           item-key="key"
-          class="elevation-1"
           :items-per-page="5"
           :items-per-page-options="[5, 10, 20, 50, -1]"
           v-model:sort-by="maintenanceSortBy"
@@ -522,7 +520,6 @@ onMounted(async () => {
           :headers="warrantyHeaders"
           :items="warranties"
           item-key="key"
-          class="elevation-1"
           :items-per-page="5"
           :items-per-page-options="[5, 10, 20, 50, -1]"
           v-model:sort-by="warrantiesSortBy"
@@ -545,7 +542,6 @@ onMounted(async () => {
           :headers="barcodeHeaders"
           :items="barcodes"
           item-key="key"
-          class="elevation-1"
           :items-per-page="5"
           :items-per-page-options="[5, 10, 20, 50, -1]"
         >
@@ -555,7 +551,6 @@ onMounted(async () => {
           :headers="leaseHeaders"
           :items="leases"
           item-key="key"
-          class="elevation-1"
           :items-per-page="5"
           :items-per-page-options="[5, 10, 20, 50, -1]"
           v-model:sort-by="leasesSortBy"

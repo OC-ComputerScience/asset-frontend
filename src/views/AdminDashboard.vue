@@ -206,7 +206,6 @@ onMounted(async () => {
               <v-data-table
                 :headers="activityHeaders"
                 :items="combinedAssets"
-                class="elevation-1"
                 :items-per-page="5"
                 :items-per-page-options="[5, 10, 20, 50, -1]"
               >
