@@ -199,7 +199,6 @@ onMounted(async () => {
                     :headers="currentPersonHeaders"
                     :items="filterPersonAssetsByPersonId()"
                     item-key="personAssetId"
-                    class="elevation-1"
                     :items-per-page="5"
                     :items-per-page-options="[5, 10, 20, 50, -1]"
                     v-model:sort-by="assetSortBy"
@@ -236,7 +235,6 @@ onMounted(async () => {
                   <v-data-table
                     :headers="pastPersonHeaders"
                     :items="filterPersonAssetsByPersonId()"
-                    class="elevation-1"
                     :items-per-page="5"
                     :items-per-page-options="[5, 10, 20, 50, -1]"
                     v-model:sort-by="assetSortBy"

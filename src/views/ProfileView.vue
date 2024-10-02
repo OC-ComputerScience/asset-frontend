@@ -807,7 +807,6 @@ onMounted(async () => {
                     :headers="serializedAssetHeaders"
                     :items="filterAssetsByProfileId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
                     :items-per-page-options="[5, 10, 20, 50, -1]"
                   >
@@ -867,7 +866,6 @@ onMounted(async () => {
                     :headers="archivedSerializedAssetHeaders"
                     :items="filterAssetsByProfileId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
                     :items-per-page-options="[5, 10, 20, 50, -1]"
                   >

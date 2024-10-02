@@ -1165,7 +1165,6 @@ onMounted(async () => {
                     <v-data-table
                       :headers="typeReportHeaders"
                       :items="typeReportData"
-                      class="elevation-1 data-table-hover"
                       :items-per-page="10"
                       :items-per-page-options="[5, 10, 20, 50, -1]"
                     >
@@ -1383,7 +1382,6 @@ onMounted(async () => {
                     <v-data-table
                       :headers="assignmentReportHeaders"
                       :items="assignmentReportData"
-                      class="elevation-1 data-table-hover"
                       :items-per-page="10"
                       :items-per-page-options="[5, 10, 20, 50, -1]"
                     >
