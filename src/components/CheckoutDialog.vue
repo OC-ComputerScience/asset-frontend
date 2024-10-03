@@ -7,7 +7,6 @@
     import { format } from "date-fns";
     import { zonedTimeToUtc } from "date-fns-tz";
     import AddPerson from "./AddPerson.vue";
-    import NotificationSender from "../components/NotificationSender.vue";
 
     const props = defineProps(["assignee", "activeCheckout", "assignees", "assets"]);
     const emit = defineEmits(["cancelCheckout", "saveCheckout"]);
@@ -25,7 +24,6 @@
     const showAddNewPersonDialog = ref(false);
     const snackbar = ref(false);
     const snackbarText = ref(null);
-    const notificationSender = ref(null);
 
     const userRoleId = computed(() => {
         return store.getters.getUserRole;
@@ -137,16 +135,6 @@
         };
         if(props.assignee === "People") {
             newCheckout.personId = selectedAssignee.value.personId;
-            
-            notificationSender.value.sendEmail(
-                {
-                    to: selectedAssignee.value.email,
-                    fullName: selectedAssignee.value.fullName,
-                    expectedCheckinDate: newCheckout.expectedCheckinDate,
-                    serializedAssetName: selectedAsset.value.serializedAssetName,
-                },
-                "confirm"
-            );
         }
         else if(props.assignee === "Buildings") newCheckout.buildingId = selectedAssignee.value.buildingId;
         else if(props.assignee === "Rooms") newCheckout.roomId = selectedAssignee.value.roomId;
@@ -314,6 +302,5 @@
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
     </v-snackbar>
-    <NotificationSender ref="notificationSender" />
 </div>
 </template>

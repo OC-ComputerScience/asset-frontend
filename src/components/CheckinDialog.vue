@@ -5,8 +5,6 @@ import { format } from "date-fns";
 import { zonedTimeToUtc } from "date-fns-tz";
 import serializedAssetServices from "../services/serializedAssetServices";
 import store from "../store/store.js";
-import NotificationSender from "../components/NotificationSender.vue";
-
 
 const props = defineProps(["assignee", "activeCheckin", "checkouts", "editMode"]);
 const emit = defineEmits(["saveCheckin", "cancelCheckin"]);
@@ -18,7 +16,6 @@ const checkinNote = ref("");
 const oldNote = ref("");
 const loginUser = computed(() => store.getters.getLoginUserInfo);
 const currentUser = `${loginUser.value.fName} ${loginUser.value.lName}`;
-const notificationSender = ref(null);
 
 const hasNoteChanged = computed(() => {
     return checkinNote.value !== oldNote.value;
@@ -86,18 +83,6 @@ const saveCheckin = async() => {
         await assignmentServices.update(props.assignee, key, checkinData);
         if(!props.activeCheckin){
           await serializedAssetServices.updateCheckoutStatus(activeCheckin.value.serializedAssetId, false);
-          if(props.assignee === 'People'){
-            notificationSender.value.sendEmail(
-              {
-                to: activeCheckin.value.person.email,
-                fullName: activeCheckin.value.person.fullNameWithId,
-                checkinDate: formattedCheckinDate,
-                serializedAssetName: activeCheckin.value.serializedAsset.serializedAssetName
-              },
-              "receipt"
-            );
-
-          }
           responseText = "Asset checked in successfully.";
         }else{
           responseText = "Checkin updated successfully.";
@@ -170,6 +155,5 @@ const saveCheckin = async() => {
         </v-card-actions>
       </v-form>
     </v-card>
-    <NotificationSender ref="notificationSender" />
 </div>
 </template>
