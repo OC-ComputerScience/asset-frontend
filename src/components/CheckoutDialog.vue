@@ -89,6 +89,9 @@
     onBeforeMount(async() => {
         if(props.activeCheckout){
             expectedCheckinDate.value = props.activeCheckout.expectedCheckinDate;
+            if(expectedCheckinDate.value){
+                indefiniteCheckout.value = false;
+            }
             checkoutNotes.value = props.activeCheckout.checkoutNote;
             selectedAsset.value = props.activeCheckout.serializedAsset;
             selectedAssignee.value = getSelectedAssignee();
