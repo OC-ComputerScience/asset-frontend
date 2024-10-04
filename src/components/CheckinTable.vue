@@ -112,7 +112,7 @@ const closeCheckinDialog = () => {
             </v-data-table>
         </v-card-text>
     </v-card>
-    <v-dialog v-model="checkinDialog" persistent max-width="600px">
+    <v-dialog v-model="checkinDialog" persistent max-width="600px" scrollable>
         <CheckinDialog 
             :assignee="props.assignee"
             :active-checkin="activeCheckin"

@@ -108,7 +108,7 @@ const closeCheckoutDialog = () => {
             </v-data-table>
         </v-card-text>
     </v-card>
-    <v-dialog v-model="checkoutDialog" persistent max-width="600px">
+    <v-dialog v-model="checkoutDialog" persistent max-width="600px" scrollable>
         <CheckoutDialog 
             :assignee="props.assignee"
             :active-checkout="activeCheckout"

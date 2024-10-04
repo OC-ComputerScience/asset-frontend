@@ -276,7 +276,7 @@
                 </v-row>
             </v-container>
             </v-card-text>
-            <v-card-actions>
+            <v-card-actions class="mt-n12">
             <v-spacer></v-spacer>
             <v-btn color="green" text @click="openAddNewPersonDialog" v-if="props.assignee === 'People'">
                 Add New Person</v-btn
