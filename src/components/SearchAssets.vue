@@ -182,6 +182,7 @@ const cancelActivate = () => {
             variant="outlined"
             label="Search by Serial Number or Barcode"
             clearable
+            @keyup.enter="searchAssets"
         />
     </v-col>
     <v-col cols="12" md="6" align=right>
