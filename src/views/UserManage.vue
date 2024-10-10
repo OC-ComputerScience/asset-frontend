@@ -395,8 +395,21 @@ function toggleServices() {
   showServices.value = !showServices.value;
 }
 
+function onChangeViewServices() {
+  newUserRole.value.viewMaintenance = newUserRole.value.viewServices
+  newUserRole.value.viewLeases = newUserRole.value.viewServices
+  newUserRole.value.viewWarranties = newUserRole.value.viewServices
+}
+
 function toggleManage() {
   showManage.value = !showManage.value;
+}
+
+function onChangeViewManage() {
+  newUserRole.value.viewAssets = newUserRole.value.viewManage
+  newUserRole.value.viewFacilities = newUserRole.value.viewManage
+  newUserRole.value.viewPeople = newUserRole.value.viewManage
+  newUserRole.value.viewUsers = newUserRole.value.viewManage
 }
 
 // Watcher for the "Users" tab
@@ -594,7 +607,7 @@ onMounted(async () => {
             <v-col>
               <v-checkbox label="View Check out/in" v-model="newUserRole.viewCheckOutIn"></v-checkbox>
               <v-row class="ml-0">
-                <v-checkbox label="View Services" v-model="newUserRole.viewServices"></v-checkbox>
+                <v-checkbox label="View Services" v-model="newUserRole.viewServices" @update:modelValue="onChangeViewServices"></v-checkbox>
                 <v-icon size="large" color="primary" class="mt-4 ml-2" @click="toggleServices">{{ showServices ?
             'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
               </v-row>
@@ -605,7 +618,7 @@ onMounted(async () => {
               </v-col>
               <v-checkbox label="View Reports" v-model="newUserRole.viewReports"></v-checkbox>
               <v-row class="ml-0">
-                <v-checkbox class="mb-0 pb-0" label="View Manage" v-model="newUserRole.viewManage"></v-checkbox>
+                <v-checkbox class="mb-0 pb-0" label="View Manage" v-model="newUserRole.viewManage" @update:modelValue="onChangeViewManage"></v-checkbox>
                 <v-icon size="large" color="primary" class="mt-4 ml-2" @click="toggleManage">{{ showManage ?
             'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
               </v-row>
