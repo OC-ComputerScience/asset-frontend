@@ -3,6 +3,7 @@ import { ref, watch, computed, onMounted } from "vue";
 import Utils from "../config/utils";
 import userServices from "../services/userServices";
 import userRoleServices from "../services/userRoleServices";
+import userUserRoleServices from "../services/userUserRoleServices"
 import assetCategoryServices from "../services/assetCategoryServices";
 
 
@@ -10,9 +11,9 @@ import assetCategoryServices from "../services/assetCategoryServices";
 const currentUser = ref([]);
 currentUser.value = Utils.getStore("user");
 
-
 // Refs for Users tab
 const users = ref([]);
+const originalUsers = ref([])
 const userRoles = ref([]);
 const assetCategories = ref([]);
 const roleNames = ref([]);
@@ -86,6 +87,8 @@ const fetchUsersAndRoles = async () => {
     ]);
 
     users.value = usersResponse.data;
+    // Deep copy of users
+    originalUsers.value = JSON.parse(JSON.stringify(users.value))
     userRoles.value = rolesResponse.data;
 
     if (currentUser.value.categoryId != 4) {
@@ -124,25 +127,115 @@ const fetchUsersAndRoles = async () => {
 
 // Batch update function
 const saveAllUserRoleChanges = async () => {
-  const updatePromises = Object.entries(changedUserRoles.value).map(
-    ([userId, roleId]) => {
-      return userServices.updateRole(userId, roleId);
-    }
-  );
-
+  let message = ""
   try {
-    await Promise.all(updatePromises);
-    snackbarText.value = "All role changes updated successfully";
-    snackbar.value = true;
-    fetchUsersAndRoles(); // Refresh data
-    showSaveAllConfirmDialog.value = false;
-    changedUserRoles.value = {}; // Reset role changes tracker
-  } catch (error) {
-    console.error("Failed to update role changes:", error);
-    snackbarText.value = "Failed to update role changes";
-    snackbar.value = true;
+    for (let index = 0; index < users.value.length; index++) {
+      let user = users.value[index]
+      let originalUser = originalUsers.value[index]
+      if (user.userUserRoles.length > originalUser.userUserRoles.length) {
+        await handleGreaterLength(user, originalUser)
+      } else if (user.userUserRoles.length < originalUser.userUserRoles.length) {
+        await handleLesserLength(user, originalUser)
+      } else {
+        await handleEqualLength(user, originalUser)
+      }
+    }
+    message = "All role changes updated successfully"
+  } catch (err) {
+    console.error(err)
+    message = "Failed to update role changes"
+  } finally {
+    await fetchUsersAndRoles()
+    showSaveAllConfirmDialog.value = false
+    snackbarText.value = message
+    snackbar.value = true
   }
-};
+}
+
+const handleGreaterLength = async (user, originalUser) => {
+  for (let i = 0; i < user.userUserRoles.length; i++) {
+    let role = user.userUserRoles[i]
+    if (i < originalUser.userUserRoles.length) {
+      let originalRole = originalUser.userUserRoles[i]
+      if (role.userRoleId === originalRole.userRoleId) {
+        continue
+      }
+      const roleId = findRoleId(role)
+      const data = {
+        userRoleId: roleId,
+        active: originalRole.active,
+        userId: originalRole.userId
+      }
+      await userUserRoleServices.update(originalRole.id, data)
+    } else {
+      const roleId = findRoleId(role)
+      const data = {
+        userRoleId: roleId,
+        active: 0,
+        userId: originalUser.id
+      }
+      await userUserRoleServices.create(data)
+    }
+  }
+}
+
+const handleLesserLength = async (user, originalUser) => {
+  for (let i = 0; i < originalUser.userUserRoles.length; i++) {
+    let role = originalUser.userUserRoles[i]
+    if (i in user.userUserRoles) {
+      let newRole = user.userUserRoles[i]
+      if (role.userRoleId === newRole.userRoleId) {
+        continue
+      }
+      const roleId = findRoleId(newRole)
+      const data = {
+        userRoleId: roleId,
+        active: role.active,
+        userId: role.userId
+      }
+      await userUserRoleServices.update(role.id, data)
+    } else {
+      await userUserRoleServices.delete(role.id)
+    }
+  }
+  if(user.userUserRoles.length === 0) {
+    const data = {
+      userRoleId: 2,
+      active: true,
+      userId: user.id
+    }
+    await userUserRoleServices.create(data)
+  }
+}
+
+const handleEqualLength = async (user, originalUser) => {
+  for (let i = 0; i < user.userUserRoles.length; i++) {
+    let role = user.userUserRoles[i]
+    let originalRole = originalUser.userUserRoles[i]
+    if (role.userRoleId === originalRole.userRoleId) {
+      continue
+    }
+    const roleId = findRoleId(role)
+    const data = {
+      userRoleId: roleId,
+      active: originalRole.active,
+      userId: originalRole.userId
+    }
+    await userUserRoleServices.update(originalRole.id, data)
+  }
+}
+
+const findRoleId = (role) => {
+  let roleId
+  if(!role.id){
+    let oldRole = userRoles.value.find((e) => e.name === role)
+    roleId = oldRole.id
+  }
+  else{
+    roleId = role.id
+  }
+  return roleId
+}
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value) {
@@ -196,7 +289,8 @@ const highlightText = (text) => {
 
 // Computed property to check if there are changes
 const hasChanges = computed(() => {
-  return Object.keys(changedUserRoles.value).length > 0;
+  const hasChanged = users.value.userUserRoles === originalUsers.value.userUserRoles
+  return hasChanged
 });
 
 // Define headers for v-data-table.
@@ -474,6 +568,7 @@ onMounted(async () => {
   await retrieveUserRoles();
   await retrieveAssetCategories();
 });
+
 </script>
 
 <template>
@@ -525,14 +620,29 @@ onMounted(async () => {
                   </v-btn>
                 </v-card-title>
                 <v-card-text>
-                  <v-data-table :headers="userHeaders" :items="highlightedUsers" item-key="id" 
-                    :items-per-page="5" :items-per-page-options="[5, 10, 20, 50, -1]" v-model:sort-by="usersSortBy">
+                  <v-data-table 
+                    :headers="userHeaders" 
+                    :items="filteredUsers" 
+                    item-key="id" 
+                    :items-per-page="5" 
+                    :items-per-page-options="[5, 10, 20, 50, -1]" 
+                    v-model:sort-by="usersSortBy"
+                  >
                     <template v-slot:item="{ item }">
                       <tr :data-user-name="`${item.fName.toLowerCase()} ${item.lName.toLowerCase()}`">
                         <td v-html="item.fullName"></td>
                         <td>
-                          <v-autocomplete v-model="item.selectedRoleName" :items="roleNames" label="Select Role"
-                            class="select-fixed-width" variant="solo" return-object clearable></v-autocomplete>
+                          <v-combobox 
+                            v-model="item.userUserRoles" 
+                            :items="roleNames" 
+                            item-title="userRole.name"
+                            label="Select Role"
+                            class="mt-4" 
+                            variant="solo" 
+                            chips
+                            closable-chips
+                            multiple
+                          ></v-combobox>
                         </td>
                       </tr>
                     </template>
@@ -546,11 +656,11 @@ onMounted(async () => {
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                   <span>User Roles</span>
-                  <v-btn color="primary" class="ma-2" @click="
-            resetForm(),
-            (showAddUserRoleDialog = true),
-            (editingUserRole = false)
-            ">
+                  <v-btn 
+                    color="primary" 
+                    class="ma-2" 
+                    @click="resetForm(), (showAddUserRoleDialog = true), (editingUserRole = false)"
+                  >
                     Add New Role
                   </v-btn>
                 </v-card-title>
