@@ -88,13 +88,12 @@ const fetchUsersAndRoles = async () => {
 
     users.value = usersResponse.data;
     // Deep copy of users
-    originalUsers.value = JSON.parse(JSON.stringify(users.value))
     userRoles.value = rolesResponse.data;
 
     if (currentUser.value.categoryId != 4) {
-      users.value = users.value.filter(user => user.userRole.categoryId === currentUser.value.categoryId || user.userRole.name === 'Unassigned');
+      users.value = users.value.filter(user => user.userUserRoles.find(role => role.userRole.categoryId === currentUser.value.categoryId) || user.userUserRoles[0].userRole.name === 'Unassigned');
     }
-
+    originalUsers.value = JSON.parse(JSON.stringify(users.value))
     const rolesFiltered = ref([]);
     rolesFiltered.value = rolesResponse.data;
     if (currentUser.value.categoryId != 4) {
@@ -615,7 +614,7 @@ onMounted(async () => {
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                   <span>Role Assignment</span>
-                  <v-btn color="saveblue" class="ma-2" @click="showSaveAllConfirmDialog = true" :disabled="!hasChanges">
+                  <v-btn color="saveblue" class="ma-2" @click="showSaveAllConfirmDialog = true" :disabled="!currentUser.canEdit">
                     Save All Changes
                   </v-btn>
                 </v-card-title>
@@ -632,7 +631,7 @@ onMounted(async () => {
                       <tr :data-user-name="`${item.fName.toLowerCase()} ${item.lName.toLowerCase()}`">
                         <td v-html="item.fullName"></td>
                         <td>
-                          <v-combobox 
+                          <v-autocomplete 
                             v-model="item.userUserRoles" 
                             :items="roleNames" 
                             item-title="userRole.name"
@@ -640,9 +639,10 @@ onMounted(async () => {
                             class="mt-4" 
                             variant="solo" 
                             chips
-                            closable-chips
+                            :closable-chips="currentUser.canEdit"
                             multiple
-                          ></v-combobox>
+                            :readonly="!currentUser.canEdit"
+                          ></v-autocomplete>
                         </td>
                       </tr>
                     </template>

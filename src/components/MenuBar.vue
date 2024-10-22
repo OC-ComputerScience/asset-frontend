@@ -257,17 +257,17 @@ onMounted(() => {
                 <h3>{{ name }}</h3>
                 <p class="text-caption mt-1">{{ user.email }}</p>
                 <v-divider class="my-3"></v-divider>
-                <v-combobox
+                <v-autocomplete
                   v-model="activeRole"
-                  :items="user.roles"
+                  :items="user.roles.sort((a, b) => a.userRole.name.localeCompare(b.userRole.name))"
                   item-title="userRole.name"
                   item-value="userRole"
                   return-object
                   density="compact"
                   variant="outlined"
-                  label="Role"
+                  label="Current Role"
                   @update:modelValue="updateRole"
-                ></v-combobox>
+                ></v-autocomplete>
                 <v-divider class="my-3"></v-divider>
                 <v-btn depressed rounded text @click="logout">Logout</v-btn>
               </div>
