@@ -1074,6 +1074,7 @@ onMounted(async () => {
   await retrieveAssetCategories();
   await retrieveAssetTypes();
   await retrieveAssetProfiles();
+  console.log(userRole.value)
 });
 </script>
 
@@ -1157,7 +1158,7 @@ onMounted(async () => {
         <SearchAssets 
           :profiles="assetProfiles"
           :types="assetTypes"
-          :user-category="userRole.categoryId"
+          :user-category="userRole.data.categoryId"
           @edit-serialized-asset="editSerializedAsset"
           @open-archive-dialog="openArchiveDialog"
         />

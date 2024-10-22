@@ -38,6 +38,7 @@ const handleCredentialResponse = async (response) => {
       Utils.setStore("user", user.value);
       fName.value = user.value.fName;
       lName.value = user.value.lName;
+      console.log(user.value)
 
       // Set the user in the store, which will also set the isAdmin flag
       store.commit("setLoginUser", user.value);

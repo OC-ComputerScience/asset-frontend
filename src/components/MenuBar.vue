@@ -1,8 +1,9 @@
 <script setup>
 import ocLogo from "/src/oc-logo-maroon.png";
-import { computed, ref, onMounted, nextTick } from "vue";
+import { computed, ref, onMounted } from "vue";
 import Utils from "../config/utils";
 import AuthServices from "../services/authServices";
+import UserUserRoleServices from "../services/userUserRoleServices"
 import { useRouter } from "vue-router";
 import { useStore } from "vuex";
 
@@ -13,8 +14,8 @@ const name = ref("");
 const logoURL = ref("");
 const router = useRouter();
 const store = useStore(); // Use the store
+const activeRole = ref(null)
 
-// Compute isDev from store
 const isDev = computed(() => store.getters.isDev);
 
 const viewCheckOutIn = computed(() => store.getters.viewCheckOutIn);
@@ -88,6 +89,11 @@ const resetMenu = async() => {
     initials.value = user.value.fName[0] + user.value.lName[0];
     name.value = user.value.fName + " " + user.value.lName;
   }
+  user.value.roles.forEach((role) => {
+    if(role.active){
+      activeRole.value = role.userRole
+    }
+  })
 };
 
 const logout = async() => {
@@ -103,8 +109,52 @@ const logout = async() => {
     });
 };
 
+const updateRole = async() => {
+  let role = activeRole.value.userRole
+  user.value.canAdd = role.canAdd
+  user.value.canEdit = role.canEdit
+  user.value.canArchive = role.canArchive
+  user.value.canActivate = role.canActivate
+  user.value.canDelete = role.canDelete
+  user.value.viewCheckOutIn = role.viewCheckOutIn
+  user.value.viewServices = role.viewServices
+  user.value.viewMaintenance = role.viewMaintenance
+  user.value.viewWarranties = role.viewWarranties
+  user.value.viewLeases = role.viewLeases
+  user.value.viewReports = role.viewReports
+  user.value.viewManage = role.viewManage
+  user.value.viewAssets = role.viewAssets
+  user.value.viewFacilities = role.viewFacilities
+  user.value.viewPeople = role.viewPeople
+  user.value.viewUsers = role.viewUsers
+  user.value.isAdmin = role.isAdmin
+  user.value.isWorker = role.isWorker
+  user.value.isManager = role.isManager
+  user.value.isUnassigned = role.isUnassigned
+  user.value.categoryId = role.categoryId
+  user.value.userRoleId = role.id
+
+  try{
+    user.value.roles.forEach(async(userRole) => {
+      if(activeRole.value.id === userRole.id){
+        userRole.active = true
+      }
+      else{ 
+        userRole.active = false 
+      }
+      await UserUserRoleServices.update(userRole.id, {active: userRole.active})
+    })
+  }
+  catch(err){
+    console.error(err)
+  }
+  
+  Utils.setStore("user", user.value)
+  location.reload()
+}
+
 onMounted(() => {
-logoURL.value = ocLogo;
+  logoURL.value = ocLogo;
   resetMenu();
 });
 </script>
@@ -186,7 +236,7 @@ logoURL.value = ocLogo;
       </template>
 
       <template v-if="user">
-        <v-menu bottom min-width="200px" rounded offset-y>
+        <v-menu bottom min-width="400px" rounded offset-y :close-on-content-click="false">
           <template v-slot:activator="{ props }">
             <v-btn v-bind="props" icon x-large>
               <v-avatar color="secondary">
@@ -206,6 +256,18 @@ logoURL.value = ocLogo;
                 </v-avatar>
                 <h3>{{ name }}</h3>
                 <p class="text-caption mt-1">{{ user.email }}</p>
+                <v-divider class="my-3"></v-divider>
+                <v-autocomplete
+                  v-model="activeRole"
+                  :items="user.roles.sort((a, b) => a.userRole.name.localeCompare(b.userRole.name))"
+                  item-title="userRole.name"
+                  item-value="userRole"
+                  return-object
+                  density="compact"
+                  variant="outlined"
+                  label="Current Role"
+                  @update:modelValue="updateRole"
+                ></v-autocomplete>
                 <v-divider class="my-3"></v-divider>
                 <v-btn depressed rounded text @click="logout">Logout</v-btn>
               </div>
