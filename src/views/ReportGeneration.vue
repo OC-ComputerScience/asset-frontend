@@ -5,11 +5,15 @@ import PersonAssetServices from "../services/personAssetServices";
 import BuildingAssetServices from "../services/buildingAssetServices";
 import RoomAssetServices from "../services/roomAssetServices";
 import ReportServices from "../services/reportServices";
-import { ref, watch, onMounted, computed } from "vue";
+import UserRoleServices from "../services/userRoleServices";
+import store from "../store/store.js";
+import { ref, watch, onMounted, computed, onBeforeMount } from "vue";
 import { useRoute } from "vue-router";
 import { zonedTimeToUtc } from "date-fns-tz";
 import { format } from "date-fns";
 import moment from "moment-timezone";
+
+const userRole = ref({});
 
 const message = ref("");
 const selectedTab = ref("Type");
@@ -49,6 +53,14 @@ const route = useRoute();
 const rules = {
   required: (value) => !!value || "Required.",
 };
+
+const userRoleId = ref()
+
+const getUserRole = async() => {
+  let response = await UserRoleServices.get(userRoleId.value);
+  userRole.value = response.data;
+}
+
 const retrievePersonAssets = async () => {
   try {
     const response = await PersonAssetServices.getAll();
@@ -105,7 +117,16 @@ const retrieveRoomAssets = async () => {
 
 const retrieveAssetTypes = async () => {
   try {
-    const typesResponse = await AssetTypeServices.getAll();
+    userRoleId.value = store.getters.getUserRole
+    await getUserRole()
+    let categoryId = userRole.value.categoryId
+    let typesResponse = []
+    if(categoryId === 4){
+      typesResponse = await AssetTypeServices.getAll();
+    }
+    else{
+      typesResponse = await AssetTypeServices.getAssetTypesByCategoryId(categoryId)
+    }
     assetTypes.value = typesResponse.data
       .filter((type) => type.activeStatus !== 0) 
       .map((type) => ({
@@ -943,6 +964,7 @@ watch(
   { immediate: true }
 );
 
+
 onMounted(async () => {
   if (route.query.tab) {
     selectedTab.value = route.query.tab; // Set the tab based on the query parameter
@@ -952,9 +974,9 @@ onMounted(async () => {
     const dataFetchers = [];
 
     // Push all necessary fetchers based on the tab or conditions
-    dataFetchers.push(retrieveAssetTypes());
+    dataFetchers.push(await retrieveAssetTypes());
     if (route.query.reportType === "type") {
-      dataFetchers.push(retrieveSerializedAssets());
+      dataFetchers.push(await retrieveSerializedAssets());
     } else if (route.query.reportType === "assignment") {
       dataFetchers.push(
         retrievePersonAssets(),

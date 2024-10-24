@@ -1074,7 +1074,6 @@ onMounted(async () => {
   await retrieveAssetCategories();
   await retrieveAssetTypes();
   await retrieveAssetProfiles();
-  console.log(userRole.value)
 });
 </script>
 
