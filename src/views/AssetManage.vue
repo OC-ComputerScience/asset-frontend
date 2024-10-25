@@ -1225,7 +1225,7 @@ onMounted(async () => {
                     :items="assetCategories"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="categoriesSortBy"
                   >
                   </v-data-table>
@@ -1254,7 +1254,7 @@ onMounted(async () => {
                     :items="filteredAssetTypes"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="typesSortBy"
                   >
                     <template v-slot:item.edit="{ item }">
@@ -1295,7 +1295,7 @@ onMounted(async () => {
                     :items="filteredAssetTypes"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="typesSortBy"
                   >
                     <template v-slot:item.activate="{ item }">
@@ -1340,7 +1340,7 @@ onMounted(async () => {
                     :search="searchProfile"
                     item-key="profileId"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="profilesSortBy"
                   >
                     <template v-slot:item.assets="{ item }">
@@ -1403,7 +1403,7 @@ onMounted(async () => {
                     :search="searchProfile"
                     item-key="profileId"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="profilesSortBy"
                   >
                     <template v-slot:item.assets="{ item }">

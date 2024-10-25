@@ -240,7 +240,7 @@ onMounted(async () => {
                 :headers="activityHeaders"
                 :items="combinedAssets"
                 :items-per-page="5"
-                :items-per-page-options="[5, 10, 20, 50, -1]"
+                :items-per-page-options="[5, 10, 20, 50]"
               >
               </v-data-table>
             </v-card-text>

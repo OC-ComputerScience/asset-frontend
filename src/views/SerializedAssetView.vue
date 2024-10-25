@@ -459,7 +459,7 @@ onMounted(async () => {
           :items="fullAssetHistory"
           item-key="key"
           :items-per-page="5"
-          :items-per-page-options="[5, 10, 20, 50, -1]"
+          :items-per-page-options="[5, 10, 20, 50]"
           v-model:sort-by="assignmentSortBy"
         >
           <template v-slot:item.checkoutDate="{ item }">
@@ -484,7 +484,7 @@ onMounted(async () => {
           :items="maintenanceLogs"
           item-key="key"
           :items-per-page="5"
-          :items-per-page-options="[5, 10, 20, 50, -1]"
+          :items-per-page-options="[5, 10, 20, 50]"
           v-model:sort-by="maintenanceSortBy"
         >
           <template v-slot:item.serviceDate="{ item }">
@@ -521,7 +521,7 @@ onMounted(async () => {
           :items="warranties"
           item-key="key"
           :items-per-page="5"
-          :items-per-page-options="[5, 10, 20, 50, -1]"
+          :items-per-page-options="[5, 10, 20, 50]"
           v-model:sort-by="warrantiesSortBy"
         >
           <template v-slot:item.length="{ item }">
@@ -543,7 +543,7 @@ onMounted(async () => {
           :items="barcodes"
           item-key="key"
           :items-per-page="5"
-          :items-per-page-options="[5, 10, 20, 50, -1]"
+          :items-per-page-options="[5, 10, 20, 50]"
         >
         </v-data-table>
         <v-data-table
@@ -552,7 +552,7 @@ onMounted(async () => {
           :items="leases"
           item-key="key"
           :items-per-page="5"
-          :items-per-page-options="[5, 10, 20, 50, -1]"
+          :items-per-page-options="[5, 10, 20, 50]"
           v-model:sort-by="leasesSortBy"
         >
           <template v-slot:item.length="{ item }">

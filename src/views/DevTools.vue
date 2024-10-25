@@ -126,7 +126,7 @@ onMounted(fetchDevUsersAndRoles);
             :headers="headers"
             :items="users"
             item-key="id"
-            :items-per-page-options="[5, 10, 20, 50, -1]"
+            :items-per-page-options="[5, 10, 20, 50]"
             v-model:sort-by="usersSortBy"
           >
             <template v-slot:item="{ item }">

@@ -210,7 +210,7 @@ const cancelActivate = () => {
         item-key="serializedAssetId"
         class="elevation-1"
         :items-per-page="5"
-        :items-per-page-options="[5, 10, 20, 50, -1]"
+        :items-per-page-options="[5, 10, 20, 50]"
         v-model:sort-by="assetsSortBy"
         >
         <template v-slot:item.checkoutStatus="{ item }">

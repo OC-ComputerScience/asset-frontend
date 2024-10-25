@@ -624,7 +624,7 @@ onMounted(async () => {
                     :items="filteredUsers" 
                     item-key="id" 
                     :items-per-page="5" 
-                    :items-per-page-options="[5, 10, 20, 50, -1]" 
+                    :items-per-page-options="[5, 10, 20, 50]" 
                     v-model:sort-by="usersSortBy"
                   >
                     <template v-slot:item="{ item }">
@@ -666,7 +666,7 @@ onMounted(async () => {
                 </v-card-title>
                 <v-card-text>
                   <v-data-table :headers="userRoleHeaders" :items="roles" item-key="id" 
-                    :items-per-page="10" :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page="10" :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="userRolesSortBy">
                     <template v-slot:item.actions="{ item }">
                       <v-btn icon class="table-icons" @click="editUserRole(item)" v-if="item.id !== 1">
