@@ -215,7 +215,7 @@ onMounted(async () => {
                   :headers="headers"
                   :items="filteredReports"
                   :items-per-page="10"
-                  :items-per-page-options="[5, 10, 20, 50, -1]"
+                  :items-per-page-options="[5, 10, 20, 50]"
                   v-model:sort-by="reportSortBy"
                 >
                   <template v-slot:item.reportDate="{ item }">
@@ -268,7 +268,7 @@ onMounted(async () => {
                   :headers="headers"
                   :items="filteredReports"
                   :items-per-page="10"
-                  :items-per-page-options="[5, 10, 20, 50, -1]"
+                  :items-per-page-options="[5, 10, 20, 50]"
                   v-model:sort-by="reportSortBy"
                 >
                   <template v-slot:item.reportDate="{ item }">

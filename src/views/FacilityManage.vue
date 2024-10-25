@@ -736,7 +736,7 @@ onMounted(async () => {
                     :items="highlightedBuildings"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="buildingsSortBy"
                   >
                     <template v-slot:item.title="{ item }">
@@ -803,7 +803,7 @@ onMounted(async () => {
                     :items="filteredBuildings"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="buildingsSortBy"
                   >
                     <template v-slot:item.activate="{ item }">
@@ -846,7 +846,7 @@ onMounted(async () => {
                     :items="filteredRooms"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.view="{ item }">
@@ -900,7 +900,7 @@ onMounted(async () => {
                     :items="filteredRooms"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.view="{ item }">

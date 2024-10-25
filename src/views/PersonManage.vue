@@ -486,7 +486,7 @@ onMounted(async () => {
                     :items="highlightedPeople"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="personSortBy"
                   >
                     <template v-slot:item.fullName="{ item }">
@@ -549,7 +549,7 @@ onMounted(async () => {
                     :items="highlightedPeople"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="personSortBy"
                   >
                     <template v-slot:item.fullName="{ item }">

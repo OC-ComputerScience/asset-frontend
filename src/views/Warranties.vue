@@ -478,7 +478,7 @@ onMounted(async () => {
                     :items="activeWarranties"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="warrantySortBy"
                   >
                     <template v-slot:item.serializedAssetName="{ item }">
@@ -532,7 +532,7 @@ onMounted(async () => {
                     :items="archivedWarranties"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="warrantySortBy"
                   >
                     <template v-slot:item.length="{ item }">

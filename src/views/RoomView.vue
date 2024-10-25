@@ -175,7 +175,7 @@ onMounted(async () => {
                     :items="filterRoomAssetsByRoomId()"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">
@@ -203,7 +203,7 @@ onMounted(async () => {
                     :items="filterRoomAssetsByRoomId()"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">

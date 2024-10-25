@@ -1188,7 +1188,7 @@ onMounted(async () => {
                       :headers="typeReportHeaders"
                       :items="typeReportData"
                       :items-per-page="10"
-                      :items-per-page-options="[5, 10, 20, 50, -1]"
+                      :items-per-page-options="[5, 10, 20, 50]"
                     >
                       <!-- Existing item slots -->
                       <template v-slot:item="{ item }">
@@ -1405,7 +1405,7 @@ onMounted(async () => {
                       :headers="assignmentReportHeaders"
                       :items="assignmentReportData"
                       :items-per-page="10"
-                      :items-per-page-options="[5, 10, 20, 50, -1]"
+                      :items-per-page-options="[5, 10, 20, 50]"
                     >
                       <template v-slot:item="{ item }">
                         <tr :class="{ 'total-row': item.isTotalRow }">

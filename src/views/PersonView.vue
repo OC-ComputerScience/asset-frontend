@@ -200,7 +200,7 @@ onMounted(async () => {
                     :items="filterPersonAssetsByPersonId()"
                     item-key="personAssetId"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="assetSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">
@@ -236,7 +236,7 @@ onMounted(async () => {
                     :headers="pastPersonHeaders"
                     :items="filterPersonAssetsByPersonId()"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="assetSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">

@@ -90,7 +90,7 @@ const closeCheckinDialog = () => {
                 :headers="headers"
                 :items="recentCheckins"
                 :items-per-page="5"
-                :items-per-page-options="[5, 10, 20, 50, -1]"
+                :items-per-page-options="[5, 10, 20, 50]"
             >
                 <template v-slot:item.expectedCheckinDate="{ item }">
                     <td>

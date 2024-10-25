@@ -808,7 +808,7 @@ onMounted(async () => {
                     :items="filterAssetsByProfileId()"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                   >
                     <template v-slot:item.view="{ item }">
                       <div
@@ -867,7 +867,7 @@ onMounted(async () => {
                     :items="filterAssetsByProfileId()"
                     item-key="key"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                   >
                     <template v-slot:item.view="{ item }">
                       <div
