@@ -6,31 +6,47 @@ import { useStore } from "vuex";
 import { format } from "date-fns";
 import { zonedTimeToUtc } from "date-fns-tz";
 import moment from "moment-timezone";
+import logServices from "../services/logServices";
 
 const message = ref("");
 const logs = ref([]);
+const logsCopy = ref([]);
+const upcomingLogs = ref([]);
+const pastLogs = ref([]);
 const serializedAssets = ref([]);
 const showAddLogDialog = ref(false);
 const selectedSerializedAssetId = ref("");
 const editingLog = ref(false);
 const originalLog = ref({});
 const validLog = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showNotesDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToDisplay = ref(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
 const logSortBy = ref([{ key: "serviceDate", order: "desc" }]);
 const searchQuery = ref("");
+const searchDate = ref(null);
 const store = useStore();
 const menu = ref(false);
+const selectPrev = ref(false);
+const menuScheduled = ref(false);
 const rawServiceDate = ref(null);
+const rawScheduledDate = ref(null);
+const showDeleteDialog = ref(false);
+const selectedTab = ref("Upcoming");
+const dataLoaded = ref(false);
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
 const rules = {
-  required: (value) => !!value || "Required.",
+  requiredSelectedAsset: (value) => !!value || "Asset is required.",
+  required: (value) =>
+    (!!value && newLog.value.type != "preventative") ||
+    newLog.value.type == "preventative" ||
+    "Required.",
+  requiredScheudledDate: (value) =>
+    (!!value && newLog.value.type == "preventative") ||
+    "Scheduled Date is required.",
   maxNameLength: (value) =>
     value.length <= 40 || "Name cannot exceed 40 characters",
   maxDescLength: (value) => value.length <= 255,
@@ -47,32 +63,49 @@ const rules = {
 const newLog = ref({
   serializedAssetId: "",
   serviceDate: null,
+  scheduledDate: null,
   performedBy: "",
   notes: "",
+  description: "",
   type: null, // "preventative", "repair", or "upgrade"
 });
-
 
 // LogsSection
 
 // Retrieve People from Database
 const retrieveLogs = async () => {
+  pastLogs.value = [];
+  upcomingLogs.value = [];
   try {
     const response = await LogServices.getAll();
     logs.value = response.data.map((log) => ({
       key: log.logId,
       serializedAssetId: log.serializedAssetId,
       serviceDate: log.serviceDate,
+      scheduledDate: log.scheduledDate,
       notes: log.notes,
+      description: log.description,
       performedBy: log.performedBy,
       serializedAssetName: log.serializedAsset.serializedAssetName,
       serialNumber: log.serializedAsset.serialNumber,
       isPreventative: log.isPreventative,
       isRepair: log.isRepair,
-      isUpgrade: log.isUpgrade
+      isUpgrade: log.isUpgrade,
     }));
+    logs.value.forEach((log) => {
+      if(!log.serviceDate && log.isPreventative){
+        upcomingLogs.value.push(log);
+      }
+      else{
+        pastLogs.value.push(log);
+      }
+    })
+    logsCopy.value = selectedTab.value === "Upcoming" ? upcomingLogs.value : pastLogs.value;
   } catch (error) {
     console.error("Error loading Logs:", error);
+  }
+  finally{
+    dataLoaded.value = true;
   }
 };
 
@@ -104,9 +137,15 @@ const editLog = async (log) => {
     key: log.key,
     serializedAssetId: log.serializedAssetId,
     serviceDate: log.serviceDate,
+    scheduledDate: log.scheduledDate,
     performedBy: log.performedBy,
     notes: log.notes,
-    type: log.isPreventative ? "preventative" : log.isRepair ? "repair" : "upgrade",
+    description: log.description,
+    type: log.isPreventative
+      ? "preventative"
+      : log.isRepair
+      ? "repair"
+      : "upgrade",
   };
   editingLog.value = true;
 
@@ -119,11 +158,15 @@ const editLog = async (log) => {
 
   showAddLogDialog.value = true;
   originalLog.value = { ...newLog.value }; // Store original log to check for changes
-  rawServiceDate.value = new Date(log.serviceDate);
+  rawServiceDate.value =
+    log.serviceDate == null ? null : new Date(log.serviceDate);
+  rawScheduledDate.value =
+    log.scheduledDate === null ? null : new Date(log.scheduledDate);
 };
 
 const saveLog = async () => {
   let formattedServiceDate = null;
+  let formattedScheduledDate = null;
   if (rawServiceDate.value) {
     // Convert local date to UTC before storing
     formattedServiceDate = format(
@@ -131,11 +174,24 @@ const saveLog = async () => {
       "MMM dd, yyyy"
     );
   }
+  if (rawScheduledDate.value) {
+    // Convert local date to UTC before storing
+    formattedScheduledDate = format(
+      new Date(rawScheduledDate.value),
+      "MMM dd, yyyy"
+    );
+  }
 
   const logData = {
-    serviceDate: formattedServiceDate,
+    serviceDate:
+      newLog.value.type != "preventative" || editingLog
+        ? formattedServiceDate
+        : null,
+    scheduledDate:
+      newLog.value.type === "preventative" ? formattedScheduledDate : null,
     performedBy: newLog.value.performedBy,
     notes: newLog.value.notes,
+    description: newLog.value.description,
     serializedAssetId: selectedSerializedAssetId.value.key,
     isPreventative: newLog.value.type === "preventative",
     isRepair: newLog.value.type === "repair",
@@ -165,32 +221,21 @@ const saveLog = async () => {
   }
 };
 
-const deleteLog = async (logId) => {
-  try {
-    await LogServices.delete(logId);
-    snackbarText.value = "Maintenance Log deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrieveLogs();
-    logs.value = logs.value.filter((t) => t.logId !== logId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting log.";
-  }
-};
-
 function resetLogForm() {
   newLog.value = {
     serializedAssetId: "",
     serviceDate: null,
+    scheduledDate: null,
     performedBy: "",
     notes: "",
+    description: "",
     isPreventative: false,
     isRepair: false,
     isUpgrade: false,
   };
   selectedSerializedAssetId.value = "";
   rawServiceDate.value = null;
+  rawScheduledDate.value = null;
 }
 
 const openAddLogDialog = () => {
@@ -205,7 +250,7 @@ const closeLogDialog = () => {
   editingLog.value = false;
 };
 
-const baseMaintenanceHeaders = ref([
+const pastHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
   { title: "Date Performed", key: "serviceDate" },
   { title: "Performed By", key: "performedBy" },
@@ -213,29 +258,39 @@ const baseMaintenanceHeaders = ref([
   { title: "View Notes", key: "view" },
 ]);
 
+const upcomingHeaders = ref([
+  { title: "Serialized Asset", key: "serializedAssetName" },
+  { title: "Scheduled Date", key: "scheduledDate" },
+  { title: "Type", key: "type" },
+  { title: "View Description", key: "view" },
+]);
+
 const dynamicHeaders = computed(() => {
-  const headers = [...baseMaintenanceHeaders.value];
+  const headers = selectedTab.value === "Upcoming" ? 
+    [...upcomingHeaders.value] :
+    [...pastHeaders.value];
 
   if (store.getters.canEdit) {
     headers.push({ title: "Edit", key: "edit", sortable: false });
   }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
+  if(store.getters.canDelete) {
+    headers.push({title: "Delete", key: "delete", sortable: false});
   }
 
   return headers;
 });
 
 const filteredLogs = computed(() => {
-  let result = logs.value;
+  let result = logsCopy.value;
 
   // Further filter by search query if present
-  if (searchQuery.value) {
-    result = result.filter((log) =>
-      `${log.serializedAssetName}`
-        .toLowerCase()
-        .includes(searchQuery.value.toLowerCase())
+  if (searchQuery.value || selectPrev.value) {
+    result = result.filter(
+      (log) =>
+        `${log.serializedAssetName}`
+          .toLowerCase()
+          .includes(searchQuery.value.toLowerCase()) &&
+        (!selectPrev.value || (log.isPreventative && log.serviceDate == null)) // Filter by preventative if selected
     );
   }
 
@@ -257,48 +312,8 @@ const scrollToLog = () => {
   }
 };
 
-const highlightText = (text) => {
-  if (!text) return "";
-  const lowerSearchQuery = searchQuery.value.toLowerCase();
-  if (!lowerSearchQuery) return text;
-  const regex = new RegExp(`(${lowerSearchQuery})`, "gi");
-  return text.replace(regex, '<mark class="custom-highlight">$1</mark>');
-};
-
-const highlightedLogs = computed(() => {
-  return filteredLogs.value.map((log) => ({
-    ...log,
-    serializedAssetName: highlightText(log.serializedAssetName)
-  }));
-});
-
-const hasLogChanged = computed(() => {
-  const isNewLogChanged = Object.keys(newLog.value).some(
-    (key) => newLog.value[key] !== originalLog.value[key]
-  );
-  const isSerializedAssetChanged =
-    selectedSerializedAssetId.value.key !== originalLog.value.serializedAssetId;
-  return isNewLogChanged || isSerializedAssetChanged;
-});
-
-// Misc Section
-
 const formatDate = (dateString) => {
   return moment.utc(dateString).format("MMM DD, YYYY");
-};
-
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "log") {
-    await deleteLog(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-  await retrieveLogs();
 };
 
 const openShowNotesDialog = (item) => {
@@ -306,20 +321,41 @@ const openShowNotesDialog = (item) => {
   showNotesDialog.value = true;
 };
 
-// Computed property for display
-const formattedServiceDate = computed(() => {
-  if (rawServiceDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawServiceDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
+const openDeleteDialog = (item) => {
+  itemToDisplay.value = item;
+  showDeleteDialog.value = true;
+}
+
+const deleteLog = async() => {
+  const id = itemToDisplay.value.key;
+  await logServices.delete(id);
+  showDeleteDialog.value = false;
+  await retrieveLogs()
+}
+
+const searchByDate = () => {
+  logsCopy.value = logs.value.filter((log) => {
+    if(selectedTab.value === "Upcoming"){
+      return formatDate(log.scheduledDate) === formatDate(searchDate.value)
+    }
+    else{
+      return formatDate(log.serviceDate) === formatDate(searchDate.value)
+    }
+  })
+
+}
+const clearDate = () => {
+  switchTab();
+}
+
+const switchTab = () => {
+  logsCopy.value = selectedTab.value === "Upcoming" ? upcomingLogs.value : pastLogs.value;
+}
 
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await retrieveLogs();
   await retrieveSerializedAssets();
-  console.log("Known issues: editing not 100%");
 });
 </script>
 
@@ -336,9 +372,33 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row class="my-1"></v-row>
+      <v-row class="my-1">
+        <v-col cols="6">
+            <v-tabs v-model="selectedTab" background-color="primary" dark dense @update:modelValue="switchTab">
+              <v-tab value="Upcoming" color="primary">
+                <v-icon left class="mr-2">mdi-lightning-bolt</v-icon>
+                Upcoming
+              </v-tab>
+              <v-tab value="Completed" color="primary">
+                <v-icon left class="mr-2">mdi-archive</v-icon>
+                Completed
+              </v-tab>
+            </v-tabs>
+            
+          </v-col>
+          <v-col cols="6" align="right">
+            <v-btn
+              v-if="canAdd"
+              color="primary"
+              class="ma-2"
+              @click="openAddLogDialog()"
+            >
+              Record Maintenance
+            </v-btn>
+          </v-col>
+      </v-row>
 
-      <v-row>
+      <v-row class="ma-0">
         <!-- Right align the search filter by using offset -->
         <v-col cols="12" md="8" offset-md="0">
           <v-text-field
@@ -349,60 +409,89 @@ onMounted(async () => {
             dense
             clearable
             @input="scrollToLog"
-            class="pt-0"
+            class="pa-0"
           ></v-text-field>
+        </v-col>
+        <v-col cols="12" md="4">
+          <v-date-input
+            v-model="searchDate"
+            clearable
+            label="Search by Date"
+            variant="outlined"
+            color="blue"
+            prepend-icon="mdi-calendar"
+            @update:modelValue="searchByDate"
+            @click:clear="clearDate"
+          ></v-date-input>
         </v-col>
       </v-row>
 
-      <v-row>
-        <v-col cols="12">
+      <v-row class="ma-0" v-if="dataLoaded"> 
+        <v-col class="ma-0" cols="12">
           <v-fade-transition mode="out-in">
             <div>
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
-                  <span>Full Maintenance History</span>
+                  <span v-if="selectedTab === 'Upcoming'">Upcoming Maintenance</span>
+                  <span v-else>Completed Maintenance</span>
+
                   <template v-if="canAdd">
-                    <v-btn
-                      color="primary"
-                      class="ma-2"
-                      @click="openAddLogDialog()"
-                    >
-                      Record Maintenance
-                    </v-btn>
+                    
                   </template>
                 </v-card-title>
                 <v-card-text>
                   <v-data-table
                     :headers="dynamicHeaders"
-                    :items="highlightedLogs"
+                    :items="filteredLogs"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="logSortBy"
                   >
                     <template v-slot:item.serializedAssetName="{ item }">
                       <span v-html="item.serializedAssetName"></span>
                     </template>
                     <template v-slot:item.serviceDate="{ item }">
-                      <td>{{ formatDate(item.serviceDate) }}</td>
+                      <td>
+                        {{
+                          item.serviceDate == null
+                            ? null
+                            : formatDate(item.serviceDate)
+                        }}
+                      </td>
+                    </template>
+                    <template v-slot:item.scheduledDate="{ item }">
+                      <td>
+                        {{
+                          item.scheduledDate == null
+                            ? null
+                            : formatDate(item.scheduledDate)
+                        }}
+                      </td>
                     </template>
                     <template v-slot:item.type="{ item }">
-    <td>
-      <span v-if="item.isPreventative">Preventative</span>
-      <span v-else-if="item.isRepair">Repair</span>
-      <span v-else-if="item.isUpgrade">Upgrade</span>
-    </td>
-  </template>
+                      <td>
+                        <span v-if="item.isPreventative">Preventative</span>
+                        <span v-else-if="item.isRepair">Repair</span>
+                        <span v-else-if="item.isUpgrade">Upgrade</span>
+                      </td>
+                    </template>
                     <template v-slot:item.view="{ item }">
-                      <v-btn icon class="table-icons" 
-                      @click="openShowNotesDialog({
+                      <v-btn
+                        icon
+                        class="table-icons"
+                        @click="
+                          openShowNotesDialog({
                             id: item.key,
                             type: 'log',
                             notes: item.notes,
                             serializedAssetName: item.serializedAssetName,
-                            serviceDate: item.serviceDate
-                      })">
+                            serviceDate: item.serviceDate,
+                            scheduledDate: item.scheduledDate,
+                            description: item.description,
+                          })
+                        "
+                      >
                         <v-icon>mdi-note-text</v-icon>
                       </v-btn>
                     </template>
@@ -412,17 +501,8 @@ onMounted(async () => {
                       </v-btn>
                     </template>
                     <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'log',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
+                      <v-btn icon class="table-icons" @click="openDeleteDialog(item)">
+                        <v-icon>mdi-trash-can</v-icon>
                       </v-btn>
                     </template>
                   </v-data-table>
@@ -431,6 +511,13 @@ onMounted(async () => {
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 
@@ -456,12 +543,55 @@ onMounted(async () => {
                     v-model="selectedSerializedAssetId"
                     item-text="title"
                     item-value="key"
-                    :rules="[rules.required]"
+                    :rules="[rules.requiredSelectedAsset]"
                     clearable
                     return-object
                   ></v-autocomplete>
                 </v-col>
                 <v-col cols="12">
+                  <v-textarea
+                    label="Description"
+                    variant="outlined"
+                    v-model="newLog.description"
+                    :rules="[rules.maxDescLength]"
+                    maxlength="255"
+                    :counter="255"
+                    prepend-icon="mdi-note"
+                  ></v-textarea>
+                </v-col>
+                <v-row>
+                  <v-col cols="12">
+                    <v-radio-group v-model="newLog.type" inline :disabled="editingLog">
+                      <v-radio
+                        label="Preventative"
+                        value="preventative"
+                      ></v-radio>
+                      <v-radio label="Repair" value="repair"></v-radio>
+                      <v-radio label="Upgrade" value="upgrade"></v-radio>
+                    </v-radio-group>
+                  </v-col>
+                </v-row>
+
+                <v-col v-if="newLog.type == 'preventative'" cols="12">
+                  Service Date
+                  <v-date-input
+                    v-model="rawScheduledDate"
+                    clearable
+                    label="Scheduled Date (PM)"
+                    variant="outlined"
+                    color="blue"
+                    :rules="[rules.requiredScheudledDate]"
+                  ></v-date-input>
+                </v-col>
+                <v-col
+                  v-if="
+                    editingLog ||
+                    (!editingLog &&
+                      newLog.type != 'preventative' &&
+                      newLog.type != null)
+                  "
+                  cols="12"
+                >
                   <v-text-field
                     label="Performed By"
                     variant="outlined"
@@ -472,44 +602,33 @@ onMounted(async () => {
                     counter
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12">
-                  <v-menu
-                    v-model="menu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedServiceDate"
-                        label="Service Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu = !menu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawServiceDate"
-                      @input="menu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                <v-col
+                  v-if="
+                    editingLog ||
+                    (!editingLog &&
+                      newLog.type != 'preventative' &&
+                      newLog.type != null)
+                  "
+                  cols="12"
+                >
+                  <v-date-input
+                    v-model="rawServiceDate"
+                    clearable
+                    label="Service Date"
+                    variant="outlined"
+                    color="blue"
+                    :rules="[rules.required]"
+                  ></v-date-input>
                 </v-col>
-                <v-row>
-  <v-col cols="12">
-    <v-radio-group v-model="newLog.type" row>
-      <v-radio label="Preventative" value="preventative"></v-radio>
-      <v-radio label="Repair" value="repair"></v-radio>
-      <v-radio label="Upgrade" value="upgrade"></v-radio>
-    </v-radio-group>
-  </v-col>
-</v-row>
-
-                <v-col cols="12">
+                <v-col
+                  v-if="
+                    editingLog ||
+                    (!editingLog &&
+                      newLog.type != 'preventative' &&
+                      newLog.type != null)
+                  "
+                  cols="12"
+                >
                   <v-textarea
                     label="Notes"
                     variant="outlined"
@@ -535,47 +654,41 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
+    <v-dialog v-model="showNotesDialog" max-width="600px">
       <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text
-          >Are you sure you want to delete this maintenance log?</v-card-text
-        >
+        <v-card-title class="justify-space-between" v-if="selectedTab === 'Upcoming'">
+          Description for {{ itemToDisplay.serializedAssetName }}
+        </v-card-title>
+        <v-card-title class="justify-space-between" v-else>
+          Notes for {{ itemToDisplay.serializedAssetName }}
+        </v-card-title>
+        <v-card-text>
+          {{ selectedTab === "Upcoming" ? itemToDisplay.description : itemToDisplay.notes }}
+        </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
+          <v-btn color="cancelgrey" text @click="showNotesDialog = false">
+            Close
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showNotesDialog" max-width="500px">
-  <v-card class="pa-4 rounded-xl">
-    <v-card-title class="justify-space-between">
-      Notes for {{ itemToDisplay.serializedAssetName }}
-    </v-card-title>
-    <v-card-text>
-      {{ itemToDisplay.notes }}
-    </v-card-text>
-    <v-card-actions>
-      <v-spacer></v-spacer>
-      <v-btn
-        color="cancelgrey"
-        text
-        @click="showNotesDialog = false"
-      >
-        Close
-      </v-btn>
-    </v-card-actions>
-  </v-card>
-</v-dialog>
+    <v-dialog v-model="showDeleteDialog" max-width="500px">
+      <v-card class="pa-4 rounded-xl">
+        <v-card-title class="justify-space-between"
+          >Confirm Archive</v-card-title
+        >
+        <v-card-text>Are you sure you want to delete this log? </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="cancelgrey" text @click="showDeleteDialog = false"
+            >Cancel</v-btn
+          >
+          <v-btn color="saveblue" text @click="deleteLog">Delete</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}

@@ -6,15 +6,43 @@ export default {
   create(data) {
     return apiClient.post(baseURL, data);
   },
-  getAll() {
-    return apiClient.get(baseURL);
+  getAll(activeStatus, checkoutStatus) {
+    let qString = "";
+    if (activeStatus || checkoutStatus) qString="?";
+    if (activeStatus!=null) qString+="activeStatus="+activeStatus+"&";
+    if (checkoutStatus!=null) qString+="checkoutStatus="+checkoutStatus;
+      return apiClient.get(baseURL+qString);
+  
   },
+  getAllForProfile(profileId) {
+    return apiClient.get(baseURL + "profile/" + `${profileId}`);
+  },
+
   getById(serializedAssetId) {
     return apiClient.get(baseURL + serializedAssetId);
   },
-  getSerializedAssetsByCategoryId(categoryId) {
-    return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`);
+
+  getBySearchFilters(searchKey = null, profileId = null, typeId = null, showArchived = false, categoryId = null){
+    let qString = "?";
+    if(searchKey) qString += `searchKey=${searchKey}&`
+    if(profileId) qString += `profileId=${profileId}&`
+    if(typeId) qString += `typeId=${typeId}&`
+    if(categoryId) qString += `categoryId=${categoryId}&`
+    qString += `showArchived=${showArchived}`
+
+    return apiClient.get(baseURL + `/search${qString}`);
   },
+
+  getSerializedAssetsByCategoryId(categoryId,activeStatus, checkoutStatus) {
+    let qString = "";
+    if (activeStatus || checkoutStatus) qString="?";
+    if (activeStatus!=null) qString+="activeStatus="+activeStatus+"&";
+    if (checkoutStatus!=null) qString+="checkoutStatus="+checkoutStatus;
+
+    return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`+qString)
+
+  },
+
   update(serializedAssetId, data) {
     return apiClient.put(baseURL + serializedAssetId, data);
   },

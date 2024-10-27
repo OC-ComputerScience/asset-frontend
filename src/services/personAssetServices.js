@@ -6,18 +6,29 @@ export default {
   create(data) {
     return apiClient.post(baseURL, data);
   },
-  getAll() {
+  getAll(checkedOut) {
+    if (checkedOut === true) {
+      return apiClient.get(baseURL + "?checkedOut=true");
+    }
     return apiClient.get(baseURL);
+  },
+  getAllRecent() {
+    return apiClient.get(baseURL+'recent');
   },
   getById(personAssetId) {
     return apiClient.get(baseURL + `${personAssetId}`);
   },
   getPersonAssetsBySerializedAssetId(serializedAssetId) {
-    console.log("PersonAsset services is getting all personAssets with serializedAssetId: " + serializedAssetId)
     return apiClient.get(baseURL + "bySerializedAsset/" + `${serializedAssetId}`);
   },
   getPersonAssetsByCategoryId(categoryId) {
     return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`);
+  },
+  getRecentByCategoryId(categoryId) {
+    return apiClient.get(baseURL + "byCategoryId/recent/" + `${categoryId}`);
+  },
+  getByPersonId(personId) {
+    return apiClient.get(`${baseURL}person/${personId}`);
   },
   update(personAssetId, data) {
     return apiClient.put(baseURL + `${personAssetId}`, data);

@@ -5,12 +5,14 @@
   "type": "module",
   "main": "main.js",
   "scripts": {
+    "build": "vite build",
+    "test:unit": "vitest --environment jsdom --root src/",
+    "test:e2e": "start-server-and-test preview :4173 'cypress run --e2e'",
+    "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore",
     "dev": "cross-env APP_ENV=development vite",
-    "build": "cross-env APP_ENV=production vite build",
-    "preview": "vite preview",
-    "bundle": "mkdir deploy && cp -r app server.js package.json package-lock.json .env deploy",
-    "test": "cypress run",
-    "test:open": "cypress open"
+ 
+    "test:e2e:dev": "start-server-and-test 'vite dev --port 4173' :4173 'cypress open --e2e'",
+    "bundle": "mv .env dist"
   },
   "repository": {
     "type": "git",
@@ -36,7 +38,7 @@
     "vite-plugin-vuetify": "^2.0.1",
     "vue": "^3.4.10",
     "vue-router": "^4.2.5",
-    "vuetify": "^3.5.15",
+    "vuetify": "^3.6.10",
     "vuex": "^4.1.0",
     "webfontloader": "^1.6.28"
   },

@@ -1,11 +1,19 @@
 <script setup>
 import { ref, watch, computed, onMounted } from "vue";
+import Utils from "../config/utils";
 import userServices from "../services/userServices";
 import userRoleServices from "../services/userRoleServices";
+import userUserRoleServices from "../services/userUserRoleServices"
 import assetCategoryServices from "../services/assetCategoryServices";
+
+
+// Refs for current user
+const currentUser = ref([]);
+currentUser.value = Utils.getStore("user");
 
 // Refs for Users tab
 const users = ref([]);
+const originalUsers = ref([])
 const userRoles = ref([]);
 const assetCategories = ref([]);
 const roleNames = ref([]);
@@ -23,13 +31,35 @@ const roles = ref([]);
 const newUserRole = ref({
   name: "",
   categoryId: null,
-  defaultCanAdd: false,
-  defaultCanEdit: false,
-  defaultCanDelete: false,
-  defaultCanArchive: false,
-  defaultCanActivate: false,
+  canAdd: false,
+  canEdit: false,
+  canDelete: false,
+  canArchive: false,
+  canActivate: false,
+  viewCheckOutIn: false,
+  viewServices: false,
+  viewMaintenance: false,
+  viewWarranties: false,
+  viewLeases: false,
+  viewReports: false,
+  viewManage: false,
+  viewAssets: false,
+  viewFacilities: false,
+  viewPeople: false,
+  viewUsers: false,
+  isAdmin: false,
+  isManager: false,
+  isWorker: false,
+  isUnassigned: false
 });
 const originalUserRole = ref({});
+
+const pickRole = ref([]);
+watch(pickRole, (newRole) => {
+  newUserRole.value.isAdmin = newRole === 'isAdmin';
+  newUserRole.value.isManager = newRole === 'isManager';
+  newUserRole.value.isWorker = newRole === 'isWorker';
+});
 
 const editingUserRole = ref(false);
 const showAddUserRoleDialog = ref(false);
@@ -39,14 +69,13 @@ const rules = {
   maxNameLength: (value) =>
     value.length <= 40 || "Name cannot exceed 40 characters",
 };
+const showServices = ref(true);
+const showManage = ref(true);
 
 // Refs for general use
 const selectedTab = ref("Users");
-const selectedStatus = ref("Active");
 const isUsersTabActive = computed(() => selectedTab.value === "Users");
 const isUserRolesTabActive = computed(() => selectedTab.value === "User Roles");
-const itemToDelete = ref(null);
-const showDeleteConfirmDialog = ref(false);
 
 // User Roles Section
 
@@ -58,12 +87,24 @@ const fetchUsersAndRoles = async () => {
     ]);
 
     users.value = usersResponse.data;
+    // Deep copy of users
     userRoles.value = rolesResponse.data;
 
+    if (currentUser.value.categoryId != 4) {
+      users.value = users.value.filter(user => user.userUserRoles.find(role => role.userRole.categoryId === currentUser.value.categoryId) || user.userUserRoles[0].userRole.name === 'Unassigned');
+    }
+    originalUsers.value = JSON.parse(JSON.stringify(users.value))
+    const rolesFiltered = ref([]);
+    rolesFiltered.value = rolesResponse.data;
+    if (currentUser.value.categoryId != 4) {
+      rolesFiltered.value = rolesFiltered.value.filter(role => role.categoryId === currentUser.value.categoryId || role.name === 'Unassigned');
+    }
+
     // Populate and sort roleNames
-    roleNames.value = rolesResponse.data
+    roleNames.value = rolesFiltered.value
       .map((role) => role.name)
       .sort((a, b) => a.localeCompare(b)); // Sorting the role names alphabetically
+
 
     roleNameToIdMap.value = rolesResponse.data.reduce((map, role) => {
       map[role.name] = role.id;
@@ -85,25 +126,115 @@ const fetchUsersAndRoles = async () => {
 
 // Batch update function
 const saveAllUserRoleChanges = async () => {
-  const updatePromises = Object.entries(changedUserRoles.value).map(
-    ([userId, roleId]) => {
-      return userServices.updateRole(userId, roleId);
-    }
-  );
-
+  let message = ""
   try {
-    await Promise.all(updatePromises);
-    snackbarText.value = "All role changes updated successfully";
-    snackbar.value = true;
-    fetchUsersAndRoles(); // Refresh data
-    showSaveAllConfirmDialog.value = false;
-    changedUserRoles.value = {}; // Reset role changes tracker
-  } catch (error) {
-    console.error("Failed to update role changes:", error);
-    snackbarText.value = "Failed to update role changes";
-    snackbar.value = true;
+    for (let index = 0; index < users.value.length; index++) {
+      let user = users.value[index]
+      let originalUser = originalUsers.value[index]
+      if (user.userUserRoles.length > originalUser.userUserRoles.length) {
+        await handleGreaterLength(user, originalUser)
+      } else if (user.userUserRoles.length < originalUser.userUserRoles.length) {
+        await handleLesserLength(user, originalUser)
+      } else {
+        await handleEqualLength(user, originalUser)
+      }
+    }
+    message = "All role changes updated successfully"
+  } catch (err) {
+    console.error(err)
+    message = "Failed to update role changes"
+  } finally {
+    await fetchUsersAndRoles()
+    showSaveAllConfirmDialog.value = false
+    snackbarText.value = message
+    snackbar.value = true
   }
-};
+}
+
+const handleGreaterLength = async (user, originalUser) => {
+  for (let i = 0; i < user.userUserRoles.length; i++) {
+    let role = user.userUserRoles[i]
+    if (i < originalUser.userUserRoles.length) {
+      let originalRole = originalUser.userUserRoles[i]
+      if (role.userRoleId === originalRole.userRoleId) {
+        continue
+      }
+      const roleId = findRoleId(role)
+      const data = {
+        userRoleId: roleId,
+        active: originalRole.active,
+        userId: originalRole.userId
+      }
+      await userUserRoleServices.update(originalRole.id, data)
+    } else {
+      const roleId = findRoleId(role)
+      const data = {
+        userRoleId: roleId,
+        active: 0,
+        userId: originalUser.id
+      }
+      await userUserRoleServices.create(data)
+    }
+  }
+}
+
+const handleLesserLength = async (user, originalUser) => {
+  for (let i = 0; i < originalUser.userUserRoles.length; i++) {
+    let role = originalUser.userUserRoles[i]
+    if (i in user.userUserRoles) {
+      let newRole = user.userUserRoles[i]
+      if (role.userRoleId === newRole.userRoleId) {
+        continue
+      }
+      const roleId = findRoleId(newRole)
+      const data = {
+        userRoleId: roleId,
+        active: role.active,
+        userId: role.userId
+      }
+      await userUserRoleServices.update(role.id, data)
+    } else {
+      await userUserRoleServices.delete(role.id)
+    }
+  }
+  if(user.userUserRoles.length === 0) {
+    const data = {
+      userRoleId: 2,
+      active: true,
+      userId: user.id
+    }
+    await userUserRoleServices.create(data)
+  }
+}
+
+const handleEqualLength = async (user, originalUser) => {
+  for (let i = 0; i < user.userUserRoles.length; i++) {
+    let role = user.userUserRoles[i]
+    let originalRole = originalUser.userUserRoles[i]
+    if (role.userRoleId === originalRole.userRoleId) {
+      continue
+    }
+    const roleId = findRoleId(role)
+    const data = {
+      userRoleId: roleId,
+      active: originalRole.active,
+      userId: originalRole.userId
+    }
+    await userUserRoleServices.update(originalRole.id, data)
+  }
+}
+
+const findRoleId = (role) => {
+  let roleId
+  if(!role.id){
+    let oldRole = userRoles.value.find((e) => e.name === role)
+    roleId = oldRole.id
+  }
+  else{
+    roleId = role.id
+  }
+  return roleId
+}
 
 const filteredUsers = computed(() => {
   if (!searchQuery.value) {
@@ -128,16 +259,21 @@ const scrollToUser = () => {
   }
 };
 
-const highlightedUsers = computed(() => {
-  return filteredUsers.value.map((user) => {
-    const fName = user.fName || ""; // Default to empty string if null
-    const lName = user.lName || "";
-    return {
-      ...user,
-      fullName: `${highlightText(fName)} ${highlightText(lName)}`, // Ensure null-safe operation
-    };
-  });
-});
+const highlightedUsers = ref([]);
+watch(
+  [filteredUsers, searchQuery],
+  ([newFilteredUsers]) => {
+    highlightedUsers.value = newFilteredUsers.map((user) => {
+      const fName = user.fName || ""; // Default to empty string if null
+      const lName = user.lName || "";
+      return {
+        ...user,
+        fullName: `${highlightText(fName)} ${highlightText(lName)}`, // Ensure null-safe operation
+      };
+    });
+  },
+  { deep: true, immediate: true }
+);
 
 const highlightText = (text) => {
   if (!text) return ""; // Return empty string if text is null or undefined
@@ -152,7 +288,8 @@ const highlightText = (text) => {
 
 // Computed property to check if there are changes
 const hasChanges = computed(() => {
-  return Object.keys(changedUserRoles.value).length > 0;
+  const hasChanged = users.value.userUserRoles === originalUsers.value.userUserRoles
+  return hasChanged
 });
 
 // Define headers for v-data-table.
@@ -177,6 +314,16 @@ const editUserRole = (role) => {
   originalUserRole.value = { ...role };
   editingUserRole.value = true;
   showAddUserRoleDialog.value = true;
+
+  if (newUserRole.value.isAdmin) {
+    pickRole.value = 'isAdmin';
+  } else if (newUserRole.value.isManager) {
+    pickRole.value = 'isManager';
+  } else if (newUserRole.value.isWorker) {
+    pickRole.value = 'isWorker';
+  } else {
+    pickRole.value = '';
+  }
 };
 
 const saveUserRole = async () => {
@@ -215,18 +362,24 @@ const updateUsersPermissions = async (updatedRole) => {
   const updatePromises = users.value
     .filter((user) => user.userRoleId === updatedRole.id)
     .map((user) => {
-      // Map each permission directly at the root level of the user object
       const updatedUserData = {
         ...user,
-        canActivate: updatedRole.defaultCanActivate,
-        canAdd: updatedRole.defaultCanAdd,
-        canArchive: updatedRole.defaultCanArchive,
-        canDelete: updatedRole.defaultCanDelete,
-        canEdit: updatedRole.defaultCanEdit,
-        canManageLeases: updatedRole.defaultCanManageLeases,
-        canManageMaintenance: updatedRole.defaultCanManageMaintenance,
-        canManageWarranties: updatedRole.defaultCanManageWarranties,
-        // Add other permissions as needed
+        canActivate: updatedRole.canActivate,
+        canAdd: updatedRole.canAdd,
+        canArchive: updatedRole.canArchive,
+        canDelete: updatedRole.canDelete,
+        canEdit: updatedRole.canEdit,
+        viewCheckOutIn: updatedRole.viewCheckOutIn,
+        viewServices: updatedRole.viewServices,
+        viewMaintenance: updatedRole.viewMaintenance,
+        viewWarranties: updatedRole.viewWarranties,
+        viewLeases: updatedRole.viewLeases,
+        viewReports: updatedRole.viewReports,
+        viewManage: updatedRole.viewManage,
+        viewAssets: updatedRole.viewAssets,
+        viewFacilities: updatedRole.viewFacilities,
+        viewPeople: updatedRole.viewPeople,
+        viewUsers: updatedRole.viewUsers
       };
 
       // Call the update API
@@ -244,38 +397,6 @@ const updateUsersPermissions = async (updatedRole) => {
   }
 };
 
-const deleteUserRole = async (roleId) => {
-  try {
-    await userRoleServices.delete(roleId); // Use the delete method from your services
-    snackbarText.value = "Role deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    await retrieveUserRoles(); // Refresh the list of roles after deletion
-    removeRoleFromRefs(roleId); // Refresh role names and maps
-    showDeleteConfirmDialog.value = false; // Close the confirmation dialog
-    itemToDelete.value = null; // Reset the itemToDelete
-  } catch (error) {
-    console.error(`Failed to delete role with ID ${roleId}:`, error);
-    // Handle the error appropriately, e.g., showing an error message to the user
-  }
-};
-
-const removeRoleFromRefs = (roleId) => {
-  const roleIndex = roles.value.findIndex((role) => role.id === roleId);
-  if (roleIndex > -1) {
-    // Remove role from roles array
-    roles.value.splice(roleIndex, 1);
-
-    // Update roleNames and roleNameToIdMap
-    roleNames.value = roles.value
-      .map((role) => role.name)
-      .sort((a, b) => a.localeCompare(b));
-    roleNameToIdMap.value = roles.value.reduce((map, role) => {
-      map[role.name] = role.id;
-      return map;
-    }, {});
-  }
-};
-
 const hasUserRoleChanged = computed(() => {
   // Compare each property of newUserRole with originalUserRole to check for changes
   return Object.keys(newUserRole.value).some(
@@ -289,14 +410,26 @@ const closeUserRoleDialog = () => {
   newUserRole.value = {
     name: "",
     categoryId: null,
-    defaultCanAdd: false,
-    defaultCanEdit: false,
-    defaultCanDelete: false,
-    defaultCanArchive: false,
-    defaultCanActivate: false,
-    defaultCanManageMaintenance: false,
-    defaultCanManageWarranties: false,
-    defaultCanManageLeases: false,
+    canAdd: false,
+    canEdit: false,
+    canDelete: false,
+    canArchive: false,
+    canActivate: false,
+    viewCheckOutIn: false,
+    viewServices: false,
+    viewMaintenance: false,
+    viewWarranties: false,
+    viewLeases: false,
+    viewReports: false,
+    viewManage: false,
+    viewAssets: false,
+    viewFacilities: false,
+    viewPeople: false,
+    viewUsers: false,
+    isAdmin: false,
+    isManager: false,
+    isWorker: false,
+    isUnassigned: false
   };
   editingUserRole.value = false; // Reset the editing state
 };
@@ -322,39 +455,59 @@ const retrieveAssetCategories = async () => {
   }
 };
 
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value) {
-    await deleteUserRole(itemToDelete.value.id);
-    showDeleteConfirmDialog.value = false;
-    itemToDelete.value = null; // Reset
-  }
-};
-
 const resetForm = () => {
   newUserRole.value = {
     name: "",
     categoryId: null,
-    defaultCanAdd: false,
-    defaultCanEdit: false,
-    defaultCanDelete: false,
-    defaultCanArchive: false,
-    defaultCanActivate: false,
-    defaultCanManageMaintenance: false,
-    defaultCanManageWarranties: false,
-    defaultCanManageLeases: false,
+    canAdd: false,
+    canEdit: false,
+    canDelete: false,
+    canArchive: false,
+    canActivate: false,
+    viewCheckOutIn: false,
+    viewServices: false,
+    viewMaintenance: false,
+    viewWarranties: false,
+    viewLeases: false,
+    viewReports: false,
+    viewManage: false,
+    viewAssets: false,
+    viewFacilities: false,
+    viewPeople: false,
+    viewUsers: false,
+    isAdmin: false,
+    isManager: false,
+    isWorker: false,
+    isUnassigned: false
   };
   validUserRole.value = false; // Reset validation state
   editingUserRole.value = false; // Ensure we're not in editing mode
 };
 
+function toggleServices() {
+  showServices.value = !showServices.value;
+}
+
+function onChangeViewServices() {
+  newUserRole.value.viewMaintenance = newUserRole.value.viewServices
+  newUserRole.value.viewLeases = newUserRole.value.viewServices
+  newUserRole.value.viewWarranties = newUserRole.value.viewServices
+}
+
+function toggleManage() {
+  showManage.value = !showManage.value;
+}
+
+function onChangeViewManage() {
+  newUserRole.value.viewAssets = newUserRole.value.viewManage
+  newUserRole.value.viewFacilities = newUserRole.value.viewManage
+  newUserRole.value.viewPeople = newUserRole.value.viewManage
+  newUserRole.value.viewUsers = newUserRole.value.viewManage
+}
+
 // Watcher for the "Users" tab
 watch(
-  [users, isUsersTabActive],
+  [highlightedUsers, isUsersTabActive],
   ([newUsers, isUsersActive]) => {
     if (isUsersActive) {
       newUsers.forEach((user) => {
@@ -383,12 +536,38 @@ watch(isUserRolesTabActive, async (isActive) => {
   }
 });
 
+// Watcher for checkboxes variables in User Roles tab
+watch(newUserRole, (newRole) => {
+
+  //Checkbox related to Services
+  //Check Services if at least one of its subcategories are checked
+  if (newRole.viewMaintenance || newRole.viewLeases || newRole.viewWarranties) {
+    newRole.viewServices = true;
+  }
+  //Uncheck Services if all its subcategories are unchecked
+  if (!newRole.viewMaintenance & !newRole.viewLeases & !newRole.viewWarranties) {
+    newRole.viewServices = false;
+  }
+
+  //Checkbox related to Manage
+  //Check Manage if at least one of its subcategories are checked
+  if (newRole.viewAssets || newRole.viewFacilities || newRole.viewPeople || newRole.viewUsers) {
+    newRole.viewManage = true;
+  }
+  //Uncheck Manage if all its subcategories are unchecked
+  if (!newRole.viewAssets & !newRole.viewFacilities & !newRole.viewPeople & !newRole.viewUsers) {
+    newRole.viewManage = false;
+  }
+
+}, { deep: true });
+
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await fetchUsersAndRoles();
   await retrieveUserRoles();
   await retrieveAssetCategories();
 });
+
 </script>
 
 <template>
@@ -423,15 +602,8 @@ onMounted(async () => {
 
       <div v-if="selectedTab === 'Users'">
         <v-col cols="12" md="8">
-          <v-text-field
-            v-model="searchQuery"
-            label="Search by Name"
-            variant="outlined"
-            dense
-            clearable
-            @input="scrollToUser"
-            class="pt-0"
-          ></v-text-field>
+          <v-text-field v-model="searchQuery" label="Search by Name" variant="outlined" dense clearable
+            @input="scrollToUser" class="pt-0"></v-text-field>
         </v-col>
       </div>
       <v-row>
@@ -442,39 +614,34 @@ onMounted(async () => {
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                   <span>Role Assignment</span>
-                  <v-btn
-                    color="saveblue"
-                    class="ma-2"
-                    @click="showSaveAllConfirmDialog = true"
-                    :disabled="!hasChanges"
-                  >
+                  <v-btn color="saveblue" class="ma-2" @click="showSaveAllConfirmDialog = true" :disabled="!currentUser.canEdit">
                     Save All Changes
                   </v-btn>
                 </v-card-title>
                 <v-card-text>
-                  <v-data-table
-                    :headers="userHeaders"
-                    :items="highlightedUsers"
-                    item-key="id"
-                    class="elevation-1"
-                    :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                  <v-data-table 
+                    :headers="userHeaders" 
+                    :items="filteredUsers" 
+                    item-key="id" 
+                    :items-per-page="5" 
+                    :items-per-page-options="[5, 10, 20, 50]" 
                     v-model:sort-by="usersSortBy"
                   >
                     <template v-slot:item="{ item }">
-                      <tr
-                        :data-user-name="`${item.fName.toLowerCase()} ${item.lName.toLowerCase()}`"
-                      >
+                      <tr :data-user-name="`${item.fName.toLowerCase()} ${item.lName.toLowerCase()}`">
                         <td v-html="item.fullName"></td>
                         <td>
-                          <v-autocomplete
-                            v-model="item.selectedRoleName"
-                            :items="roleNames"
+                          <v-autocomplete 
+                            v-model="item.userUserRoles" 
+                            :items="roleNames" 
+                            item-title="userRole.name"
                             label="Select Role"
-                            class="select-fixed-width"
-                            variant="solo"
-                            return-object
-                            clearable
+                            class="mt-4" 
+                            variant="solo" 
+                            chips
+                            :closable-chips="currentUser.canEdit"
+                            multiple
+                            :readonly="!currentUser.canEdit"
                           ></v-autocomplete>
                         </td>
                       </tr>
@@ -489,44 +656,21 @@ onMounted(async () => {
               <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                   <span>User Roles</span>
-                  <v-btn
-                    color="primary"
-                    class="ma-2"
-                    @click="
-                      resetForm(),
-                        (showAddUserRoleDialog = true),
-                        (editingUserRole = false)
-                    "
+                  <v-btn 
+                    color="primary" 
+                    class="ma-2" 
+                    @click="resetForm(), (showAddUserRoleDialog = true), (editingUserRole = false)"
                   >
                     Add New Role
                   </v-btn>
                 </v-card-title>
                 <v-card-text>
-                  <v-data-table
-                    :headers="userRoleHeaders"
-                    :items="roles"
-                    item-key="id"
-                    class="elevation-1"
-                    :items-per-page="10"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
-                    v-model:sort-by="userRolesSortBy"
-                  >
+                  <v-data-table :headers="userRoleHeaders" :items="roles" item-key="id" 
+                    :items-per-page="10" :items-per-page-options="[5, 10, 20, 50]"
+                    v-model:sort-by="userRolesSortBy">
                     <template v-slot:item.actions="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="editUserRole(item)"
-                        v-if="item.id !== 1"
-                      >
+                      <v-btn icon class="table-icons" @click="editUserRole(item)" v-if="item.id !== 1">
                         <v-icon>mdi-pencil</v-icon>
-                      </v-btn>
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="() => openDeleteConfirmDialog(item)"
-                        v-if="item.id !== 1"
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
                       </v-btn>
                     </template>
                   </v-data-table>
@@ -542,75 +686,66 @@ onMounted(async () => {
     <v-dialog v-model="showAddUserRoleDialog" max-width="600px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between">
-          {{ editingUserRole ? "Edit" : "Add" }} User Role</v-card-title
-        >
+          {{ editingUserRole ? "Edit" : "Add" }} User Role</v-card-title>
         <v-card-text>
           <v-form ref="formUserRole" v-model="validUserRole">
-            <v-text-field
-              label="Role Name"
-              variant="outlined"
-              v-model="newUserRole.name"
-              :rules="[rules.required, rules.maxNameLength]"
-              maxlength="40"
-              counter
-            ></v-text-field>
+            <v-text-field label="Role Name" variant="outlined" v-model="newUserRole.name"
+              :rules="[rules.required, rules.maxNameLength]" maxlength="40" counter></v-text-field>
             <!-- Category Selection -->
-            <v-autocomplete
-              label="Can View"
-              variant="outlined"
-              :items="assetCategories"
-              v-model="newUserRole.categoryId"
-              item-text="title"
-              item-value="categoryId"
-              :rules="[rules.required]"
-              clearable
-            ></v-autocomplete>
-            <v-checkbox
-              label="Add"
-              v-model="newUserRole.defaultCanAdd"
-            ></v-checkbox>
-            <v-checkbox
-              label="Edit"
-              v-model="newUserRole.defaultCanEdit"
-            ></v-checkbox>
-            <v-checkbox
-              label="Delete"
-              v-model="newUserRole.defaultCanDelete"
-            ></v-checkbox>
-            <v-checkbox
-              label="Archive"
-              v-model="newUserRole.defaultCanArchive"
-            ></v-checkbox>
-            <v-checkbox
-              label="Activate"
-              v-model="newUserRole.defaultCanActivate"
-            ></v-checkbox>
-            <v-checkbox
-              label="View Maintenance"
-              v-model="newUserRole.defaultCanManageMaintenance"
-            ></v-checkbox>
-            <v-checkbox
-              label="View Leases"
-              v-model="newUserRole.defaultCanManageLeases"
-            ></v-checkbox>
-            <v-checkbox
-              label="View Warranties"
-              v-model="newUserRole.defaultCanManageWarranties"
-            ></v-checkbox>
+            <v-autocomplete label="Department" variant="outlined" :items="assetCategories"
+              v-model="newUserRole.categoryId" item-text="title" item-value="categoryId" :rules="[rules.required]"
+              clearable></v-autocomplete>
+
+            <v-card-text class="font-weight-bold text-primary text-h6 mr-0 mb-1 pb-1">Position</v-card-text>
+            <v-col>
+              <v-radio-group v-model="pickRole" inline>
+                  <v-radio label="Administrator" value="isAdmin" class="mr-2"></v-radio>
+                  <v-radio label="Manager" value="isManager" class="mr-2
+                  "></v-radio>
+                  <v-radio label="Student Worker" value="isWorker"></v-radio>
+              </v-radio-group>
+            </v-col>
+            <v-card-text class="font-weight-bold text-primary text-h6 mr-0 mb-0 pb-0">Functionalities</v-card-text>
+            <v-col>
+              <v-checkbox class="font-weight-semi-bold" label="Add" v-model="newUserRole.canAdd"></v-checkbox>
+              <v-checkbox label="Edit" v-model="newUserRole.canEdit"></v-checkbox>
+              <v-checkbox label="Delete" v-model="newUserRole.canDelete"></v-checkbox>
+              <v-checkbox label="Archive" v-model="newUserRole.canArchive"></v-checkbox>
+              <v-checkbox label="Activate" v-model="newUserRole.canActivate"></v-checkbox>
+            </v-col>
+            <v-card-text class="font-weight-bold text-primary text-h6 mr-0 mb-0 pb-0">Menu Options</v-card-text>
+            <v-col>
+              <v-checkbox label="View Check out/in" v-model="newUserRole.viewCheckOutIn"></v-checkbox>
+              <v-row class="ml-0">
+                <v-checkbox label="View Services" v-model="newUserRole.viewServices" @update:modelValue="onChangeViewServices"></v-checkbox>
+                <v-icon size="large" color="primary" class="mt-4 ml-2" @click="toggleServices">{{ showServices ?
+            'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+              </v-row>
+              <v-col v-if="showServices" class="sub-checkboxes">
+                <v-checkbox label="View Maintenance" v-model="newUserRole.viewMaintenance"></v-checkbox>
+                <v-checkbox label="View Leases" v-model="newUserRole.viewLeases"></v-checkbox>
+                <v-checkbox label="View Warranties" v-model="newUserRole.viewWarranties"></v-checkbox>
+              </v-col>
+              <v-checkbox label="View Reports" v-model="newUserRole.viewReports"></v-checkbox>
+              <v-row class="ml-0">
+                <v-checkbox class="mb-0 pb-0" label="View Manage" v-model="newUserRole.viewManage" @update:modelValue="onChangeViewManage"></v-checkbox>
+                <v-icon size="large" color="primary" class="mt-4 ml-2" @click="toggleManage">{{ showManage ?
+            'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+              </v-row>
+              <v-col v-if="showManage" class="sub-checkboxes">
+                <v-checkbox label="View Assets" v-model="newUserRole.viewAssets"></v-checkbox>
+                <v-checkbox label="View Facilities" v-model="newUserRole.viewFacilities"></v-checkbox>
+                <v-checkbox label="View People" v-model="newUserRole.viewPeople"></v-checkbox>
+                <v-checkbox label="View Users" v-model="newUserRole.viewUsers"></v-checkbox>
+              </v-col>
+            </v-col>
           </v-form>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="cancelgrey" text @click="closeUserRoleDialog"
-            >Cancel</v-btn
-          >
-          <v-btn
-            color="saveblue"
-            text
-            :disabled="!validUserRole || !hasUserRoleChanged"
-            @click="saveUserRole"
-            >Save</v-btn
-          >
+          <v-btn color="cancelgrey" text @click="closeUserRoleDialog">Cancel</v-btn>
+          <v-btn color="saveblue" text :disabled="!validUserRole || !hasUserRoleChanged"
+            @click="saveUserRole">Save</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -622,11 +757,7 @@ onMounted(async () => {
         <v-card-text> Are you sure you want to save all changes? </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showSaveAllConfirmDialog = false"
-          >
+          <v-btn color="cancelgrey" text @click="showSaveAllConfirmDialog = false">
             Cancel
           </v-btn>
           <v-btn color="saveblue" text @click="saveAllUserRoleChanges">
@@ -636,31 +767,25 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text
-          >Are you sure you want to delete this user role?</v-card-text
-        >
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="() => confirmDelete()"
-            >Delete</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
     </v-snackbar>
   </div>
 </template>
+
+<style scoped>
+.sub-checkboxes {
+  position: relative;
+  padding-left: 20px;
+}
+
+.sub-checkboxes::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background-color: #801429;
+}
+</style>

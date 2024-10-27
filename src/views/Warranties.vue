@@ -15,10 +15,8 @@ const selectedSerializedAssetId = ref("");
 const editingWarranty = ref(false);
 const originalWarranty = ref({});
 const validWarranty = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -30,6 +28,7 @@ const startMenu = ref(false);
 const endMenu = ref(false);
 const startDate = ref(null);
 const endDate = ref(null);
+const dataLoaded = ref(false);
 
 const activeWarranties = computed(() => {
   return filteredWarranties.value.filter(
@@ -49,13 +48,14 @@ const canAdd = computed(() => {
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) =>
-    value.length <= 40 || "Name cannot exceed 40 characters",
+    value.length <= 40 || "Description cannot exceed 40 characters",
   onlyNumbers: (value) =>
     /^[0-9]{1,3}$/.test(value) || "Must be a number (max 3 digits)",
 };
 const newWarranty = ref({
   serializedAssetId: "",
-  warrantyType: "",
+  warrantyDescription: "",
+  warrantyNotes: "",
   length: "",
   startDate: null,
   endDate: null,
@@ -70,7 +70,8 @@ const retrieveWarranties = async () => {
     warranties.value = response.data.map((warranty) => ({
       key: warranty.warrantyId,
       serializedAssetId: warranty.serializedAssetId,
-      warrantyType: warranty.warrantyType,
+      warrantyDescription: warranty.warrantyDescription,
+      warrantyNotes: warranty.warrantyNotes,
       startDate: warranty.startDate,
       endDate: warranty.endDate,
       length: warranty.length,
@@ -79,6 +80,9 @@ const retrieveWarranties = async () => {
     }));
   } catch (error) {
     console.error("Error loading Warranties:", error);
+  }
+  finally {
+    dataLoaded.value = true;
   }
 };
 
@@ -109,7 +113,8 @@ const editWarranty = async (warranty) => {
   newWarranty.value = {
     key: warranty.key,
     serializedAssetId: warranty.serializedAssetId,
-    warrantyType: warranty.warrantyType,
+    warrantyDescription: warranty.warrantyDescription,
+    warrantyNotes: warranty.warrantyNotes,
     startDate: warranty.startDate,
     endDate: warranty.endDate,
     length: warranty.length,
@@ -130,6 +135,14 @@ const editWarranty = async (warranty) => {
   originalWarranty.value = { ...newWarranty.value };
 };
 
+function monthDiff(d1, d2) {
+  var months;
+  months = (d2.getFullYear() - d1.getFullYear()) * 12;
+  months -= d1.getMonth();
+  months += d2.getMonth();
+  return months <= 0 ? 0 : months;
+}
+
 const saveWarranty = async () => {
   let formattedStartDate = null;
   if (startDate.value) {
@@ -143,12 +156,18 @@ const saveWarranty = async () => {
     formattedEndDate = format(new Date(endDate.value), "MMM dd, yyyy");
   }
 
+  let lengthMonth = monthDiff(
+    new Date(startDate.value),
+    new Date(endDate.value)
+  );
+
   const warrantyData = {
     startDate: formattedStartDate,
     endDate: formattedEndDate,
-    length: newWarranty.value.length,
-    warrantyType: newWarranty.value.warrantyType,
+    length: lengthMonth,
+    warrantyDescription: newWarranty.value.warrantyDescription,
     serializedAssetId: selectedSerializedAssetId.value.key,
+    warrantyNotes: newWarranty.value.warrantyNotes,
   };
 
   try {
@@ -176,22 +195,6 @@ const saveWarranty = async () => {
     editingWarranty.value = false;
     showAddWarrantyDialog.value = false;
     resetWarrantyForm(); // Reset the form fields
-  }
-};
-
-const deleteWarranty = async (warrantyId) => {
-  try {
-    await WarrantyServices.delete(warrantyId);
-    snackbarText.value = "Warranty deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrieveWarranties();
-    warranties.value = warranties.value.filter(
-      (t) => t.warrantyId !== warrantyId
-    );
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting warranty.";
   }
 };
 
@@ -234,7 +237,8 @@ function resetWarrantyForm() {
     startDate: null,
     endDate: null,
     length: "",
-    warrantyType: "",
+    warrantyDescription: "",
+    warrantyNotes: "",
   };
   selectedSerializedAssetId.value = "";
   startDate.value = null;
@@ -257,7 +261,7 @@ const closeWarrantyDialog = () => {
 
 const baseWarrantyHeaders = ref([
   { title: "Serialized Asset", key: "serializedAssetName" },
-  { title: "Warranty Type", key: "warrantyType" },
+  { title: "Warranty Description", key: "warrantyDescription" },
   { title: "Length", key: "length" },
   { title: "Start Date", key: "startDate" },
   { title: "End Date", key: "endDate" },
@@ -285,10 +289,6 @@ const archivedWarrantyHeaders = computed(() => {
 
   if (store.getters.canActivate) {
     headers.push({ title: "Activate", key: "activate", sortable: false });
-  }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
   }
 
   return headers;
@@ -362,18 +362,6 @@ const formatLength = (length) => {
   return `${length} mo.`;
 };
 
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  await deleteWarranty(itemToDelete.value.id);
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-  await retrieveWarranties();
-};
-
 const openArchiveDialog = (item) => {
   itemToArchive.value = item;
   showArchiveDialog.value = true;
@@ -419,9 +407,6 @@ const formattedEndDate = computed(() => {
 onMounted(async () => {
   await retrieveWarranties();
   await retrieveSerializedAssets();
-  console.log(
-    "Known issues: Search by serialized Asset not working, edit function not 100%, warranties should be sorted by closes to end date (maybe)"
-  );
 });
 </script>
 
@@ -469,7 +454,7 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active warranties -->
@@ -490,11 +475,10 @@ onMounted(async () => {
                 <v-card-text>
                   <v-data-table
                     :headers="activeWarrantyHeaders"
-                    :items="highlightedWarranties"
+                    :items="activeWarranties"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="warrantySortBy"
                   >
                     <template v-slot:item.serializedAssetName="{ item }">
@@ -547,9 +531,8 @@ onMounted(async () => {
                     :headers="archivedWarrantyHeaders"
                     :items="archivedWarranties"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="warrantySortBy"
                   >
                     <template v-slot:item.length="{ item }">
@@ -583,25 +566,19 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 
@@ -634,85 +611,48 @@ onMounted(async () => {
                 </v-col>
                 <v-col cols="12">
                   <v-text-field
-                    label="Warranty Name"
+                    label="Warranty Description"
                     variant="outlined"
                     prepend-icon="mdi-account"
-                    v-model="newWarranty.warrantyType"
+                    v-model="newWarranty.warrantyDescription"
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
                   ></v-text-field>
                 </v-col>
+                <v-col cols="12">
+                  <v-textarea
+                    label="Warranty Notes"
+                    variant="outlined"
+                    prepend-icon="mdi-account"
+                    v-model="newWarranty.warrantyNotes"
+                    maxlength="255"
+                    counter
+                  ></v-textarea>
+                </v-col>
 
                 <!-- Start Date Picker -->
                 <v-col cols="12">
-                  <v-menu
-                    v-model="startMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedStartDate"
-                        label="Start Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="startMenu = !startMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="startDate"
-                      @input="startMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
-                </v-col>
-
-                <!-- Warranty Length Field -->
-                <v-col cols="12">
-                  <v-text-field
-                    label="Length (months)"
+                  <v-date-input
+                    v-model="startDate"
+                    clearable
+                    label="Warranty Start Date"
                     variant="outlined"
-                    prepend-icon="mdi-clock"
-                    v-model="newWarranty.length"
-                    :rules="[rules.required, rules.onlyNumbers]"
-                    maxlength="3"
-                    counter
-                  ></v-text-field>
+                    color="blue"
+                    :rules="[rules.required]"
+                  ></v-date-input>
                 </v-col>
 
                 <!-- End Date Picker -->
                 <v-col cols="12">
-                  <v-menu
-                    v-model="endMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedEndDate"
-                        label="End Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="endMenu = !endMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="endDate"
-                      @input="endMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="endDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                    :rules="[rules.required]"
+                  ></v-date-input>
                 </v-col>
 
                 <v-col cols="12"> </v-col>
@@ -736,26 +676,6 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text
-          >Are you sure you want to delete this warranty?</v-card-text
-        >
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
     <!-- Confirm Archive Dialog -->
     <v-dialog v-model="showArchiveDialog" max-width="500px">
       <v-card class="pa-4 rounded-xl">

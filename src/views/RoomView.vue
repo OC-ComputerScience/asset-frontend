@@ -35,6 +35,7 @@ const retrieveRoomAssets = async () => {
       checkinDate: roomAsset.checkinDate,
       checkedInBy: roomAsset.checkedInBy,
       checkoutStatus: roomAsset.checkoutStatus,
+      expectedCheckinDate: roomAsset.expectedCheckinDate,
     }));
   } catch (error) {
     console.error("Error loading roomAssets:", error);
@@ -62,7 +63,6 @@ const retrieveBuildingDetails = async () => {
       roomDetails.value.buildingId
     );
     buildingDetails.value = response.data;
-    console.log("retrieved building details succesfully");
   } catch (error) {
     console.error("Error loading building details:", error);
     message.value = "Failed to load building details.";
@@ -126,7 +126,6 @@ watch(selectedTime, (statusValue) => {
 
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
-  console.log("Received source page: " + sourcePage);
   await retrieveRoomDetails();
   await retrieveBuildingDetails();
   await retrieveRoomAssets();
@@ -150,7 +149,6 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <!-- Introducing a spacer row for visual separation -->
       <v-row class="my-1"></v-row>
 
       <v-row>
@@ -176,9 +174,8 @@ onMounted(async () => {
                     :headers="currentRoomHeaders"
                     :items="filterRoomAssetsByRoomId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">
@@ -205,9 +202,8 @@ onMounted(async () => {
                     :headers="pastRoomHeaders"
                     :items="filterRoomAssetsByRoomId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">

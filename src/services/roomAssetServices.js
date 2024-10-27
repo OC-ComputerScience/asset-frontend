@@ -6,8 +6,14 @@ export default {
   create(data) {
     return apiClient.post(baseURL, data);
   },
-  getAll() {
+  getAll(checkedOut) {
+    if (checkedOut === true) {
+      return apiClient.get(baseURL + "?checkedOut=true");
+    }
     return apiClient.get(baseURL);
+  },
+  getAllRecent() {
+    return apiClient.get(baseURL+"recent ");
   },
   getById(roomAssetId) {
     return apiClient.get(baseURL + `${roomAssetId}`);
@@ -18,6 +24,9 @@ export default {
 
   getRoomAssetsByCategoryId(categoryId) {
     return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`);
+  },
+  getRecentByCategoryId(categoryId) {
+    return apiClient.get(baseURL + "byCategoryId/recent/" + `${categoryId}`);
   },
 
   update(roomAssetId, data) {

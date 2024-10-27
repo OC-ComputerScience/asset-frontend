@@ -1,78 +1,173 @@
 <script setup>
 import PersonServices from "../services/personServices";
+import RoomServices from "../services/roomServices";
 import { ref, onMounted, watch, computed } from "vue";
 import router from "../router";
 import { useStore } from "vuex";
+import { formatInTimeZone } from "date-fns-tz";
 
 const message = ref("");
+const messageText = ref("");
 const selectedTab = ref("People");
 const selectedStatus = ref("Active");
 const people = ref([]);
+const rooms = ref([]);
 const showAddPersonDialog = ref(false);
 const editingPerson = ref(false);
 const originalPerson = ref({});
 const validPerson = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
 const snackbarText = ref("");
-const personSortBy = ref([{ key: "title", order: "asc" }]);
+const personSortBy = ref([{ key: "fName", order: "asc" }]);
 const searchQuery = ref("");
+const dataLoaded = ref(false);
 const store = useStore();
 const canAdd = computed(() => {
   return store.getters.canAdd;
 });
+const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) =>
-    value.length <= 40 || "Name cannot exceed 40 characters",
-  maxCounter: (value) => value.length <= 7,
+    value == null || value.length <= 40 || "Name cannot exceed 40 characters",
+  maxCounter: (value) => value == null || value.length <= 7,
   minCounter: (value) =>
-    value.length >= 7 || "ID number must be 7 numbers long",
+    value == null || value.length >= 7 || "ID number must be 7 numbers long",
   idNumber: (value) =>
-    /^[0-9]{7}$/.test(value) || "ID number must contain only numbers",
+    value == null ||
+    /^[0-9]{7}$/.test(value) ||
+    "ID number must contain only numbers",
   email: (value) => {
-    const pattern = /^[a-zA-Z]+(?:\.[a-zA-Z]+)?@(?:eagles\.)?oc\.edu$/;
-    return pattern.test(value) || "e-mail must be eagles.oc.edu or oc.edu.";
+    return (
+      value == null ||
+      pattern.test(value) ||
+      "e-mail must be eagles.oc.edu or oc.edu."
+    );
   },
 };
 const newPerson = ref({
-  title: "",
+  formatInTimeZone: "",
   lName: "",
   email: "",
   idNumber: "",
+  roomId: null,
 });
 
 // People Section
 
 // Retrieve People from Database
+
 const retrievePeople = async () => {
   try {
     const response = await PersonServices.getAll();
     people.value = response.data.map((person) => ({
-      title: person.fName,
+      fName: person.fName,
       key: person.personId,
       lName: person.lName,
       email: person.email,
       idNumber: person.idNumber,
+      roomId: person.roomId,
       activeStatus: person.activeStatus,
     }));
   } catch (error) {
     console.error("Error loading people:", error);
   }
+  finally {
+    dataLoaded.value = true;
+  }
+};
+
+const retrieveRooms = async () => {
+  try {
+    const response = await RoomServices.getAll();
+    rooms.value = response.data || [];
+    rooms.value.forEach((room) => {
+      room.roomName =
+        room.building.abbreviation +
+        "-" +
+        room.roomNo +
+        " " +
+        room.building.name;
+    });
+    rooms.value.sort((a, b) => a.roomName.localeCompare(b.roomName));
+  } catch (error) {
+    console.error("Error loading rooms:", error);
+  }
+};
+
+const getOCPerson = async () => {
+  let roomNumber = "";
+  messageText.value = "";
+
+  if (newPerson.value.idNumber != null && newPerson.value.idNumber != "") {
+    let idNumber = newPerson.value.idNumber;
+    let roomNumber = newPerson.value.roomNo;
+    let roomId = null;
+    try {
+      const response = await PersonServices.getOCPersonById(idNumber);
+      roomNumber = response.data.OfficeNumber;
+      if (roomNumber != null && roomNumber != "") {
+        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found for " + roomNumber + ". Please add room first";
+          roomNumber = null;
+        }
+      }
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomId: roomId,
+      };
+    } catch (error) {
+      messageText.value = "Failed to load OC person data.";
+    }
+  } else if (newPerson.value.email != null && newPerson.value.email != "") {
+    let email = newPerson.value.email;
+    let roomId = null;
+    try {
+      const response = await PersonServices.getOCPersonByEmail(email);
+      roomNumber = response.data.OfficeNumber;
+      if (roomNumber != null && roomNumber != "") {
+        const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
+        if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
+        else {
+          messageText.value =
+            "No room found for " + roomNumber + ". Please add room first";
+          roomNumber = null;
+        }
+      }
+
+      newPerson.value = {
+        fName: response.data.FirstName,
+        lName: response.data.LastName,
+        email: response.data.Email,
+        idNumber: response.data.UserID,
+        roomId: roomId,
+      };
+    } catch (error) {
+      console.error("Error loading OC person data:", error);
+      message.value = "Failed to load OC person data.";
+    }
+  }
 };
 
 const editPerson = async (person) => {
   newPerson.value = {
-    title: person.title,
+    fullName: `${person.fName} ${person.lName}`,
+    fName: person.fName,
     lName: person.lName,
     email: person.email,
     idNumber: person.idNumber,
     personId: person.key,
+    roomId: person.roomId,
   };
   editingPerson.value = true;
   showAddPersonDialog.value = true;
@@ -81,10 +176,11 @@ const editPerson = async (person) => {
 
 const savePerson = async () => {
   const personData = {
-    fName: newPerson.value.title,
+    fName: newPerson.value.fName,
     lName: newPerson.value.lName,
     email: newPerson.value.email,
     idNumber: newPerson.value.idNumber,
+    roomId: newPerson.value.roomId,
   };
 
   try {
@@ -109,21 +205,8 @@ const savePerson = async () => {
   } finally {
     editingPerson.value = false;
     showAddPersonDialog.value = false;
-    newPerson.value = { title: "", lName: "", email: "", idNumber: "" }; // Reset the form
-  }
-};
 
-const deletePerson = async (personId) => {
-  try {
-    await PersonServices.delete(personId);
-    snackbarText.value = "Person deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrievePeople();
-    people.value = people.value.filter((t) => t.personId !== personId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting person.";
+    newPerson.value = { fName: "", lName: "", email: "", idNumber: "" }; // Reset the form
   }
 };
 
@@ -195,10 +278,6 @@ const archivedPersonHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -218,7 +297,7 @@ const filteredPeople = computed(() => {
 
     result = result.filter(
       (person) =>
-        `${person.title} ${person.lName}`
+        `${person.fName} ${person.lName}`
           .toLowerCase()
           .includes(lowerSearchQuery) ||
         person.idNumber.toLowerCase().includes(lowerSearchQuery) // Include ID in the search
@@ -240,19 +319,28 @@ const highlightText = (text) => {
   return text.replace(regex, '<mark class="custom-highlight">$1</mark>'); // Apply custom highlight
 };
 
+const hasPersonChanged = computed(() => {
+  return (
+    newPerson.value.title !== originalPerson.value.title ||
+    newPerson.value.lName !== originalPerson.value.lName ||
+    newPerson.value.email !== originalPerson.value.email ||
+    newPerson.value.idNumber !== originalPerson.value.idNumber ||
+    newPerson.value.roomId !== originalPerson.value.roomId
+  );
+});
 const highlightedPeople = computed(() => {
   const lowerSearchQuery = searchQuery.value
     ? searchQuery.value.toLowerCase()
     : ""; // Handle null/empty cases
 
   return filteredPeople.value.map((person) => {
-    const title = person.title || ""; // Default to empty string if null
+    const fName = person.fName || ""; // Default to empty string if null
     const lName = person.lName || "";
     const idNumber = person.idNumber || "";
 
     return {
       ...person,
-      fullName: `${highlightText(title)} ${highlightText(lName)}`, // Ensure null-safe operation
+      fullName: `${highlightText(fName)} ${highlightText(lName)}`, // Ensure null-safe operation
       idNumber: highlightText(idNumber),
     };
   });
@@ -261,7 +349,7 @@ const highlightedPeople = computed(() => {
 const scrollToPerson = () => {
   const searchLower = searchQuery.value.toLowerCase();
   const matchedPerson = filteredPeople.value.find((person) =>
-    `${person.title} ${person.lName}`.toLowerCase().includes(searchLower)
+    `${person.fName} ${person.lName}`.toLowerCase().includes(searchLower)
   );
 
   if (matchedPerson) {
@@ -278,19 +366,6 @@ const scrollToPerson = () => {
 function viewPerson(personId) {
   router.push({ name: "personView", params: { personId: personId } });
 }
-
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "person") {
-    await deletePerson(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-};
 
 const openArchiveDialog = (item) => {
   itemToArchive.value = item;
@@ -328,6 +403,7 @@ watch(selectedTab, (newValue) => {
 // Call this once to load the default tab's data when the component mounts
 onMounted(async () => {
   await retrievePeople();
+  await retrieveRooms();
 });
 </script>
 
@@ -386,7 +462,7 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active People Section -->
@@ -409,9 +485,8 @@ onMounted(async () => {
                     :headers="personHeaders"
                     :items="highlightedPeople"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="personSortBy"
                   >
                     <template v-slot:item.fullName="{ item }">
@@ -473,9 +548,8 @@ onMounted(async () => {
                     :headers="archivedPersonHeaders"
                     :items="highlightedPeople"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="personSortBy"
                   >
                     <template v-slot:item.fullName="{ item }">
@@ -514,26 +588,19 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'person',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 
@@ -545,6 +612,10 @@ onMounted(async () => {
             >{{ editingPerson ? "Edit" : "Add" }} Person</span
           >
         </v-card-title>
+        <v-card-subtitle v-if="!editingPerson"
+          >Enter Email or Id and click GET OC DATA to load current
+          info</v-card-subtitle
+        >
         <v-card-text>
           <v-form ref="formPerson" v-model="validPerson">
             <v-container>
@@ -553,10 +624,11 @@ onMounted(async () => {
                   <v-text-field
                     label="First Name"
                     variant="outlined"
-                    v-model="newPerson.title"
+                    v-model="newPerson.fName"
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -567,6 +639,7 @@ onMounted(async () => {
                     :rules="[rules.required, rules.maxNameLength]"
                     maxlength="40"
                     counter
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -575,10 +648,11 @@ onMounted(async () => {
                     variant="outlined"
                     v-model="newPerson.email"
                     placeholder="first.last@oc.edu or first.last@eagles.oc.edu"
-                    :rules="[rules.require, rules.email]"
+                    :rules="[rules.required, rules.email]"
                     maxlength="40"
                     counter
                     prepend-icon="mdi-email"
+                    :disabled="editingPerson"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -596,14 +670,32 @@ onMounted(async () => {
                     maxlength="7"
                     counter
                     prepend-icon="mdi-pound"
+                    :disabled="editingPerson"
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-autocomplete
+                    label="Office/Room"
+                    variant="outlined"
+                    v-model="newPerson.roomId"
+                    item-title="roomName"
+                    item-value="roomId"
+                    :return-object="false"
+                    :items="rooms"
+                    prepend-icon="mdi-office-building"
+                    clearable
+                  ></v-autocomplete>
                 </v-col>
               </v-row>
             </v-container>
           </v-form>
         </v-card-text>
+        <v-card-text v-if="messageText" class="text-red text-right">
+          {{ messageText }}
+        </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
+          <v-btn color="green" @click="getOCPerson">Get OC Data</v-btn>
           <v-btn color="cancelgrey" text @click="closePersonDialog"
             >Cancel</v-btn
           >
@@ -612,28 +704,6 @@ onMounted(async () => {
             @click="savePerson"
             :disabled="!validPerson || !hasPersonChanged"
             >Save</v-btn
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this person?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" class="ma-2" text @click="confirmDelete"
-            >Delete</v-btn
           >
         </v-card-actions>
       </v-card>

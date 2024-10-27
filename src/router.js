@@ -15,12 +15,12 @@ import SerializedAssetView from "./views/SerializedAssetView.vue";
 import BuildingView from "./views/BuildingView.vue";
 import RoomView from "./views/RoomView.vue";
 import PersonView from "./views/PersonView.vue";
-import AssetCheckout from "./views/AssetCheckout.vue";
 import Reports from "./views/Reports.vue";
 import ReportGeneration from "./views/ReportGeneration.vue";
 import Maintenance from "./views/Maintenance.vue";
 import Warranties from "./views/Warranties.vue";
 import Leasing from "./views/Leasing.vue";
+import Checkout from "./views/Checkout.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,16 +30,12 @@ const router = createRouter({
       alias: "/login",
       name: "login",
       component: Login,
-      // meta: {
-      //   breadCrumb: [{ text: 'Login' }]
-      // }
     },
     {
       path: "/adminDashboard",
       name: "adminDashboard",
       component: AdminDashboard,
       meta: {
-        // breadCrumb: [{ text: 'Admin Dashboard' }]
         requiresAuth: true,
         requiresAdmin: true,
       },
@@ -49,7 +45,6 @@ const router = createRouter({
       name: "unassignedDashboard",
       component: UnassignedDashboard,
       meta: {
-        // breadCrumb: [{ text: 'Unassigned Dashboard' }]
         requiresAuth: true,
       },
     },
@@ -58,10 +53,6 @@ const router = createRouter({
       name: "userDashboard",
       component: UserDashboard,
       meta: {
-        // breadCrumb: [
-        //   { text: 'Login', to: {name: 'login'}},
-        //   { text: 'User Dashboard' }
-        // ]
         requiresAuth: true,
         requiresRole: true,
       },
@@ -71,10 +62,6 @@ const router = createRouter({
       name: "devTools",
       component: DevTools,
       meta: {
-        // breadCrumb: [
-        //   { text: 'Admin Dashboard', to: {name: 'adminDashboard'}},
-        //   { text: 'Dev Tools' }
-        // ]
         requiresAuth: true,
         // requiresRole: true
       },
@@ -84,12 +71,8 @@ const router = createRouter({
       name: "userManage",
       component: UserManage,
       meta: {
-        // breadCrumb: [
-        //   { text: 'Admin Dashboard'},
-        //   { text: 'User Manage' }
-        // ]
         requiresAuth: true,
-        requiresAdmin: true,
+        requiresViewUsers: true,
       },
     },
     {
@@ -97,12 +80,8 @@ const router = createRouter({
       name: "assetManage",
       component: AssetManage,
       meta: {
-        // breadCrumb: [
-        //   { text: 'Admin Dashboard'},
-        //   { text: 'Asset Manage' }
-        // ]
         requiresAuth: true,
-        requiresManagerOrAdmin: true,
+        requiresViewAssets: true,
       },
     },
     {
@@ -110,12 +89,8 @@ const router = createRouter({
       name: "facilityManage",
       component: FacilityManage,
       meta: {
-        // breadCrumb: [
-        //   { text: 'Admin Dashboard'},
-        //   { text: 'Building Manage' }
-        // ]
         requiresAuth: true,
-        requiresManagerOrAdmin: true,
+        requiresViewFacilities: true,
       },
     },
     {
@@ -124,7 +99,7 @@ const router = createRouter({
       component: PersonManage,
       meta: {
         requiresAuth: true,
-        requiresManagerOrAdmin: true,
+        requiresViewPeople: true,
       },
     },
     {
@@ -140,10 +115,10 @@ const router = createRouter({
     {
       path: "/assetCheckout",
       name: "assetCheckout",
-      component: AssetCheckout,
+      component: Checkout,
       meta: {
         requiresAuth: true,
-        requiresRole: true,
+        requiresViewCheckOutIn: true,
       },
     },
     {
@@ -152,7 +127,7 @@ const router = createRouter({
       component: Reports,
       meta: {
         requiresAuth: true,
-        requiresAdmin: true,
+        requiresViewReports: true,
       },
     },
     {
@@ -161,7 +136,7 @@ const router = createRouter({
       component: ReportGeneration,
       meta: {
         requiresAuth: true,
-        requiresAdmin: true,
+        requiresViewReports: true,
       },
     },
     {
@@ -171,7 +146,7 @@ const router = createRouter({
       props: true,
       meta: {
         requiresAuth: true,
-        requiresRole: true,
+        requiresViewAssets: true,
       },
     },
     {
@@ -181,7 +156,7 @@ const router = createRouter({
       props: true,
       meta: {
         requiresAuth: true,
-        requiresRole: true,
+        requiresViewFacilities: true,
       },
     },
     {
@@ -191,7 +166,7 @@ const router = createRouter({
       props: true,
       meta: {
         requiresAuth: true,
-        requiresRole: true,
+        requiresViewFacilities: true,
       },
     },
     {
@@ -201,7 +176,7 @@ const router = createRouter({
       props: true,
       meta: {
         requiresAuth: true,
-        requiresRole: true,
+        requiresViewPeople: true,
       },
     },
     {
@@ -210,7 +185,7 @@ const router = createRouter({
       component: Maintenance,
       meta: {
         requiresAuth: true,
-        requiresRole: true,
+        requiresViewMaintenance: true,
       },
     },
     {
@@ -219,7 +194,7 @@ const router = createRouter({
       component: Warranties,
       meta: {
         requiresAuth: true,
-        requiresManagerOrAdmin: true,
+        requiresViewWarranties: true,
       },
     },
     {
@@ -228,7 +203,7 @@ const router = createRouter({
       component: Leasing,
       meta: {
         requiresAuth: true,
-        requiresManagerOrAdmin: true,
+        requiresViewLeases: true,
       },
     },
   ],
@@ -236,7 +211,6 @@ const router = createRouter({
 
 // Navigation guards
 router.beforeEach((to, from, next) => {
-  console.log('Role id: ', store.getters.getUserRole)
   // Redirect to login if not authenticated
   if (to.meta.requiresAuth && !store.getters.isAuthenticated) {
     next("/login");
@@ -245,14 +219,23 @@ router.beforeEach((to, from, next) => {
   else if (to.meta.requiresAdmin && !store.getters.isAdmin) {
     next("/userDashboard");
   }
-  // Redirect to user dashboard if not manager
-  else if (to.meta.requiresManagerOrAdmin && !store.getters.isManager && !store.getters.isAdmin) {
-    next("/userDashboard");
-  }
   // redirect to unassigned dashboard if not assigned
   else if (to.meta.requiresRole && !store.getters.isRoleAssigned) {
     next("/unassignedDashboard");
-  } else {
+  }
+  // Redirect to user dashboard if doesn't have access to the specific view
+  else if ((to.meta.requiresViewUsers && !store.getters.viewUsers)
+    || (to.meta.requiresViewAssets && !store.getters.viewAssets)
+    || (to.meta.requiresViewFacilities && !store.getters.viewFacilities)
+    || (to.meta.requiresViewPeople && !store.getters.viewPeople)
+    || (to.meta.requiresViewCheckOutIn && !store.getters.viewCheckOutIn)
+    || (to.meta.requiresViewMaintenance && !store.getters.viewMaintenance)
+    || (to.meta.requiresViewWarranties && !store.getters.viewWarranties)
+    || (to.meta.requiresViewLeases && !store.getters.viewLeases)
+    || (to.meta.requiresViewReports && !store.getters.viewReports)) {
+    next("/userDashboard");
+  }
+  else {
     next();
   }
 });

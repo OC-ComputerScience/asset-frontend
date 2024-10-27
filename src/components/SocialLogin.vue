@@ -10,7 +10,6 @@ const store = useStore(); // Use the store
 const fName = ref("");
 const lName = ref("");
 const user = ref({});
-console.log("store", store);
 const loginWithGoogle = () => {
   window.handleCredentialResponse = handleCredentialResponse;
   const client = import.meta.env.VITE_APP_CLIENT_ID;
@@ -20,7 +19,6 @@ const loginWithGoogle = () => {
     auto_select: true,
     callback: window.handleCredentialResponse,
   });
-  console.log("client", client);
   window.google.accounts.id.renderButton(document.getElementById("parent_id"), {
     type: "standard",
     theme: "outline",
@@ -31,7 +29,6 @@ const loginWithGoogle = () => {
 };
 
 const handleCredentialResponse = async (response) => {
-  console.log("response", response);
   let token = {
     credential: response.credential,
   };

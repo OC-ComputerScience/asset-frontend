@@ -1,21 +1,35 @@
 import { createStore } from "vuex";
 import Utils from "../config/utils";
 
-const adminRoleId = 1;
-const miscUserRoleId = 2;
-const managerRoleId = [3, 5, 7];
-
 const user = Utils.getStore("user");
+const assignees = Utils.getStore("assignees");
+const assets = Utils.getStore("assets");
+const checkins = Utils.getStore("checkins");
 
 const store = createStore({
   state: {
     loginUser: user,
+    assignees: assignees,
+    assets: assets,
+    checkins: checkins,
   },
   mutations: {
     setLoginUser(state, user) {
       state.loginUser = user;
       Utils.setStore("user", user);
     },
+    setAssignees(state, assignees) {
+      state.assignees = assignees;
+      Utils.setStore("assignees", assignees);
+    },
+    setAssets(state, assets) {
+      state.assets = assets;
+      Utils.setStore("assets", assets);
+    },
+    setCheckins(state, checkins) {
+      state.checkins = checkins;
+      Utils.setStore("checkins", checkins);
+    }
   },
   actions: {
     login({ commit }, user) {
@@ -23,6 +37,15 @@ const store = createStore({
     },
   },
   getters: {
+    getAssignees(state) {
+      return state.assignees;
+    },
+    getAssets(state) {
+      return state.assets;
+    },
+    getCheckins(state) {
+      return state.checkins;
+    },
     getLoginUserInfo(state) {
       return state.loginUser;
     },
@@ -33,24 +56,20 @@ const store = createStore({
       return state.loginUser.userRoleId;
     },
     isAdmin(state) {
-      // Assuming `adminRoleId` is the ID for the Admin role, adjust as necessary
-      return state.loginUser && state.loginUser.userRoleId === adminRoleId;
+      return state.loginUser && state.loginUser.isAdmin;
     },
     isManager(state) {
-      return state.loginUser && managerRoleId.includes(state.loginUser.userRoleId);
+      return state.loginUser && state.loginUser.isManager;
     },
-    isMaintenance(state) {
-      const userRole = userRoleServices.get(state.loginUser.userRoleId);
-
-      return userRole.categoryId === maintenanceCategoryId;
+    isWorker(state) {
+      return state.loginUser && state.loginUser.isWorker;
     },
     isRoleAssigned(state) {
-      return state.loginUser && state.loginUser.userRoleId !== miscUserRoleId;
+      return state.loginUser && state.loginUser.isUnassigned == false;
     },
     isDev(state) {
       return state.loginUser && state.loginUser.devPermission === true;
     },
-  
     canAdd(state) {
       return state.loginUser && state.loginUser.canAdd === true;
     },
@@ -66,15 +85,39 @@ const store = createStore({
     canActivate(state) {
       return state.loginUser && state.loginUser.canActivate === true;
     },
-    canManageMaintenance(state) {
-      return state.loginUser && state.loginUser.canManageMaintenance === true;
+    viewCheckOutIn(state) {
+      return state.loginUser && state.loginUser.viewCheckOutIn === true;
     },
-    canManageWarranties(state) {
-      return state.loginUser && state.loginUser.canManageWarranties === true;
+    viewServices(state) {
+      return state.loginUser && state.loginUser.viewServices === true;
     },
-    canManageLeases(state) {
-      return state.loginUser && state.loginUser.canManageLeases === true;
+    viewMaintenance(state) {
+      return state.loginUser && state.loginUser.viewMaintenance === true;
     },
+    viewWarranties(state) {
+      return state.loginUser && state.loginUser.viewWarranties === true;
+    },
+    viewLeases(state) {
+      return state.loginUser && state.loginUser.viewLeases === true;
+    },
+    viewReports(state) {
+      return state.loginUser && state.loginUser.viewReports === true;
+    },
+    viewManage(state) {
+      return state.loginUser && state.loginUser.viewManage === true;
+    },
+    viewAssets(state) {
+      return state.loginUser && state.loginUser.viewAssets === true;
+    },
+    viewFacilities(state) {
+      return state.loginUser && state.loginUser.viewFacilities === true;
+    },
+    viewPeople(state) {
+      return state.loginUser && state.loginUser.viewPeople === true;
+    },
+    viewUsers(state) {
+      return state.loginUser && state.loginUser.viewUsers === true;
+    }
   },
 });
 

@@ -2,22 +2,44 @@
 import { ref, toRefs, watch, onMounted, computed, reactive } from "vue";
 import { vMaska } from "maska";
 import { parseISO, format } from "date-fns";
-import moment from "moment-timezone";
-import ProfileDataServices from "../services/profileDataServices";
 import AssetProfileServices from "../services/assetProfileServices";
 import AssetTypeServices from "../services/assetTypeServices";
+import customFieldValueServices from "../services/customFieldValueServices";
+import customFieldTypeServices from "../services/customFieldTypeServices";
+import profileDataServices from "../services/profileDataServices";
 
 const message = ref("");
 const validProfile = ref(false);
-const assetCategories = ref([]);
 const assetTypes = ref([]);
 const selectedTypeId = ref("");
-const generateDynamicFields = ref([]);
+const titleArray = ref([]);
+const customFields = ref([]);
 const originalProfile = ref({});
-const originalDynamicFields = ref([]);
 const initialTypeId = ref("");
 const rawAcquisitionDate = ref(null);
-const menu = ref(false);
+const rawWarrStartDate = ref(null);
+const rawWarrEndDate = ref(null);
+
+const editMode = ref(false);
+const overrideTitle = ref(false);
+const dataLoaded = ref(false);
+const profileInfoChanged = ref(false);
+
+const intRegex = /^-?\d+$/;
+const intTest = (value) => intRegex.test(value) || "Enter only integers";
+const decRegex = /^-?\d+(\.\d+)?$/;
+const decTest = (value) => decRegex.test(value) || "Enter only decimals";
+const filterIntegerInput = (event) => {
+  const value = event.target.value;
+  event.target.value = value.replace(/[^\d-]/g, "");
+};
+const filterDecimalInput = (event) => {
+  const value = event.target.value;
+  event.target.value = value
+    .replace(/[^0-9.-]/g, "")
+    .replace(/(\..*?)\..*/g, "$1")
+    .replace(/(\-.*?)-.*/g, "$1");
+};
 
 // maska options
 const options = {
@@ -36,45 +58,23 @@ const options = {
   },
 };
 
-// Validation Rules
-const rules = {
-  required: (value) => !!value || "Required.",
-  maxNotesLength: (value) => {
-    if (!value) return true; // If value is undefined or null, consider this validation as passed
-    return value.length <= 255 || "Max length of 255 characters";
-  },
-  maxFieldLength: (value) => {
-    if (!value) return true; // Similar check for other validations
-    return value.length <= 50 || "Max length of 50 characters";
-  },
-  serialNumberLength: (value) => {
-    if (!value) return true;
-    return value.length <= 20 || "Max length of 20 characters";
-  },
-  validPrice: (value) => {
-    value.value > 0 || "Enter a valid price";
-  },
-};
-
 const emit = defineEmits(["closeDialog", "updateSnackbar", "saveSnackbar"]);
 
 // Receive props from AssetManage
 const props = defineProps({
-  editingProfile: {
-    required: false,
-    default: false,
-  },
-  sendEditProfile: {
-    type: Function,
-    required: true,
-  },
   selectedProfile: {
     required: false,
+  },
+  rules: {
+    required: true,
+  },
+  userCategoryId: {
+    required: true,
   },
 });
 
 // Deconstruct props => refs
-const { editingProfile, selectedProfile } = toRefs(props);
+const { selectedProfile, rules } = toRefs(props);
 
 const newProfile = ref({
   profileName: "",
@@ -82,34 +82,56 @@ const newProfile = ref({
   purchasePrice: "",
   acquisitionDate: "",
   notes: "",
+  warrantyStartDate: null,
+  warrantyEndDate: null,
+  warrantyDescription: "",
+  warrantyNotes: "",
+  features: "",
+  accessories: "",
 });
 
-// The naming is confusing however newData is meant for the backend ProfileData object
-const newData = ref({
-  field: "",
-  data: "",
-  profileId: "",
-});
+const changeProfileInfo = () => {
+  profileInfoChanged.value = true;
+};
 
 // When you load the profile for editing, store the initial state
 const loadProfileForEditing = async (profile) => {
+  selectedTypeId.value = profile.typeId;
+  await retrieveCustomFields(selectedTypeId.value);
   if (profile.profileId) {
-    await fetchDynamicFields(profile.profileId);
+    await retrieveFieldValues(profile.profileId);
   }
 
   // Correctly assign `rawAcquisitionDate`
   if (profile.acquisitionDate) {
-    rawAcquisitionDate.value = parseISO(profile.acquisitionDate);
+    //rawAcquisitionDate.value = parseISO(profile.acquisitionDate);
+    let targetTime = parseISO(profile.acquisitionDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawAcquisitionDate.value = offsetTime;
   } else {
     rawAcquisitionDate.value = null; // Fallback if there's no acquisition date
   }
 
-  // Correctly set `selectedTypeId`
-  selectedTypeId.value = profile.typeId;
-
-  // Ensure `generateDynamicFields` is populated
-  if (generateDynamicFields.value.length === 0) {
-    console.error("Dynamic fields not populated correctly.");
+  // Correctly assign `rawWarrStartDate`
+  if (profile.warrantyStartDate) {
+    //rawWarrStartDate.value = parseISO(profile.warrantyStartDate);
+    let targetTime = parseISO(profile.warrantyStartDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawWarrStartDate.value = offsetTime;
+  } else {
+    rawWarrStartDate.value = null; // Fallback if there's no Start date
+  }
+  // Correctly assign `rawWarrEndDate`
+  if (profile.warrantyEndDate) {
+    //rawWarrEndDate.value = parseISO(profile.warrantyEndDate);
+    let targetTime = parseISO(profile.warrantyEndDate);
+    let tzDifference = targetTime.getTimezoneOffset();
+    let offsetTime = new Date(targetTime.getTime() + tzDifference * 60 * 1000);
+    rawWarrEndDate.value = offsetTime;
+  } else {
+    rawWarrEndDate.value = null; // Fallback if there's no end date
   }
 
   // Update `originalProfile` for comparison
@@ -119,6 +141,12 @@ const loadProfileForEditing = async (profile) => {
     purchasePrice: profile.purchasePrice,
     acquisitionDate: profile.acquisitionDate,
     notes: profile.notes,
+    warrantyStartDate: profile.warrantyStartDate,
+    warrantyEndDate: profile.warrantyEndDate,
+    warrantyDescription: profile.warrantyDescription,
+    warrantyNotes: profile.warrantyNotes,
+    features: profile.features,
+    accessories: profile.accessories,
   };
 
   initialTypeId.value = profile.typeId; // Store initial typeId
@@ -133,60 +161,90 @@ const retrieveAssetTypes = async () => {
       key: type.typeId,
       title: type.typeName,
       description: type.desc,
-      categoryName:
-        assetCategories.value.find((c) => c.key === type.categoryId)?.title ||
-        "Unknown Category",
-      dynamicFields: JSON.parse(type.dynamicFields || "[]"), // Ensure correct parsing here
+      activeStatus: type.activeStatus,
+      categoryId: type.categoryId,
     }));
+
+    assetTypes.value = assetTypes.value.filter(
+      (type) =>
+        type.activeStatus === true &&
+        (props.userCategoryId === 4 || type.categoryId == props.userCategoryId)
+    );
+    assetTypes.value.sort((a, b) => a.typeName.localeCompare(b.typeName));
   } catch (error) {
     console.error("Error loading types:", error);
     message.value = "Failed to load types.";
   }
 };
 
-// Retrieve ProfileData from Database
-const retrieveProfileData = async () => {
+const retrieveCustomFields = async (typeId) => {
   try {
-    const response = await ProfileDataServices.getAll();
-    if (response.data.length == 0) {
-      newData.value = [];
-      message.value = "No profile data";
-    } else {
-      newData.value = response.data.map((data) => {
-        return {
-          ...data,
-          key: data.profileDataId,
-          title: data.field,
-        };
-      });
-    }
-  } catch (error) {
-    console.error("Error loading profile data:", error);
-    message.value = "Failed to load profile data.";
+    let response = await customFieldTypeServices.getAllForType(typeId);
+    let customFieldPromises = response.data.map(async (field) => {
+      let newField = {
+        fieldTypeId: field.id,
+        customFieldId: field.customFieldId,
+        name: field.customField.name,
+        type: field.customField.type,
+        required: field.required,
+        identifier: field.identifier,
+        fieldValueId: null,
+        value: "",
+        profileDataId: null,
+        listValues: {},
+        sequence: field.sequence,
+        changed: false,
+      };
+
+      if (newField.type === "List") {
+        let data = await customFieldValueServices.getAllForField(
+          newField.customFieldId
+        );
+        newField.listValues = data.data;
+      }
+      return newField;
+    });
+
+    let customFieldsArray = await Promise.all(customFieldPromises);
+    customFields.value.push(...customFieldsArray);
+  } catch (err) {
+    console.error(err);
   }
 };
 
-const fetchDynamicFields = async (profileId) => {
-  try {
-    const response = await ProfileDataServices.getByProfileId(profileId);
-    console.log("fetchDynamicFields response:", JSON.stringify(response.data));
-    if (response.data && response.data.length > 0) {
-      generateDynamicFields.value = response.data.map((df) => ({
-        fieldName: df.field || "Undefined Field",
-        fieldValue: df.data || "",
-        fieldId: df.profileDataId, // Check if this is correct
-        fieldType: df.fieldType || "text",
-      }));
-      console.log(
-        "Dynamic fields set:",
-        JSON.stringify(generateDynamicFields.value)
-      );
-    } else {
-      console.error("No dynamic fields found for the profile.");
-      generateDynamicFields.value = []; // Clear if no fields are found
+const retrieveFieldValues = async (profileId) => {
+  let response = await profileDataServices.getByProfileId(profileId);
+  let profileData = response.data;
+  profileData.forEach((profile) => {
+    let customField = customFields.value.find(
+      (field) => field.customFieldId === profile.customFieldValue.customFieldId
+    );
+    customField.value = profile.customFieldValue.value;
+    customField.fieldValueId = profile.fieldValueId;
+    customField.profileDataId = profile.profileDataId;
+    if (customField.sequence) {
+      titleArray.value[customField.sequence - 1] = customField.value;
     }
-  } catch (error) {
-    console.error("Error fetching dynamic fields:", error);
+  });
+};
+
+const changeFieldValue = (field) => {
+  field.changed = true;
+  if (field.type == "List") {
+    let newValue = field.listValues.find(
+      (listValue) => listValue.value === field.value
+    );
+    if (newValue) {
+      field.fieldValueId = newValue.id;
+    } else field.fieldValueId = null;
+  }
+  updateTitle(field.value, field.sequence);
+};
+
+const updateTitle = (value, sequence) => {
+  if (sequence > 0 && !overrideTitle.value) {
+    titleArray.value[sequence - 1] = value;
+    newProfile.value.profileName = titleArray.value.join(" ");
   }
 };
 
@@ -194,13 +252,22 @@ const fetchDynamicFields = async (profileId) => {
 const saveProfile = async () => {
   const purchasePrice = newProfile.value.purchasePrice.replace(/[$,]/g, "");
 
-  console.log("Save Profile Called");
-
   let formattedAcquisitionDate = null;
   formattedAcquisitionDate = format(
     new Date(rawAcquisitionDate.value),
     "yyyy-MM-dd"
   );
+
+  let formattedWarrStartDate = null;
+  if (rawWarrStartDate.value)
+    formattedWarrStartDate = format(
+      new Date(rawWarrStartDate.value),
+      "yyyy-MM-dd"
+    );
+
+  let formattedWarrEndDate = null;
+  if (rawWarrEndDate.value)
+    formattedWarrEndDate = format(new Date(rawWarrEndDate.value), "yyyy-MM-dd");
 
   const profilePayload = {
     profileName: newProfile.value.profileName,
@@ -208,41 +275,36 @@ const saveProfile = async () => {
     purchasePrice: purchasePrice,
     acquisitionDate: formattedAcquisitionDate,
     typeId: selectedTypeId.value.typeId,
+    warrantyStartDate: formattedWarrStartDate,
+    warrantyEndDate: formattedWarrEndDate,
+    warrantyDescription: newProfile.value.warrantyDescription,
+    warrantyNotes: newProfile.value.warrantyNotes,
+    features: newProfile.value.features,
+    accessories: newProfile.value.accessories,
   };
 
   try {
-    if (newProfile.value.id && selectedTypeId.value !== initialTypeId.value) {
-      console.log("Changed Type, Delete Profile Data Called");
-
-      // Delete existing profile data first
-      await ProfileDataServices.deleteByProfileId(newProfile.value.id);
-      // console.log("Existing profile data deleted due to type change.")
-    }
-
     // Check if editing profile
-    if (newProfile.value.id) {
-      console.log("Editing Profile Called");
-
+    if (newProfile.value.id && profileInfoChanged.value) {
       // Update the profile itself
       const response = await AssetProfileServices.update(
         newProfile.value.id,
         profilePayload
       );
-      console.log("Profile updated:", response);
 
       // Update the profile data
-      await saveProfileData(newProfile.value.id);
+
+      await saveFieldValues(newProfile.value.id);
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
-      console.log("Creating New Profile Called");
-
       // Create new profile
       const createResponse = await AssetProfileServices.create(profilePayload);
       if (createResponse.data && createResponse.data.profileId) {
         newProfile.value.id = createResponse.data.profileId;
-        console.log("New profile created:", createResponse);
-        await saveProfileData(newProfile.value.id);
+
+        await saveFieldValues(newProfile.value.id);
+
         emitSaveSnackbar();
       }
     }
@@ -254,35 +316,59 @@ const saveProfile = async () => {
   }
 };
 
-// Save profileData
-const saveProfileData = async (profileId) => {
-  console.log(
-    "Saving Profile Data",
-    JSON.stringify(generateDynamicFields.value)
-  );
 
-  for (const field of generateDynamicFields.value) {
-    const payload = {
-      field: field.fieldName,
-      data: field.fieldValue,
-      profileId: profileId,
-    };
-
-    try {
-      if (field.fieldId) {
-        console.log(
-          "Updating existing field data with fieldId:",
-          field.fieldId
-        );
-        await ProfileDataServices.update(field.fieldId, payload);
-      } else {
-        console.log("Field ID missing, creating new field data.");
-        const response = await ProfileDataServices.create(payload);
-        field.fieldId = response.data.profileDataId; // Ensure this matches the response structure
+const saveFieldValues = async(profileId) => {
+  for(let field of customFields.value){
+    if(field.changed){
+      let data = {
+        customFieldId: field.customFieldId,
+        value: field.value,
+      };
+      try {
+        if(field.fieldValueId){
+          handleFieldValueWithId(field, data, profileId);
+        }
+        else {
+          handleFieldValueWithoutId(field, data, profileId);
+        }
+      } catch (err) {
+        console.error(err);
       }
-    } catch (error) {
-      console.error("Error updating/creating field:", field.fieldName, error);
     }
+  }
+};
+
+const handleFieldValueWithId = async(field, data, profileId) => {
+  if (field.type != "List") {
+    await customFieldValueServices.update(field.fieldValueId, data);
+  } 
+  else if (field.type == "List") {
+    let newFieldValue = { fieldValueId: field.fieldValueId };
+    if(field.profileDataId){
+      await profileDataServices.update(field.profileDataId, newFieldValue);
+    }
+    else {
+      let profileData = {
+        profileId: profileId,
+        fieldValueId: field.fieldValueId
+      }
+      await profileDataServices.create(profileData);
+    }
+  } 
+};
+
+const handleFieldValueWithoutId = async(field, data, profileId) => {
+  let response = await customFieldValueServices.create(data);
+  let fieldValueId = response.data.id;
+  let profileData = {
+    profileId: profileId, 
+    fieldValueId: fieldValueId
+  };
+  if(field.profileDataId){
+    await profileDataServices.update(profileData);
+  }
+  else {
+    await profileDataServices.create(profileData);
   }
 };
 
@@ -302,94 +388,6 @@ const editProfile = async () => {
   }
 };
 
-const editProfileData = async () => {
-  if (selectedProfile.value) {
-    try {
-      await retrieveProfileData();
-
-      const profileDataForProfile = newData.value.filter(
-        (data) => data.profileId === selectedProfile.value.profileId
-      );
-
-      // Reset generateDynamicFields before re-populating
-      generateDynamicFields.value = profileDataForProfile.map((dataItem) => {
-        return {
-          ...dataItem,
-          fieldName: dataItem.field, // Assuming 'field' is the correct property name
-          fieldValue: dataItem.data,
-          fieldType: "text", // Default type or determine from data
-        };
-      });
-    } catch (error) {
-      console.error("Error fetching profileData", error);
-      message.value = `Error fetching profileData: ${
-        error.message || "unknown error"
-      }`;
-    }
-  }
-};
-
-// Computed property for display
-const formattedAcquisitionDate = computed(() => {
-  if (rawAcquisitionDate.value) {
-    // Display the date in a readable format
-    return moment.utc(rawAcquisitionDate.value).format("MMM DD, YYYY");
-  }
-  return "";
-});
-
-// const hasProfileChanged = () => {
-//   if (editingProfile.value) {
-//     // Assuming selectedTypeId.value holds the currently selected type object
-//     const currentTypeId = selectedTypeId.value?.key || selectedTypeId.value;
-//     // Strip out white space and $ for comparison
-//     const newPurchasePrice = newProfile.value.purchasePrice.replace(
-//       /[$,]/g,
-//       ""
-//     );
-//     return (
-//       newProfile.value.profileName !== originalProfile.value.profileName ||
-//       currentTypeId !== originalProfile.value.typeId || // Adjust this line
-//       newPurchasePrice !== originalProfile.value.purchasePrice ||
-//       newProfile.value.acquisitionDate !==
-//         originalProfile.value.acquisitionDate ||
-//       newProfile.value.notes !== originalProfile.value.notes
-//     );
-//   }
-// };
-
-// Utility function to check if a dynamic field has changed
-const hasDynamicFieldChanged = (field) => {
-  // Find the original field with the same name
-  const originalField = originalDynamicFields.value.find(
-    (original) => original.fieldName === field.fieldName
-  );
-  // If there is no original field (which means it's a new field), or if the data has changed, return true
-  return !originalField || originalField.fieldValue !== field.fieldValue;
-};
-
-// const canSave = computed(() => {
-//   // Check if the profile itself has changed
-//   const profileChanged = hasProfileChanged();
-
-//   // Check if any of the dynamic fields have changed
-//   const dynamicFieldChanged = generateDynamicFields.value.some((field) =>
-//     hasDynamicFieldChanged(field)
-//   );
-
-//   // Enable Save button if there are changes to save
-//   return !(validProfile.value && (profileChanged || dynamicFieldChanged));
-// });
-
-// Groups the text fields into row with 3 columns
-const groupFields = computed(() => {
-  const rowOfFields = [];
-  for (let i = 0; i < generateDynamicFields.value.length; i += 3) {
-    rowOfFields.push(generateDynamicFields.value.slice(i, i + 3));
-  }
-  return rowOfFields;
-});
-
 const emitCloseDialog = () => {
   emit("closeDialog");
 };
@@ -404,33 +402,11 @@ const emitUpdateSnackbar = () => {
 
 // Watchers
 
-watch(selectedTypeId, (newVal) => {
-  const typeId = newVal?.typeId || newVal;
-  const selectedType = assetTypes.value.find((type) => type.key === typeId);
-
-  if (selectedType) {
-    let dynamicFields = selectedType.dynamicFields;
-
-    if (typeof dynamicFields === "string") {
-      try {
-        dynamicFields = JSON.parse(dynamicFields); // Parse if needed
-      } catch (error) {
-        console.error("Error parsing dynamicFields:", error);
-        dynamicFields = []; // Default to empty array if parsing fails
-      }
-    }
-
-    if (Array.isArray(dynamicFields)) {
-      generateDynamicFields.value = dynamicFields.map((field) => ({
-        fieldName: field.fieldName || "Unnamed Field",
-        fieldValue: field.fieldValue || "",
-        fieldType: field.fieldType || "text",
-      }));
-    } else {
-      console.error("dynamicFields is not an array:", dynamicFields);
-    }
-  } else {
-    generateDynamicFields.value = [];
+watch(selectedTypeId, async (newVal) => {
+  if (dataLoaded.value) {
+    const typeId = newVal?.typeId || newVal;
+    customFields.value = [];
+    await retrieveCustomFields(typeId);
   }
 });
 
@@ -438,8 +414,6 @@ watch(selectedTypeId, (newVal) => {
 watch(
   selectedProfile,
   (newValue, oldValue) => {
-    console.log("selectedProfile changed from", oldValue, "to", newValue);
-
     if (newValue) {
       // Ensure all fields are assigned correctly
       newProfile.value.profileName = newValue.profileName || "";
@@ -447,16 +421,42 @@ watch(
       newProfile.value.purchasePrice = newValue.purchasePrice || "";
       newProfile.value.acquisitionDate = newValue.acquisitionDate || "";
       newProfile.value.notes = newValue.notes || "";
-
+      newProfile.value.warrantyStartDate = newValue.warrantyStartDate || "";
+      newProfile.value.warrantyEndDate = newValue.warrantyEndDate || "";
+      newProfile.value.warrantyDescription = newValue.warrantyDescription || "";
+      newProfile.value.warrantyNotes = newValue.warrantyNotes || "";
+      newProfile.value.features = newValue.features || "";
+      newProfile.value.accessories = newValue.accessories || "";
       if (newValue.typeId) {
         selectedTypeId.value = newValue.typeId; // Update `selectedTypeId`
       }
 
       if (newValue.acquisitionDate) {
-        rawAcquisitionDate.value = parseISO(newValue.acquisitionDate); // Update date
+        let targetTime = parseISO(newValue.acquisitionDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawAcquisitionDate.value = offsetTime;
+        //rawAcquisitionDate.value = parseISO(newValue.acquisitionDate);
+        //convert the offset to milliseconds, add to targetTime, and make a new Date
       }
-    } else {
-      console.error("Selected profile is undefined or null");
+      if (newValue.warrantyStartDate) {
+        let targetTime = parseISO(newValue.warrantyStartDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawWarrStartDate.value = offsetTime;
+      }
+      if (newValue.warrantyEndDate) {
+        let targetTime = parseISO(newValue.warrantyEndDate);
+        let tzDifference = targetTime.getTimezoneOffset();
+        let offsetTime = new Date(
+          targetTime.getTime() + tzDifference * 60 * 1000
+        );
+        rawWarrEndDate.value = offsetTime;
+      }
     }
   },
   { immediate: true, deep: true }
@@ -477,25 +477,25 @@ onMounted(async () => {
     await retrieveAssetTypes(); // Ensure asset types are loaded
 
     if (selectedProfile.value?.profileId) {
-      await fetchDynamicFields(selectedProfile.value.profileId); // Ensure dynamic fields are fetched
+      editMode.value = true;
     }
 
-    if (editingProfile.value) {
+    if (editMode.value) {
       loadProfileForEditing(selectedProfile.value); // Load the profile for editing
+      overrideTitle.value = !titleArray.value.length > 0;
     }
   } catch (error) {
     console.error("Error during initialization:", error);
     message.value = "Failed to load profile data.";
   }
+  dataLoaded.value = true;
 });
 </script>
 
 <template>
   <v-card class="pa-4 rounded-xl">
     <v-card-title>
-      <span class="headline"
-        >{{ editingProfile ? "Edit" : "Add" }} Profile</span
-      >
+      <span class="headline">{{ editMode ? "Edit" : "Add" }} Profile</span>
     </v-card-title>
     <v-card-text>
       <v-form ref="formProfile" v-model="validProfile">
@@ -504,30 +504,40 @@ onMounted(async () => {
             <v-col cols="12">
               <v-row>
                 <v-col cols="12">
-                  <v-text-field
-                    label="Profile Name"
-                    variant="outlined"
-                    v-model="newProfile.profileName"
-                    :rules="[rules.required, rules.maxFieldLength]"
-                    maxlength="50"
-                    counter
-                    prepend-icon="mdi-rename"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12">
-                  <!-- Asset Type Selection -->
                   <v-autocomplete
                     label="Type"
                     variant="outlined"
                     :items="assetTypes"
-                    item-text="title"
-                    item-value="key"
+                    item-text="typeName"
+                    item-value="typeId"
                     v-model="selectedTypeId"
                     :rules="[rules.required]"
                     clearable
                     return-object
+                    :disabled="editMode"
                     prepend-icon="mdi-devices"
+                    @update:modelValue="changeProfileInfo"
                   ></v-autocomplete>
+                </v-col>
+                <v-col cols="7">
+                  <v-text-field
+                    label="Profile Name"
+                    variant="outlined"
+                    v-model="newProfile.profileName"
+                    :rules="[rules.required, rules.maxNameLength]"
+                    maxlength="50"
+                    counter
+                    prepend-icon="mdi-rename"
+                    :disabled="!overrideTitle"
+                    @update:modelValue="changeProfileInfo"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="5">
+                  <v-checkbox
+                    v-model="overrideTitle"
+                    color="primary"
+                    label="Override Name Generation"
+                  ></v-checkbox>
                 </v-col>
                 <v-col cols="6">
                   <v-text-field
@@ -542,61 +552,130 @@ onMounted(async () => {
                     inputmode="numeric"
                     type="text"
                     prepend-icon="mdi-cash-multiple"
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
                 </v-col>
+
                 <v-col>
-                  <v-menu
-                    v-model="menu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
+                  <v-date-input
+                    prepend-icon="mdi-calendar"
+                    v-model="rawAcquisitionDate"
+                    clearable
+                    label="Acquisition Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                </v-col>
+                <v-col cols="6">
+                  <v-textarea
+                    prepend-icon="mdi-memory"
+                    label="Features"
+                    variant="outlined"
+                    v-model="newProfile.features"
                   >
-                    <template v-slot:activator="{ on, attrs }">
-                      <v-text-field
-                        v-model="formattedAcquisitionDate"
-                        label="Acquisition Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="menu = !menu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="rawAcquisitionDate"
-                      @input="menu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  </v-textarea>
+                </v-col>
+                <v-col cols="6">
+                  <v-textarea
+                    label="Accessories"
+                    variant="outlined"
+                    v-model="newProfile.accessories"
+                    prepend-icon="mdi-headphones"
+                  >
+                  </v-textarea>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    label="Warranty Description"
+                    prepend-icon="mdi-note"
+                    variant="outlined"
+                    v-model="newProfile.warrantyDescription"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-textarea
+                    label="Warrany Notes"
+                    prepend-icon="mdi-note"
+                    variant="outlined"
+                    v-model="newProfile.warrantyNotes"
+                    :rules="[rules.maxNotesLength]"
+                  ></v-textarea>
+                </v-col>
+                <v-col>
+                  <v-date-input
+                    v-model="rawWarrStartDate"
+                    clearable
+                    label="Warranty Start Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
+                </v-col>
+                <v-col>
+                  <v-date-input
+                    v-model="rawWarrEndDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                  ></v-date-input>
                 </v-col>
               </v-row>
             </v-col>
-            <template
-              v-for="(field, index) in generateDynamicFields"
-              :key="index"
-            >
-              <v-col cols="4" v-if="field.fieldType === 'boolean'">
-                <v-switch
-                  v-model="field.fieldValue"
-                  :label="field.fieldName"
+            <template v-for="(field, index) in customFields" :key="index">
+              <v-col cols="4" v-if="field.type === 'List'">
+                <v-combobox
+                  v-model="field.value"
+                  :label="field.name"
+                  :items="field.listValues"
+                  item-title="value"
+                  item-value="value"
+                  :rules="field.required ? [rules.required] : []"
                   variant="outlined"
                   prepend-icon="field"
-                ></v-switch>
+                  :return-object="false"
+                  @update:modelValue="changeFieldValue(field)"
+                ></v-combobox>
               </v-col>
-              <v-col cols="4" v-else>
+              <v-col cols="4" v-else-if="field.type === 'String'">
                 <v-text-field
-                  v-model="field.fieldValue"
-                  :label="field.fieldName"
+                  v-model="field.value"
+                  :label="field.name"
+                  :rules="field.required ? [rules.required] : []"
                   variant="outlined"
                   prepend-icon="field"
+                  :return-object="false"
+                  @update:modelValue="changeFieldValue(field)"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="4" v-else-if="field.type === 'Integer'">
+                <v-text-field
+                  v-model="field.value"
+                  :label="field.name"
+                  :rules="
+                    field.required ? [rules.required, intTest] : [intTest]
+                  "
+                  variant="outlined"
+                  prepend-icon="field"
+                  :return-object="false"
+                  @input="filterIntegerInput"
+                  @update:modelValue="changeFieldValue(field)"
+                ></v-text-field>
+              </v-col>
+              <v-col cols="4" v-else-if="field.type === 'Decimal'">
+                <v-text-field
+                  v-model="field.value"
+                  :label="field.name"
+                  :rules="
+                    field.required ? [rules.required, decTest] : [decTest]
+                  "
+                  variant="outlined"
+                  prepend-icon="field"
+                  :return-object="false"
+                  @input="filterDecimalInput"
+                  @update:modelValue="changeFieldValue(field)"
                 ></v-text-field>
               </v-col>
             </template>
-            <!-- the prepend-icon here is used to create a spacer for alignment purposes.
-                  Funnily enough, if the name is incorrect it makes a mdi icon sized blank space. -->
-
             <v-col cols="12">
               <v-textarea
                 label="Notes"
@@ -604,6 +683,7 @@ onMounted(async () => {
                 variant="outlined"
                 v-model="newProfile.notes"
                 :rules="[rules.maxNotesLength]"
+                @update:modelValue="changeProfileInfo"
               ></v-textarea>
             </v-col>
           </v-row>
@@ -613,9 +693,16 @@ onMounted(async () => {
     <v-card-actions>
       <v-spacer></v-spacer>
       <v-btn color="cancelgrey" text @click="emitCloseDialog">Cancel</v-btn>
-      <v-btn color="saveblue" @click="saveProfile">Save</v-btn>
+      <v-btn color="saveblue" @click="saveProfile" :disabled="!validProfile"
+        >Save</v-btn
+      >
     </v-card-actions>
   </v-card>
 </template>
+<style scoped>
+.relative-container {
+  position: relative;
+}
+</style>
 
 <!-- Love, "Zane" and Jaxen-->

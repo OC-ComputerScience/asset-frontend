@@ -11,12 +11,11 @@ const deleteDialog = ref(false);
 const reportToDelete = ref(null);
 const editDialog = ref(false);
 const reportToEdit = ref({});
-const originalReportName = ref(""); // Ref to store the original report name
+const originalReportName = ref(""); 
 const selectedTab = ref("Type");
 const snackbar = ref(false);
 const snackbarText = ref("");
 
-// Function to fetch 20 most recent reports depending on tab
 const retrieveReports = async () => {
   const reportType =
     selectedTab.value.toLowerCase() === "type" ? "type" : "assignment";
@@ -32,7 +31,6 @@ const viewReport = (report) => {
   let startDateParam = "null";
   let endDateParam = "null";
 
-  // Check the report type and set the start and end dates accordingly
   if (report.reportType === "type") {
     startDateParam = report.startDate ? report.startDate : "null";
     endDateParam = report.endDate ? report.endDate : "null";
@@ -49,7 +47,7 @@ const viewReport = (report) => {
       startDate: startDateParam,
       endDate: endDateParam,
       typeId: report.typeId ? report.typeId : "null",
-      tab: selectedTab.value, // Pass the currently selected tab to the router
+      tab: selectedTab.value, 
       reportType: report.reportType ? report.reportType : "null",
       customReportName: report.customReportName
         ? report.customReportName
@@ -58,12 +56,11 @@ const viewReport = (report) => {
   });
 };
 
-// When opening the edit dialog, save the current name and open the dialog
 const openEditDialog = (report) => {
   originalReportName.value =
     report.customReportName ||
     report.typeReportName ||
-    report.assignmentReportName; // Save the original name
+    report.assignmentReportName; 
   reportToEdit.value = {
     ...report,
     customReportName: originalReportName.value,
@@ -71,15 +68,12 @@ const openEditDialog = (report) => {
   editDialog.value = true;
 };
 
-// Computed property to check if the name has been changed
 const hasNameChanged = computed(() => {
   return reportToEdit.value.customReportName !== originalReportName.value;
 });
 
-// The save function checks if the name has changed before saving
 const saveReportName = async () => {
   if (hasNameChanged.value) {
-    // Only proceed if the name has changed
     try {
       const updatedReport = {
         ...reportToEdit.value,
@@ -87,14 +81,13 @@ const saveReportName = async () => {
       };
       await ReportServices.update(reportToEdit.value.reportId, updatedReport);
       editDialog.value = false;
-      // Refresh list to show updated name
       retrieveReports();
       snackbarText.value = "Report name updated successfully.";
-      snackbar.value = true; // Show the snackbar
+      snackbar.value = true; 
     } catch (error) {
       console.error("Error updating report name:", error);
       snackbarText.value = "Failed to update report name.";
-      snackbar.value = true; // Show error in snackbar
+      snackbar.value = true; 
     }
   }
 };
@@ -102,7 +95,6 @@ const saveReportName = async () => {
 const deleteReport = async (reportId) => {
   try {
     await ReportServices.delete(reportId);
-    // Refresh the reports list after deletion
     await retrieveReports();
   } catch (error) {
     console.error("Error deleting report:", error);
@@ -118,16 +110,15 @@ const confirmDelete = async () => {
   if (reportToDelete.value) {
     await deleteReport(reportToDelete.value);
     deleteDialog.value = false;
-    reportToDelete.value = null; // Reset the state
+    reportToDelete.value = null; 
   }
 };
 
 const cancelDelete = () => {
   deleteDialog.value = false;
-  reportToDelete.value = null; // Reset the state
+  reportToDelete.value = null; 
 };
 
-// Navigate to the report generation page
 const goToReportGeneration = () => {
   router.push({
     name: 'reportGeneration',
@@ -138,7 +129,6 @@ const goToReportGeneration = () => {
 };
 
 const formatDate = (dateString) => {
-  // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY");
 };
 
@@ -208,7 +198,6 @@ onMounted(async () => {
     <v-row>
       <v-col cols="12">
         <v-fade-transition mode="out-in">
-          <!-- Content for "Type" Reports -->
           <div v-if="selectedTab === 'Type'">
             <v-card>
               <v-card-title class="d-flex justify-space-between align-center">
@@ -225,9 +214,8 @@ onMounted(async () => {
                 <v-data-table
                   :headers="headers"
                   :items="filteredReports"
-                  class="elevation-1"
                   :items-per-page="10"
-                  :items-per-page-options="[5, 10, 20, 50, -1]"
+                  :items-per-page-options="[5, 10, 20, 50]"
                   v-model:sort-by="reportSortBy"
                 >
                   <template v-slot:item.reportDate="{ item }">
@@ -263,7 +251,6 @@ onMounted(async () => {
             </v-card>
           </div>
 
-          <!-- Content for Assignment Reports -->
           <div v-if="selectedTab === 'Assignment'">
             <v-card>
               <v-card-title class="d-flex justify-space-between align-center">
@@ -280,9 +267,8 @@ onMounted(async () => {
                 <v-data-table
                   :headers="headers"
                   :items="filteredReports"
-                  class="elevation-1"
                   :items-per-page="10"
-                  :items-per-page-options="[5, 10, 20, 50, -1]"
+                  :items-per-page-options="[5, 10, 20, 50]"
                   v-model:sort-by="reportSortBy"
                 >
                   <template v-slot:item.reportDate="{ item }">
@@ -321,7 +307,6 @@ onMounted(async () => {
       </v-col>
     </v-row>
 
-    <!-- Edit Report Name Dialog -->
     <v-dialog v-model="editDialog" persistent max-width="600px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between">
@@ -351,7 +336,6 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <!-- Delete Report Dialog -->
     <v-dialog v-model="deleteDialog" persistent max-width="500px">
       <v-card class="pa-4 rounded-xl">
         <v-card-title class="justify-space-between"
@@ -366,7 +350,6 @@ onMounted(async () => {
       </v-card>
     </v-dialog>
 
-    <!-- Snackbar for Notifications -->
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
     </v-snackbar>

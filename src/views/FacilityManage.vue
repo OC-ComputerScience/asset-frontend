@@ -20,10 +20,8 @@ const selectedBuildingId = ref("");
 const selectedFilterBuildingId = ref("");
 const validBuilding = ref(false);
 const validRoom = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -31,6 +29,7 @@ const snackbarText = ref("");
 const searchQuery = ref("");
 const buildingsSortBy = ref([{ key: "title", order: "asc" }]);
 const roomsSortBy = ref([{ key: "title", order: "asc" }]);
+const dataLoaded = ref(false);
 const store = useStore();
 const canAdd = computed(() => {
   return store.getters.canAdd;
@@ -38,26 +37,46 @@ const canAdd = computed(() => {
 const rules = {
   required: (value) => !!value || "Required.",
   maxNameLength: (value) => value.length <= 80,
+  maxNotesLength: (value) => value.length <= 255,
   roomNumber: (value) =>
     /^[a-zA-Z0-9]{2,4}$/.test(value) ||
     "Room number must be between 2 and 4 characters long.",
-  numberOfRooms: (value) => {
-    const intValue = parseInt(value);
-    return (
-      (Number.isInteger(intValue) && intValue >= 0 && intValue <= 400) ||
-      "Number of rooms cannot be greater than 400"
-    );
-  },
+
   buildingAbbreviation: (value) => {
     const pattern = /^[a-zA-Z]{2,3}$/;
     return (
       pattern.test(value) || "Building Abbreviation must be 2 or 3 characters"
     );
   },
+  numberic: (value) => {
+    return null || /^[0-9]*$/.test(value) || "Value must be a number";
+  },
+  money: (value) => {
+    return (
+      !value ||
+      /^[0-9]+(\.[0-9]{1,2})?$/.test(value) ||
+      "Value must be a money amount"
+    );
+  },
 };
+
 const newBuilding = ref({
   title: "",
   abbreviation: "",
+  activeStatus: true,
+  function: "",
+  yearBuilt: null,
+  squareFeet: null,
+  numStories: null,
+  hasElevator: false,
+  hasFireMonitor: false,
+  hasSmokeAlarm: false,
+  fireSmokeNotes: "",
+  constructionType: "",
+  roofType: "",
+  buildingValue: null,
+  buildingBPP: null,
+  renovationNotes: "",
 });
 const newRoom = ref({
   title: "",
@@ -76,7 +95,20 @@ const retrieveBuildings = async () => {
         key: building.buildingId,
         abbreviation: building.abbreviation,
         activeStatus: building.activeStatus,
+        function: building.function,
+        yearBuilt: building.yearBuilt,
+        squareFeet: building.squareFeet,
+        numStories: building.numStories,
+        hasElevator: building.hasElevator,
+        hasFireMonitor: building.hasFireMonitor,
+        fireSmokeNotes: building.fireSmokeNotes,
+        hasSmokeAlarm: building.hasSmokeAlarm,
+        constructionType: building.constructionType,
+        roofType: building.roofType,
+        buildingValue: building.buildingValue,
+        buildingBPP: building.buildingBPP,
         noOfRooms: building.noOfRooms,
+        renovationNotes: building.renovationNotes,
       }))
       .sort((a, b) => a.title.localeCompare(b.title)); // Sorting buildings by name
   } catch (error) {
@@ -89,7 +121,20 @@ const editBuilding = async (building) => {
     title: building.title,
     abbreviation: building.abbreviation,
     activeStatus: building.activeStatus,
+    function: building.function,
     buildingId: building.key,
+    yearBuilt: building.yearBuilt,
+    squareFeet: building.squareFeet,
+    numStories: building.numStories,
+    hasElevator: building.hasElevator,
+    hasFireMonitor: building.hasFireMonitor,
+    fireSmokeNotes: building.fireSmokeNotes,
+    hasSmokeAlarm: building.hasSmokeAlarm,
+    constructionType: building.constructionType,
+    roofType: building.roofType,
+    buildingValue: building.buildingValue,
+    buildingBPP: building.buildingBPP,
+    renovationNotes: building.renovationNotes,
   };
   editingBuilding.value = true;
   showAddBuildingDialog.value = true;
@@ -100,6 +145,30 @@ const saveBuilding = async () => {
   const buildingData = {
     name: newBuilding.value.title,
     abbreviation: newBuilding.value.abbreviation,
+    activeStatus: newBuilding.value.activeStatus,
+    function: newBuilding.value.function,
+    buildingId: newBuilding.value.key,
+    yearBuilt:
+      newBuilding.value.yearBuilt == "" ? null : newBuilding.value.yearBuilt,
+    squareFeet:
+      newBuilding.value.squareFeet == "" ? null : newBuilding.value.squareFeet,
+    numStories:
+      newBuilding.value.numStories == "" ? null : newBuilding.value.numStories,
+    hasElevator: newBuilding.value.hasElevator,
+    hasFireMonitor: newBuilding.value.hasFireMonitor,
+    fireSmokeNotes: newBuilding.value.fireSmokeNotes,
+    hasSmokeAlarm: newBuilding.value.hasSmokeAlarm,
+    constructionType: newBuilding.value.constructionType,
+    roofType: newBuilding.value.roofType,
+    buildingValue:
+      newBuilding.value.buildingValue == ""
+        ? null
+        : newBuilding.value.buildingValue,
+    buildingBPP:
+      newBuilding.value.buildingBPP == ""
+        ? null
+        : newBuilding.value.buildingBPP,
+    renovationNotes: newBuilding.value.renovationNotes,
   };
 
   try {
@@ -125,23 +194,25 @@ const saveBuilding = async () => {
   } finally {
     editingBuilding.value = false;
     showAddBuildingDialog.value = false;
-    newBuilding.value = { title: "", abbreviation: "" }; // Reset the form
-  }
-};
-
-const deleteBuilding = async (buildingId) => {
-  try {
-    await BuildingServices.delete(buildingId);
-    snackbarText.value = "Building deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of buildings after successful deletion
-    retrieveBuildings();
-    buildings.value = buildings.value.filter(
-      (t) => t.buildingId !== buildingId
-    );
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting building.";
+    newBuilding.value = {
+      title: "",
+      abbreviation: "",
+      title: "",
+      activeStatus: true,
+      function: "",
+      yearBuilt: null,
+      squareFeet: null,
+      numStories: null,
+      hasElevator: false,
+      hasFireMonitor: false,
+      fireSmokeNotes: "",
+      hasSmokeAlarm: false,
+      constructionType: null,
+      roofType: null,
+      buildingValue: null,
+      buildingBPP: null,
+      renovationNotes: "",
+    };
   }
 };
 
@@ -193,6 +264,7 @@ function viewBuilding(buildingId) {
 const baseBuildingHeaders = ref([
   { title: "Building Name", key: "title" },
   { title: "Abbreviation", key: "abbreviation" },
+  { title: "Function", key: "function" },
   { title: "No. of Rooms", key: "noOfRooms" },
   { title: "View Building", key: "view" },
 ]);
@@ -216,10 +288,6 @@ const archivedBuildingHeaders = computed(() => {
 
   if (store.getters.canActivate) {
     headers.push({ title: "Activate", key: "activate", sortable: false });
-  }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
   }
 
   return headers;
@@ -310,6 +378,9 @@ const retrieveRooms = async () => {
     console.error("Error loading rooms:", error);
     message.value = "Failed to load rooms.";
   }
+  finally {
+    dataLoaded.value = true;
+  }
 };
 
 const editRoom = (room) => {
@@ -318,6 +389,9 @@ const editRoom = (room) => {
     title: room.title,
     buildingId: room.buildingId,
     roomId: room.roomId,
+    roomNo: room.roomNo,
+    roomDescription: room.roomDescription,
+    roomType: room.roomType,
   };
   editingRoom.value = true;
   showAddRoomDialog.value = true;
@@ -329,7 +403,6 @@ const editRoom = (room) => {
 
 const saveRoom = async () => {
   let buildingId = selectedBuildingId.value; // Directly use the selected category ID
-  console.log(buildingId);
 
   if (!buildingId) {
     console.error("Building not selected.");
@@ -341,17 +414,17 @@ const saveRoom = async () => {
   const roomData = {
     roomNo: newRoom.value.title,
     buildingId: selectedBuildingId.value.key, // Make sure this is getting set correctly
+    roomType: newRoom.value.roomType,
+    roomDescription: newRoom.value.roomDescription,
   };
 
   try {
     if (editingRoom.value) {
-      console.log(newRoom.value.roomId);
       await RoomServices.update(newRoom.value.roomId, roomData);
       snackbarText.value = "Room updated successfully.";
     } else {
       await RoomServices.create(roomData);
       snackbarText.value = "Room added successfully.";
-      console.log(roomData);
     }
     snackbar.value = true; // Show the snackbar
     message.value = "Room saved successfully.";
@@ -363,22 +436,6 @@ const saveRoom = async () => {
   } finally {
     resetForm(); // Ensure form is reset here
     showAddRoomDialog.value = false; // Close dialog in finally to ensure it closes
-  }
-  console.log(roomData);
-};
-
-const deleteRoom = async (roomId) => {
-  try {
-    await RoomServices.delete(roomId);
-    snackbarText.value = "Room deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of rooms after successful deletion
-    retrieveRooms();
-    retrieveBuildings();
-    rooms.value = rooms.value.filter((t) => t.id !== roomId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting room.";
   }
 };
 
@@ -444,11 +501,10 @@ function viewRoom(roomId) {
     params: { roomId: roomId },
     query: { sourcePage: sourcePage },
   });
-  console.log("Facility manage passed sourcePage " + sourcePage);
 }
 
 const baseRoomHeaders = ref([
-  { title: "Room No.", key: "title" },
+  { title: "Room No.", key: "roomName" },
   { title: "Building", key: "buildingName" },
   { title: "View Room Details", key: "view" },
 ]);
@@ -476,10 +532,6 @@ const archivedRoomHeaders = computed(() => {
 
   if (store.getters.canActivate) {
     headers.push({ title: "Activate", key: "activate", sortable: false });
-  }
-
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
   }
 
   return headers;
@@ -523,21 +575,6 @@ const hasRoomChanged = computed(() => {
 });
 
 // *** Misc Section ***
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "building") {
-    await deleteBuilding(itemToDelete.value.id);
-  } else if (itemToDelete.value.type === "room") {
-    await deleteRoom(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-};
-
 const openArchiveDialog = (item) => {
   itemToArchive.value = item;
   showArchiveDialog.value = true;
@@ -673,7 +710,7 @@ onMounted(async () => {
         </v-row>
       </div>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active Buildings Section -->
@@ -698,9 +735,8 @@ onMounted(async () => {
                     :headers="buildingHeaders"
                     :items="highlightedBuildings"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="buildingsSortBy"
                   >
                     <template v-slot:item.title="{ item }">
@@ -766,9 +802,8 @@ onMounted(async () => {
                     :headers="archivedBuildingHeaders"
                     :items="filteredBuildings"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="buildingsSortBy"
                   >
                     <template v-slot:item.activate="{ item }">
@@ -783,20 +818,6 @@ onMounted(async () => {
                         "
                       >
                         <v-icon>mdi-arrow-up-box</v-icon>
-                      </v-btn>
-                    </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'building',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
                       </v-btn>
                     </template>
                   </v-data-table>
@@ -824,9 +845,8 @@ onMounted(async () => {
                     :headers="roomHeaders"
                     :items="filteredRooms"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.view="{ item }">
@@ -879,9 +899,8 @@ onMounted(async () => {
                     :headers="archivedRoomHeaders"
                     :items="filteredRooms"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.view="{ item }">
@@ -912,26 +931,19 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'room',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 
@@ -957,7 +969,7 @@ onMounted(async () => {
                     counter
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12">
+                <v-col cols="6">
                   <v-text-field
                     label="Building Abbreviation"
                     v-model="newBuilding.abbreviation"
@@ -966,6 +978,127 @@ onMounted(async () => {
                     maxlength="3"
                     counter
                   ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-combobox
+                    label="Function"
+                    v-model="newBuilding.function"
+                    variant="outlined"
+                    :items="[
+                      'Admin',
+                      'Academic',
+                      'Athletic',
+                      'Misc',
+                      'Mixed',
+                      'Plant',
+                      'Residential',
+                      'Other',
+                    ]"
+                  ></v-combobox>
+                </v-col>
+
+                <v-col cols="4">
+                  <v-text-field
+                    label="Year Built"
+                    v-model="newBuilding.yearBuilt"
+                    variant="outlined"
+                    maxlength="4"
+                    :rules="[rules.numberic]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="4">
+                  <v-text-field
+                    label="Square Feet"
+                    v-model="newBuilding.squareFeet"
+                    variant="outlined"
+                    maxlength="6"
+                    :rules="[rules.numberic]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="4">
+                  <v-text-field
+                    label="Number of Stories"
+                    v-model="newBuilding.numStories"
+                    variant="outlined"
+                    maxlength="1"
+                    :rules="[rules.numberic]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="4">
+                  <v-checkbox
+                    label="Elevator"
+                    v-model="newBuilding.hasElevator"
+                    variant="outlined"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="4">
+                  <v-checkbox
+                    label="Fire Monitor"
+                    v-model="newBuilding.hasFireMonitor"
+                    variant="outlined"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="4">
+                  <v-checkbox
+                    label="Smoke Alarm"
+                    v-model="newBuilding.hasSmokeAlarm"
+                    variant="outlined"
+                  ></v-checkbox>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    label="Fire/Smoke Notes"
+                    v-model="newBuilding.fireSmokeNotes"
+                    variant="outlined"
+                    :rules="[rules.maxNotesLength]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-combobox
+                    label="Construction Type"
+                    v-model="newBuilding.constructionType"
+                    variant="outlined"
+                    :items="[
+                      'Brick & Motar',
+                      'Metal',
+                      'Steel Frame / Brick',
+                      'Wood Frame',
+                      'Wood Frame/ Brick',
+                      'Other',
+                    ]"
+                  ></v-combobox>
+                </v-col>
+                <v-col cols="6">
+                  <v-combobox
+                    label="Roof Type"
+                    v-model="newBuilding.roofType"
+                    variant="outlined"
+                    :items="['Metal', 'Tar', 'TPO', 'Other']"
+                  ></v-combobox>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    label="Buildiing Value"
+                    v-model="newBuilding.buildingValue"
+                    variant="outlined"
+                    :rules="[rules.money]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    label="BPP Value"
+                    v-model="newBuilding.buildingBPP"
+                    variant="outlined"
+                    :rules="[rules.money]"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-area
+                    label="Renovation Notes"
+                    v-model="newBuilding.renovationNotes"
+                    variant="outlined"
+                    :rules="[rules.maxNotesLength]"
+                  ></v-text-area>
                 </v-col>
               </v-row>
             </v-container>
@@ -1008,7 +1141,6 @@ onMounted(async () => {
                     :rules="[rules.required]"
                     clearable
                     return-object
-                    prepend-icon="mdi-domain"
                   ></v-autocomplete>
                 </v-col>
                 <v-col cols="12">
@@ -1019,8 +1151,42 @@ onMounted(async () => {
                     :rules="[rules.required, rules.roomNumber]"
                     maxlength="4"
                     counter
-                    prepend-icon="mdi-pound"
                   ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-text-field
+                    label="Room Description"
+                    variant="outlined"
+                    v-model="newRoom.roomDescription"
+                    maxlength="45"
+                    counter
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12">
+                  <v-combobox
+                    label="Room Type"
+                    v-model="newRoom.roomType"
+                    variant="outlined"
+                    :items="[
+                      'Auditorium',
+                      'Classroom',
+                      'Conference Room',
+                      'Kitchen',
+                      'Laboratory',
+                      'Lobby',
+                      'Lounge',
+                      'Gym',
+                      'Meeting Room',
+                      'Office',
+                      'Practice Room',
+                      'Reception',
+                      'Storage',
+                      'Study Room',
+                      'Therapy Room',
+                      'Workroom',
+                      'Other',
+                    ]"
+                  ></v-combobox>
                 </v-col>
               </v-row>
             </v-container>
@@ -1036,25 +1202,6 @@ onMounted(async () => {
             :disabled="!validRoom || !hasRoomChanged"
             >Save</v-btn
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this item?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

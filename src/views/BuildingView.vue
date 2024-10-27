@@ -20,10 +20,8 @@ const originalRoom = ref({});
 const selectedBuildingId = ref("");
 const validBuilding = ref(false);
 const validRoom = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -100,8 +98,20 @@ const retrieveBuildings = async () => {
     buildings.value = response.data.map((building) => ({
       title: building.name,
       key: building.buildingId,
+      function: building.function,
       abbreviation: building.abbreviation,
-      noOfRooms: building.noOfRooms,
+      yearBuilt: building.yearBuilt,
+      squareFeet: building.squareFeet,
+      numStories: building.numStories,
+      hasElevator: building.hasElevator,
+      hasFireMonitor: building.hasFireMonitor,
+      hasSmokeAlarm: building.hasSmokeAlarm,
+      fireSmokeNotes: building.fireSmokeNotes,
+      constructionType: building.constructionType,
+      roofType: building.roofType,
+      buildingValue: building.buildingValue,
+      buildingBPP: building.buildingBPP,
+      renovationNotes: building.renovationNotes,
       activeStatus: building.activeStatus,
     }));
   } catch (error) {
@@ -115,9 +125,7 @@ const retrieveBuildingDetails = async () => {
   try {
     const response = await BuildingServices.getById(props.buildingId);
     buildingDetails.value = response.data;
-    console.log("retrieved building details successfully");
   } catch (error) {
-    console.error("Error loading \building details:", error);
     message.value = "Failed to load building details.";
   }
 };
@@ -148,7 +156,6 @@ function viewRoom(roomId) {
     params: { roomId: roomId },
     query: { sourcePage: sourcePage },
   });
-  console.log("Building view passed sourcePage " + sourcePage);
 }
 
 const retrieveRooms = async () => {
@@ -168,7 +175,6 @@ const retrieveRooms = async () => {
     });
     rooms.value = enrichedRooms;
   } catch (error) {
-    console.error("Error loading rooms:", error);
     message.value = "Failed to load rooms.";
   }
 };
@@ -198,10 +204,8 @@ const editRoom = (room) => {
 
 const saveRoom = async () => {
   let buildingId = props.buildingId; // Directly use the selected category ID
-  console.log(buildingId);
 
   if (!buildingId) {
-    console.error("Building not selected.");
     message.value = "Building not found or not selected.";
     return;
   }
@@ -214,38 +218,20 @@ const saveRoom = async () => {
 
   try {
     if (editingRoom.value) {
-      console.log(newRoom.value.roomId);
       await RoomServices.update(newRoom.value.roomId, roomData);
       snackbarText.value = "Room updated successfully.";
     } else {
       await RoomServices.create(roomData);
       snackbarText.value = "Room added successfully.";
-      console.log(roomData);
     }
     snackbar.value = true; // Show the snackbar
     message.value = "Room saved successfully.";
     await retrieveRooms();
   } catch (error) {
-    console.error("Error saving room:", error);
     message.value = `Error saving room: ${error.message || "Unknown error"}`;
   } finally {
     resetForm(); // Ensure form is reset here
     showAddRoomDialog.value = false; // Close dialog in finally to ensure it closes
-  }
-  console.log(roomData);
-};
-
-const deleteRoom = async (roomId) => {
-  try {
-    await RoomServices.delete(roomId);
-    snackbarText.value = "Room deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of rooms after successful deletion
-    retrieveRooms();
-    rooms.value = rooms.value.filter((t) => t.id !== roomId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting room.";
   }
 };
 
@@ -280,7 +266,6 @@ const archiveRoom = async (roomId) => {
     retrieveRooms();
     rooms.value = rooms.value.filter((c) => c.id !== roomId);
   } catch (error) {
-    console.error(error);
     message.value = "Error archiving room.";
   }
 };
@@ -297,7 +282,6 @@ const activateRoom = async (roomId) => {
     retrieveRooms();
     rooms.value = rooms.value.filter((c) => c.id !== roomId);
   } catch (error) {
-    console.error(error);
     message.value = "Error activating room.";
   }
 };
@@ -333,10 +317,6 @@ const archivedRoomHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -365,20 +345,6 @@ const formatExpectedDate = (dateString) => {
   if (!dateString) return "Indefinite";
   // Parse the date as UTC and format it
   return moment.utc(dateString).format("MMM DD, YYYY");
-};
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  if (itemToDelete.value.type === "building") {
-    await deleteBuilding(itemToDelete.value.id);
-  } else if (itemToDelete.value.type === "room") {
-    await deleteRoom(itemToDelete.value.id);
-  }
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
 };
 
 const openArchiveDialog = (item) => {
@@ -456,9 +422,49 @@ onMounted(async () => {
             <v-btn icon @click="goBack">
               <v-icon>mdi-arrow-left</v-icon>
             </v-btn>
-            <v-toolbar-title>{{ buildingDetails.name }}</v-toolbar-title>
+            <v-toolbar-title>{{ buildingDetails.name }} x</v-toolbar-title>
           </v-toolbar>
           <v-divider style="width: 80%; height: 3px"></v-divider>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col cols="4">
+          Abreviation : {{ buildingDetails.abbreviation }}
+        </v-col>
+        <v-col cols="4"> Function : {{ buildingDetails.function }} </v-col>
+        <v-col cols="4"> Year Built : {{ buildingDetails.yearBuilt }} </v-col>
+        <v-col cols="4"> Square Feet: {{ buildingDetails.squareFeet }} </v-col>
+        <v-col cols="4">
+          Number of Stories: {{ buildingDetails.numStories }}
+        </v-col>
+        <v-col cols="4">
+          Elevator: {{ buildingDetails.elevator ? "Yes" : "No" }}
+        </v-col>
+        <v-col cols="4">
+          Fire Monitor: {{ buildingDetails.hasFireMonitor ? "Yes" : "No" }}
+        </v-col>
+        <v-col cols="4">
+          Smoke Alarm: {{ buildingDetails.hasSmokeAlarm ? "Yes" : "No" }}
+        </v-col>
+        <v-col cols="4">
+          Smoke Alarm Notes: {{ buildingDetails.fireSmokeNotes }}
+        </v-col>
+        <v-col cols="4">
+          Construction Type:
+          {{ buildingDetails.constructionType }}
+        </v-col>
+        <v-col cols="4">
+          Roof Type:
+          {{ buildingDetails.roofType }}
+        </v-col>
+        <v-col cols="4">
+          Building Value: {{ buildingDetails.buildingValue }}
+        </v-col>
+        <v-col cols="4">
+          Building BPP: {{ buildingDetails.buildingBPP }}
+        </v-col>
+        <v-col cols="12">
+          Renovation Notes: {{ buildingDetails.renovationNotes }}
         </v-col>
       </v-row>
 
@@ -515,9 +521,8 @@ onMounted(async () => {
                     :headers="roomHeaders"
                     :items="filterRoomsByBuildingId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.edit="{ item }">
@@ -571,9 +576,8 @@ onMounted(async () => {
                     :headers="archivedRoomHeaders"
                     :items="filterRoomsByBuildingId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.edit="{ item }">
@@ -593,20 +597,6 @@ onMounted(async () => {
                         "
                       >
                         <v-icon>mdi-arrow-up-box</v-icon>
-                      </v-btn>
-                    </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                            type: 'room',
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
                       </v-btn>
                     </template>
                     <template v-slot:item.view="{ item }">
@@ -641,9 +631,8 @@ onMounted(async () => {
                     :headers="currentBuildingAssetHeaders"
                     :items="filterBuildingAssetsByBuildingId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">
@@ -672,9 +661,8 @@ onMounted(async () => {
                     :headers="pastBuildingAssetHeaders"
                     :items="filterBuildingAssetsByBuildingId()"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="roomsSortBy"
                   >
                     <template v-slot:item.checkoutDate="{ item }">
@@ -728,24 +716,6 @@ onMounted(async () => {
             :disabled="!validRoom || !hasRoomChanged"
             >Save</v-btn
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Confirm Delete Dialog -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card>
-        <v-card-title class="text-h5">Confirm Deletion</v-card-title>
-        <v-card-text>Are you sure you want to delete this item?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

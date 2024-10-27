@@ -12,6 +12,9 @@ export default {
   getById(profileId) {
     return apiClient.get(baseURL + `${profileId}`);
   },
+  getByType(typeId){
+    return apiClient.get(baseURL + `type/${typeId}`);
+  },
   getProfilesByCategoryId(categoryId) {
     return apiClient.get(baseURL + "byCategoryId/" + `${categoryId}`);
   },

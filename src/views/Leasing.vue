@@ -15,10 +15,8 @@ const selectedSerializedAssetId = ref("");
 const editingLease = ref(false);
 const originalLease = ref({});
 const validLease = ref(false);
-const showDeleteConfirmDialog = ref(false);
 const showArchiveDialog = ref(false);
 const showActivateDialog = ref(false);
-const itemToDelete = ref(null);
 const itemToArchive = ref(null);
 const itemToActivate = ref(null);
 const snackbar = ref(false);
@@ -30,6 +28,7 @@ const startMenu = ref(false);
 const endMenu = ref(false);
 const startDate = ref(null);
 const endDate = ref(null);
+const dataLoaded = ref(false);
 
 const activeLeases = computed(() => {
   return filteredLeases.value.filter((lease) => lease.activeStatus === true);
@@ -77,6 +76,9 @@ const retrieveLeases = async () => {
     }));
   } catch (error) {
     console.error("Error loading leases:", error);
+  }
+  finally {
+    dataLoaded.value = true;
   }
 };
 
@@ -127,7 +129,13 @@ const editLease = async (lease) => {
   showAddLeaseDialog.value = true;
   originalLease.value = { ...newLease.value };
 };
-
+function monthDiff(d1, d2) {
+  var months;
+  months = (d2.getFullYear() - d1.getFullYear()) * 12;
+  months -= d1.getMonth();
+  months += d2.getMonth();
+  return months <= 0 ? 0 : months;
+}
 const saveLease = async () => {
   let formattedStartDate = null;
   if (startDate.value) {
@@ -140,11 +148,14 @@ const saveLease = async () => {
     // Convert local date to UTC before storing
     formattedEndDate = format(new Date(endDate.value), "MMM dd, yyyy");
   }
-
+  let lengthMonth = monthDiff(
+    new Date(startDate.value),
+    new Date(endDate.value)
+  );
   const leaseData = {
     startDate: formattedStartDate,
     endDate: formattedEndDate,
-    length: newLease.value.length,
+    length: lengthMonth,
     lessor: newLease.value.lessor,
     serializedAssetId: selectedSerializedAssetId.value.key,
   };
@@ -169,20 +180,6 @@ const saveLease = async () => {
     editingLease.value = false;
     showAddLeaseDialog.value = false;
     resetLeaseForm(); // Reset the form fields
-  }
-};
-
-const deleteLease = async (leaseId) => {
-  try {
-    await LeaseServices.delete(leaseId);
-    snackbarText.value = "Lease deleted successfully.";
-    snackbar.value = true; // Show the snackbar
-    // Refresh the list of people after successful deletion
-    retrieveLeases();
-    leases.value = leases.value.filter((t) => t.leaseId !== leaseId);
-  } catch (error) {
-    console.error(error);
-    message.value = "Error deleting lease.";
   }
 };
 
@@ -279,10 +276,6 @@ const archivedLeaseHeaders = computed(() => {
     headers.push({ title: "Activate", key: "activate", sortable: false });
   }
 
-  if (store.getters.canDelete) {
-    headers.push({ title: "Delete", key: "delete", sortable: false });
-  }
-
   return headers;
 });
 
@@ -368,18 +361,6 @@ const formatLength = (length) => {
   return `${length} mo.`;
 };
 
-const openDeleteConfirmDialog = (item) => {
-  itemToDelete.value = item;
-  showDeleteConfirmDialog.value = true;
-};
-
-const confirmDelete = async () => {
-  await deleteLease(itemToDelete.value.id);
-  showDeleteConfirmDialog.value = false;
-  itemToDelete.value = null; // Reset after deletion
-  await retrieveLeases();
-};
-
 const openArchiveDialog = (item) => {
   itemToArchive.value = item;
   showArchiveDialog.value = true;
@@ -425,9 +406,6 @@ const formattedEndDate = computed(() => {
 onMounted(async () => {
   await retrieveLeases();
   await retrieveSerializedAssets();
-  console.log(
-    "Know Issues: When editing day shows a day before the DB date // Search by serialized asset not functioning // Leases need to be sorted by closest to end date (maybe)"
-  );
 });
 </script>
 
@@ -475,7 +453,7 @@ onMounted(async () => {
         </v-col>
       </v-row>
 
-      <v-row>
+      <v-row v-if="dataLoaded">
         <v-col cols="12">
           <v-fade-transition mode="out-in">
             <!-- Active leases -->
@@ -496,11 +474,10 @@ onMounted(async () => {
                 <v-card-text>
                   <v-data-table
                     :headers="activeLeaseHeaders"
-                    :items="highlightedLeases"
+                    :items="activeLeases"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="leaseSortBy"
                   >
                     <template v-slot:item.serializedAssetName="{ item }">
@@ -549,9 +526,8 @@ onMounted(async () => {
                     :headers="archivedLeaseHeaders"
                     :items="archivedLeases"
                     item-key="key"
-                    class="elevation-1"
                     :items-per-page="5"
-                    :items-per-page-options="[5, 10, 20, 50, -1]"
+                    :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="leaseSortBy"
                   >
                     <template v-slot:item.length="{ item }">
@@ -581,25 +557,19 @@ onMounted(async () => {
                         <v-icon>mdi-arrow-up-box</v-icon>
                       </v-btn>
                     </template>
-                    <template v-slot:item.delete="{ item }">
-                      <v-btn
-                        icon
-                        class="table-icons"
-                        @click="
-                          openDeleteConfirmDialog({
-                            id: item.key,
-                          })
-                        "
-                      >
-                        <v-icon color="primary">mdi-delete</v-icon>
-                      </v-btn>
-                    </template>
                   </v-data-table>
                 </v-card-text>
               </v-card>
             </div>
           </v-fade-transition>
         </v-col>
+      </v-row>
+      <v-row v-else align="center" justify="center">
+        <v-progress-circular
+          color="blue"
+          indeterminate
+          :size="50"
+        />
       </v-row>
     </v-container>
 
@@ -644,73 +614,26 @@ onMounted(async () => {
 
                 <!-- Start Date Picker -->
                 <v-col cols="12">
-                  <v-menu
-                    v-model="startMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedStartDate"
-                        label="Start Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="startMenu = !startMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="startDate"
-                      @input="startMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
-                </v-col>
-
-                <!-- Lease Length Field -->
-                <v-col cols="12">
-                  <v-text-field
-                    label="Length (months)"
+                  <v-date-input
+                    v-model="startDate"
+                    clearable
+                    label="Warranty Start Date"
                     variant="outlined"
-                    prepend-icon="mdi-clock"
-                    v-model="newLease.length"
-                    :rules="[rules.required, rules.onlyNumbers]"
-                    maxlength="3"
-                    counter
-                  ></v-text-field>
+                    color="blue"
+                    :rules="[rules.required]"
+                  ></v-date-input>
                 </v-col>
 
                 <!-- End Date Picker -->
                 <v-col cols="12">
-                  <v-menu
-                    v-model="endMenu"
-                    attach="#attach"
-                    :close-on-content-click="false"
-                    transition="scale-transition"
-                    min-width="auto"
-                  >
-                    <template v-slot:activator="{ attrs }">
-                      <v-text-field
-                        v-model="formattedEndDate"
-                        label="End Date"
-                        variant="outlined"
-                        prepend-icon="mdi-calendar"
-                        :rules="[rules.required]"
-                        readonly
-                        v-bind="attrs"
-                        @click="endMenu = !endMenu"
-                      ></v-text-field>
-                    </template>
-                    <v-date-picker
-                      v-model="endDate"
-                      @input="endMenu = false"
-                      color="primary"
-                    ></v-date-picker>
-                  </v-menu>
+                  <v-date-input
+                    v-model="endDate"
+                    clearable
+                    label="Warranty End Date"
+                    variant="outlined"
+                    color="blue"
+                    :rules="[rules.required]"
+                  ></v-date-input>
                 </v-col>
 
                 <v-col cols="12"> </v-col>
@@ -727,25 +650,6 @@ onMounted(async () => {
           <v-btn color="saveblue" @click="saveLease" :disabled="!validLease"
             >Save</v-btn
           >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
-      <v-card class="pa-4 rounded-xl">
-        <v-card-title class="justify-space-between"
-          >Confirm Deletion</v-card-title
-        >
-        <v-card-text>Are you sure you want to delete this lease?</v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn
-            color="cancelgrey"
-            text
-            @click="showDeleteConfirmDialog = false"
-            >Cancel</v-btn
-          >
-          <v-btn color="primary" text @click="confirmDelete">Delete</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

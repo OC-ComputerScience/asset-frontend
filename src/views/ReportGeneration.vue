@@ -5,11 +5,15 @@ import PersonAssetServices from "../services/personAssetServices";
 import BuildingAssetServices from "../services/buildingAssetServices";
 import RoomAssetServices from "../services/roomAssetServices";
 import ReportServices from "../services/reportServices";
-import { ref, watch, onMounted, computed } from "vue";
+import UserRoleServices from "../services/userRoleServices";
+import store from "../store/store.js";
+import { ref, watch, onMounted, computed, onBeforeMount } from "vue";
 import { useRoute } from "vue-router";
 import { zonedTimeToUtc } from "date-fns-tz";
 import { format } from "date-fns";
 import moment from "moment-timezone";
+
+const userRole = ref({});
 
 const message = ref("");
 const selectedTab = ref("Type");
@@ -49,17 +53,14 @@ const route = useRoute();
 const rules = {
   required: (value) => !!value || "Required.",
 };
-// const newReport = ref({
-//   startDate: "",
-//   endDate: "",
-//   typeId: "",
-//   reportDate: "",
-//   dateFilter: "",
-// });
 
-// *** Retrieves ***
+const userRoleId = ref()
 
-// Retrieve PersonAssets from Database
+const getUserRole = async() => {
+  let response = await UserRoleServices.get(userRoleId.value);
+  userRole.value = response.data;
+}
+
 const retrievePersonAssets = async () => {
   try {
     const response = await PersonAssetServices.getAll();
@@ -78,7 +79,6 @@ const retrievePersonAssets = async () => {
   }
 };
 
-// Retrieve BuildingAssets from Database
 const retrieveBuildingAssets = async () => {
   try {
     const response = await BuildingAssetServices.getAll();
@@ -97,7 +97,6 @@ const retrieveBuildingAssets = async () => {
   }
 };
 
-// Retrieve RoomAssets from Database
 const retrieveRoomAssets = async () => {
   try {
     const response = await RoomAssetServices.getAll();
@@ -116,18 +115,26 @@ const retrieveRoomAssets = async () => {
   }
 };
 
-// Retrieve Types from Database
 const retrieveAssetTypes = async () => {
   try {
-    const typesResponse = await AssetTypeServices.getAll();
+    userRoleId.value = store.getters.getUserRole
+    await getUserRole()
+    let categoryId = userRole.value.categoryId
+    let typesResponse = []
+    if(categoryId === 4){
+      typesResponse = await AssetTypeServices.getAll();
+    }
+    else{
+      typesResponse = await AssetTypeServices.getAssetTypesByCategoryId(categoryId)
+    }
     assetTypes.value = typesResponse.data
-      .filter((type) => type.activeStatus !== 0) // Filter out types with activeStatus of 0
+      .filter((type) => type.activeStatus !== 0) 
       .map((type) => ({
         ...type,
         key: type.typeId,
         title: type.typeName,
       }))
-      .sort((a, b) => a.title.localeCompare(b.title)); // Sort by typeName
+      .sort((a, b) => a.title.localeCompare(b.title));
 
     // Prepend the "All" option to the list of filtered and sorted asset types
     assetTypes.value = [{ key: "all", title: "All" }, ...assetTypes.value];
@@ -265,25 +272,8 @@ const generateTypeReport = async () => {
     disposalPrice: asset.disposalPrice,
   }));
 
-  // Add a total row at the end of your data
-  // if (typeReportData.value.length > 0) {
-  //   typeReportData.value.push({
-  //     serializedAssetName: "Total Spent",
-  //     acquisitionDate: "",
-  //     purchasePrice: totalSpent.value, // Assuming this computes the total
-  //     disposalDate: "",
-  //     disposalMethod: "",
-  //     isTotalRow: true, // A marker to identify this row
-  //   });
-  // }
-
-  // Enable saving and exporting
   typeReportGenerated.value = true;
-
-  // Re-enable the Save button for the new report
   saveButtonDisabled.value = false;
-
-  // Handle case where no assets match the filter criteria
   if (filteredAssets.length === 0) {
     snackbarText.value = "No assets found with the selected criteria.";
     snackbar.value = true;
@@ -343,7 +333,6 @@ const generateAssignmentReport = async () => {
     assignmentEndDate.value &&
     moment(assignmentEndDate.value).isBefore(assignmentStartDate.value)
   ) {
-    console.log("End date is before start date.");
     snackbarText.value = "Please ensure the end date is after the start date.";
     snackbar.value = true;
     return;
@@ -371,7 +360,6 @@ const generateAssignmentReport = async () => {
         : null,
   }));
 
-  console.log("Combined assets:", combinedAssets);
 
   // Filter by selected type if not 'All'
   if (
@@ -381,7 +369,6 @@ const generateAssignmentReport = async () => {
     combinedAssets = combinedAssets.filter(
       (asset) => asset.typeId === selectedTypeAssignment.value.key
     );
-    console.log("Filtered by type:", combinedAssets);
   }
 
   let filteredAssets = combinedAssets;
@@ -422,7 +409,6 @@ const generateAssignmentReport = async () => {
     });
   }
 
-  console.log("Date filtered assets:", filteredAssets);
 
   assignmentReportData.value = filteredAssets;
   assignmentReportGenerated.value = true;
@@ -526,7 +512,6 @@ const saveTypeReport = async () => {
 
 const saveAssignmentReport = async () => {
   if (!assignmentReportGenerated.value) {
-    console.log("No report generated to save.");
     snackbarText.value = "Please generate the report before saving.";
     snackbar.value = true;
     return;
@@ -556,14 +541,11 @@ const saveAssignmentReport = async () => {
     reportType: "assignment", // This specifies the report as an assignment report
   };
 
-  console.log("Attempting to save report with data:", reportData);
-
   try {
     await ReportServices.create(reportData);
     snackbarText.value = "Report successfully saved!";
     snackbar.value = true;
     saveButtonDisabled.value = true; // Disable the Save button after successful save
-    console.log("Report saved successfully.");
   } catch (error) {
     console.error("Failed to save the report:", error);
     snackbarText.value = "Failed to save the report.";
@@ -803,20 +785,16 @@ const formatCurrencyForCSV = (value) => {
 };
 
 const totalSpent = computed(() => {
-  console.log("Recalculating total");
   const total = typeReportData.value.reduce((acc, asset) => {
     return acc + (parseFloat(asset.purchasePrice) || 0);
   }, 0);
-  console.log("Total Spent:", total);
   return total;
 });
 
 const totalSold = computed(() => {
-  console.log("Recalculating total");
   const total = typeReportData.value.reduce((acc, asset) => {
     return acc + (parseFloat(asset.disposalPrice) || 0);
   }, 0);
-  console.log("Total Spent:", total);
   return total;
 });
 // Define headers for the type table
@@ -986,6 +964,7 @@ watch(
   { immediate: true }
 );
 
+
 onMounted(async () => {
   if (route.query.tab) {
     selectedTab.value = route.query.tab; // Set the tab based on the query parameter
@@ -995,9 +974,9 @@ onMounted(async () => {
     const dataFetchers = [];
 
     // Push all necessary fetchers based on the tab or conditions
-    dataFetchers.push(retrieveAssetTypes());
+    dataFetchers.push(await retrieveAssetTypes());
     if (route.query.reportType === "type") {
-      dataFetchers.push(retrieveSerializedAssets());
+      dataFetchers.push(await retrieveSerializedAssets());
     } else if (route.query.reportType === "assignment") {
       dataFetchers.push(
         retrievePersonAssets(),
@@ -1208,9 +1187,8 @@ onMounted(async () => {
                     <v-data-table
                       :headers="typeReportHeaders"
                       :items="typeReportData"
-                      class="elevation-1 data-table-hover"
                       :items-per-page="10"
-                      :items-per-page-options="[5, 10, 20, 50, -1]"
+                      :items-per-page-options="[5, 10, 20, 50]"
                     >
                       <!-- Existing item slots -->
                       <template v-slot:item="{ item }">
@@ -1426,9 +1404,8 @@ onMounted(async () => {
                     <v-data-table
                       :headers="assignmentReportHeaders"
                       :items="assignmentReportData"
-                      class="elevation-1 data-table-hover"
                       :items-per-page="10"
-                      :items-per-page-options="[5, 10, 20, 50, -1]"
+                      :items-per-page-options="[5, 10, 20, 50]"
                     >
                       <template v-slot:item="{ item }">
                         <tr :class="{ 'total-row': item.isTotalRow }">
