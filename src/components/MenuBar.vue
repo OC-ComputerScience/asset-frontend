@@ -89,11 +89,14 @@ const resetMenu = async() => {
     initials.value = user.value.fName[0] + user.value.lName[0];
     name.value = user.value.fName + " " + user.value.lName;
   }
-  user.value.roles.forEach((role) => {
-    if(role.active){
-      activeRole.value = role.userRole
-    }
-  })
+  if(user.value){
+    user.value.roles.forEach((role) => {
+      if(role.active){
+        activeRole.value = role.userRole
+      }
+    })
+  }
+  
 };
 
 const logout = async() => {
