@@ -451,8 +451,7 @@ const retrieveAssetProfiles = async () => {
   } catch (error) {
     console.error("Error loading profiles:", error);
     message.value = "Failed to load profiles.";
-  }
-  finally {
+  } finally {
     dataLoaded.value = true;
   }
 };
@@ -667,7 +666,7 @@ const saveSerializedAsset = async () => {
       "MMM dd, yyyy"
     );
   }
-  
+
   const serializedAssetData = {
     serialNumber: newSerializedAsset.value.serialNumber,
     profileId: selectedProfileId.value.key,
@@ -683,48 +682,52 @@ const saveSerializedAsset = async () => {
     // Check if editing an existing serializedAsset (i.e., `id` is present)
     if (editingSerializedAsset.value && newSerializedAsset.value.id) {
       // Call update service if editing
-      if(hasSerializedAssetChanged.value){
+      if (hasSerializedAssetChanged.value) {
         await SerializedAssetServices.update(
           newSerializedAsset.value.id,
           serializedAssetData
         );
       }
-      if(barcodes.value !== originalBarcodes.value){
-        barcodes.value.forEach(async(barcode, index) => {
-          if(!barcode.barcodeId){
+      if (barcodes.value !== originalBarcodes.value) {
+        barcodes.value.forEach(async (barcode, index) => {
+          if (!barcode.barcodeId) {
             let newBarcode = {
               barcode: barcode.barcode,
               barcodeType: barcode.barcodeType,
-              serializedAssetId: newSerializedAsset.value.id
-            }
-            await BarcodeServices.create(newBarcode)
-          }
-          else if(barcode != originalBarcodes.value[index]){
+              serializedAssetId: newSerializedAsset.value.id,
+            };
+            await BarcodeServices.create(newBarcode);
+          } else if (barcode != originalBarcodes.value[index]) {
             await BarcodeServices.update(barcode.barcodeId, barcode);
           }
-        })
-        deletedBarcodes.value.forEach(async(barcode, index) => {
-          if(barcode.barcodeId){
-            await BarcodeServices.delete(barcode.barcodeId)
+        });
+        deletedBarcodes.value.forEach(async (barcode, index) => {
+          if (barcode.barcodeId) {
+            await BarcodeServices.delete(barcode.barcodeId);
           }
-        })
+        });
       }
       message.value = "Asset saved successfully.";
     } else {
-      const response = await SerializedAssetServices.create(serializedAssetData)
+      const response = await SerializedAssetServices.create(
+        serializedAssetData
+      );
       newSerializedAsset.value.id = response.data.serializedAssetId;
-      if(rawWarrStartDate.value && rawWarrEndDate.value && showAssetWarranty.value){
+      if (
+        rawWarrStartDate.value &&
+        rawWarrEndDate.value &&
+        showAssetWarranty.value
+      ) {
         await addAssetWarranty();
       }
-      if(assetMaintenanceDate.value && showAssetMaintenance){
+      if (assetMaintenanceDate.value && showAssetMaintenance) {
         await addAssetMaintenance();
       }
       await addAssetBarcodes();
-  
+
       message.value = "Asset saved successfully.";
       await retrieveAssetProfiles();
     }
-      
   } catch (error) {
     console.error("Error saving asset:", error);
     message.value = `Error saving asset: ${error.message || "Unknown error"}`;
@@ -737,7 +740,7 @@ const saveSerializedAsset = async () => {
   }
 };
 
-const addAssetWarranty = async() => {
+const addAssetWarranty = async () => {
   let formattedWarrStartDate = format(
     new Date(rawWarrStartDate.value),
     "MMM dd, yyyy"
@@ -759,9 +762,9 @@ const addAssetWarranty = async() => {
     warrantyNotes: newSerializedAsset.value.warrantyNotes,
   };
   await WarrantyServices.create(newWarranty);
-}
+};
 
-const addAssetMaintenance = async() => {
+const addAssetMaintenance = async () => {
   let formattedMaintenanceDate = format(
     new Date(assetMaintenanceDate.value),
     "MMM dd, yyyy"
@@ -772,12 +775,12 @@ const addAssetMaintenance = async() => {
     description: assetMaintenanceDesc.value,
     isPreventative: true,
     isRepair: false,
-    isUpgrade: false
-  }
+    isUpgrade: false,
+  };
   await logServices.create(newLog);
-}
+};
 
-const addAssetBarcodes = async() => {
+const addAssetBarcodes = async () => {
   barcodes.value.forEach((barcode) => {
     let newBarcode = {
       barcodeType: barcode.barcodeType,
@@ -786,17 +789,16 @@ const addAssetBarcodes = async() => {
     };
     BarcodeServices.create(newBarcode);
   });
-}
+};
 
 // Edit asset
-const editSerializedAsset = async(serializedAssetId) => {
+const editSerializedAsset = async (serializedAssetId) => {
   // Assign existing assets properties, including its unique identifier
   let serializedAsset = {};
-  try{
+  try {
     const response = await SerializedAssetServices.getById(serializedAssetId);
     serializedAsset = response.data;
-  }
-  catch(err){
+  } catch (err) {
     console.error(err);
   }
   newSerializedAsset.value = {
@@ -807,16 +809,14 @@ const editSerializedAsset = async(serializedAssetId) => {
     notes: serializedAsset.notes,
     id: serializedAsset.serializedAssetId,
   };
-  barcodes.value = serializedAsset.barcodes.map(e => e);
-  originalBarcodes.value = serializedAsset.barcodes.map(e => e)
+  barcodes.value = serializedAsset.barcodes.map((e) => e);
+  originalBarcodes.value = serializedAsset.barcodes.map((e) => e);
 
   const profileObject = assetProfiles.value.find(
     (p) => p.key === serializedAsset.profileId
   );
   selectedProfileId.value = profileObject; // This should be the full profile object
   originalProfileId.value = serializedAsset.profileId; // Save the original profile ID
-  editingSerializedAsset.value = true;
-  showAddSerializedAssetDialog.value = true;
 
   // Set original value for hasChanged comparison
   originalSerializedAsset.value = {
@@ -832,6 +832,8 @@ const editSerializedAsset = async(serializedAssetId) => {
   rawAcquisitionDate.value = new Date(
     targetTime.getTime() + tzDifference * 60 * 1000
   );
+  editingSerializedAsset.value = true;
+  showAddSerializedAssetDialog.value = true;
 };
 
 const updateDisposalValueLabel = () => {
@@ -857,39 +859,39 @@ const updateSerialNumberLabel = () => {
 };
 
 const hasSerializedAssetChanged = computed(() => {
-  let purchasePrice = newSerializedAsset.value.purchasePrice.replace(
-    /[^0-9.-]+/g,
-    ""
-  )
+  let purchasePrice = newSerializedAsset.value.purchasePrice
+    ? newSerializedAsset.value.purchasePrice.replace(/[^0-9.-]+/g, "")
+    : null;
   let formattedAcquisitionDate = null;
   if (rawAcquisitionDate.value) {
     // Convert local date to UTC before storing
-    let date = new Date(rawAcquisitionDate.value)
-    let offset = date.getTimezoneOffset() * 60000
-    let localDate = new Date(date.getTime() - offset)
-    formattedAcquisitionDate = localDate.toISOString()
+    let date = new Date(rawAcquisitionDate.value);
+    let offset = date.getTimezoneOffset() * 60000;
+    let localDate = new Date(date.getTime() - offset);
+    formattedAcquisitionDate = localDate.toISOString();
   }
   return (
     newSerializedAsset.value.serialNumber !==
       originalSerializedAsset.value.serialNumber ||
     newSerializedAsset.value.notes !== originalSerializedAsset.value.notes ||
     purchasePrice !== originalSerializedAsset.value.purchasePrice ||
-    formattedAcquisitionDate !== originalSerializedAsset.value.acquisitionDate ||
+    formattedAcquisitionDate !==
+      originalSerializedAsset.value.acquisitionDate ||
     selectedProfileId.value !== originalSerializedAsset.value.profileId
   );
 });
 
 const haveBarcodesChanged = computed(() => {
   return barcodes.value !== originalBarcodes.value;
-})
+});
 
 const hasAssetFormChanged = computed(() => {
   return hasSerializedAssetChanged.value || haveBarcodesChanged.value;
-})
+});
 
 const canSaveAsset = computed(() => {
-  return validSerializedAsset.value || hasAssetFormChanged.value
-})
+  return validSerializedAsset.value || hasAssetFormChanged.value;
+});
 
 // *** Misc Section ***
 
@@ -917,7 +919,7 @@ const confirmArchive = async () => {
     await archiveType(itemToArchive.value.id);
   } else if (itemToArchive.value.type === "profile") {
     await archiveProfile(itemToArchive.value.id);
-  } 
+  }
   showArchiveDialog.value = false;
   showSerialArchiveDialog.value = false;
   itemToArchive.value = null; // Reset after deletion
@@ -966,7 +968,7 @@ watch(
           (p) => p.key === newProfileId.key
         );
         if (profile) {
-          if(profile.warrantyStartDate) showAssetWarranty.value = true;
+          if (profile.warrantyStartDate) showAssetWarranty.value = true;
           newSerializedAsset.value.purchasePrice = profile.purchasePrice || "";
           newSerializedAsset.value.warrantyDescription =
             profile.warrantyDescription || "";
@@ -1017,7 +1019,7 @@ const addBarCode = () => {
 };
 
 const removeBarCode = (index) => {
-  deletedBarcodes.value.push(barcodes.value[index])
+  deletedBarcodes.value.push(barcodes.value[index]);
   barcodes.value.splice(index, 1);
 };
 
@@ -1121,7 +1123,9 @@ onMounted(async () => {
       <v-row class="my-1"></v-row>
       <!-- Adjust 'my-1' class for desired spacing -->
 
-      <div v-if="selectedTab != 'Categories' && selectedTab != 'SerializedAssets'">
+      <div
+        v-if="selectedTab != 'Categories' && selectedTab != 'SerializedAssets'"
+      >
         <v-row>
           <v-col cols="12">
             <v-tabs
@@ -1144,7 +1148,6 @@ onMounted(async () => {
       </div>
       <!-- Serialized Assets section with added space after tabs -->
       <div v-if="selectedTab === 'SerializedAssets' && dataLoaded">
-
         <v-btn
           v-if="canAdd"
           color="primary"
@@ -1154,7 +1157,7 @@ onMounted(async () => {
           Add New Asset
         </v-btn>
 
-        <SearchAssets 
+        <SearchAssets
           :profiles="assetProfiles"
           :types="assetTypes"
           :user-category="userRole.data.categoryId"
@@ -1446,11 +1449,7 @@ onMounted(async () => {
         </v-col>
       </v-row>
       <v-row v-else align="center" justify="center">
-        <v-progress-circular
-          color="blue"
-          indeterminate
-          :size="50"
-        />
+        <v-progress-circular color="blue" indeterminate :size="50" />
       </v-row>
     </v-container>
 
@@ -1539,13 +1538,16 @@ onMounted(async () => {
                   ></v-date-input>
                 </v-col>
                 <v-col cols="12" class="mb-n8" v-if="!editingSerializedAsset">
-                  <v-checkbox 
+                  <v-checkbox
                     v-model="showAssetWarranty"
                     color="primary"
                     label="Add Warranty"
                   />
                 </v-col>
-                <v-col cols="12" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="12"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-text-field
                     label="Warranty Description"
                     variant="outlined"
@@ -1555,7 +1557,10 @@ onMounted(async () => {
                     prepend-icon="mdi-note"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="12"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-text-field
                     label="Warranty Notes"
                     variant="outlined"
@@ -1565,7 +1570,10 @@ onMounted(async () => {
                     prepend-icon="mdi-note"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="6" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="6"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-date-input
                     v-model="rawWarrStartDate"
                     clearable
@@ -1575,7 +1583,10 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
                 </v-col>
-                <v-col cols="6" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="6"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-date-input
                     v-model="rawWarrEndDate"
                     clearable
@@ -1586,14 +1597,14 @@ onMounted(async () => {
                   ></v-date-input>
                 </v-col>
                 <v-col cols="12" class="mb-n8" v-if="!editingSerializedAsset">
-                  <v-checkbox 
+                  <v-checkbox
                     v-model="showAssetMaintenance"
                     color="primary"
                     label="Schedule Maintenance"
                   />
                 </v-col>
                 <v-col cols="12" v-if="showAssetMaintenance">
-                  <v-date-input 
+                  <v-date-input
                     v-model="assetMaintenanceDate"
                     clearable
                     label="Maintenance Date"
