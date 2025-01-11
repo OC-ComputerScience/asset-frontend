@@ -91,6 +91,7 @@ const newProfile = ref({
 });
 
 const changeProfileInfo = () => {
+  console.log(newProfile.value.purchasePrice);
   profileInfoChanged.value = true;
 };
 
@@ -539,7 +540,6 @@ onMounted(async () => {
                     label="Purchase Price"
                     variant="outlined"
                     v-model="newProfile.purchasePrice"
-                    :rules="[rules.required]"
                     maxlength="12"
                     v-maska:[options]
                     data-maska="0.99"
