@@ -251,7 +251,9 @@ const updateTitle = (value, sequence) => {
 
 // Save profile (add or edit)
 const saveProfile = async () => {
-  const purchasePrice = newProfile.value.purchasePrice.replace(/[$,]/g, "");
+  const purchasePrice = newProfile.value.purchasePrice
+    ? newProfile.value.purchasePrice.replace(/[$,]/g, "")
+    : null;
 
   let formattedAcquisitionDate = null;
   formattedAcquisitionDate = format(
@@ -273,7 +275,7 @@ const saveProfile = async () => {
   const profilePayload = {
     profileName: newProfile.value.profileName,
     notes: newProfile.value.notes,
-    purchasePrice: purchasePrice,
+    purchasePrice: purchasePrice === "" ? null : purchasePrice,
     acquisitionDate: formattedAcquisitionDate,
     typeId: selectedTypeId.value.typeId,
     warrantyStartDate: formattedWarrStartDate,
