@@ -58,14 +58,16 @@ const filterPersonAssetsByPersonId = () => {
 
 const currentPersonHeaders = ref([
   { title: "Name", key: "serializedAsset.serializedAssetName" },
+  { title: "View Asset Details", key: "view" },
   { title: "Check Out Date", key: "checkoutDate" },
   { title: "Checked Out By", key: "checkedOutBy" },
   { title: "Expected Check In", key: "expectedCheckinDate" },
-  { title: "Check Asset In", key: "checkin" }
+  { title: "Check Asset In", key: "checkin" },
 ]);
 
 const pastPersonHeaders = ref([
   { title: "Name", key: "serializedAsset.serializedAssetName" },
+  { title: "View Asset Details", key: "view" },
   { title: "Check Out Date", key: "checkoutDate" },
   { title: "Checked Out By", key: "checkedOutBy" },
   { title: "Check In Date", key: "checkinDate" },
@@ -87,19 +89,19 @@ const formatExpectedDate = (dateString) => {
 const showCheckinDialog = (item) => {
   activeCheckin.value = item;
   showCheckin.value = true;
-}
+};
 
 const closeCheckinDialog = () => {
   showCheckin.value = false;
   activeCheckin.value = {};
-}
+};
 
-const saveCheckin = async(responseText) => {
+const saveCheckin = async (responseText) => {
   closeCheckinDialog();
   await retrievePersonAssets();
   snackbarText.value = responseText;
   snackbar.value = true;
-}
+};
 
 const formatCheckinDate = (dateString) => {
   if (!dateString) return "N/A";
@@ -110,6 +112,14 @@ const formatCheckinName = (String) => {
   if (!String) return "N/A";
   return String;
 };
+function viewSerializedAsset(serializedAssetId) {
+  const sourcePage = "personView";
+  router.push({
+    name: "serializedAssetView",
+    params: { serializedAssetId: serializedAssetId, personId: props.personId },
+    query: { sourcePage: sourcePage },
+  });
+}
 
 const goBack = () => {
   router.replace({ name: "personManage" });
@@ -203,6 +213,20 @@ onMounted(async () => {
                     :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="assetSortBy"
                   >
+                    <template v-slot:item.view="{ item }">
+                      <div
+                        class="d-flex align-center justify-start"
+                        style="padding-left: 10%"
+                      >
+                        <v-btn
+                          icon
+                          class="table-icons"
+                          @click="viewSerializedAsset(item.serializedAssetId)"
+                        >
+                          <v-icon>mdi-eye</v-icon>
+                        </v-btn>
+                      </div>
+                    </template>
                     <template v-slot:item.checkoutDate="{ item }">
                       <td>{{ formatDate(item.checkoutDate) }}</td>
                     </template>
@@ -256,13 +280,13 @@ onMounted(async () => {
       </v-row>
     </v-container>
     <v-dialog v-model="showCheckin" persistent max-width="600px">
-        <CheckinDialog 
-            assignee="People"
-            :active-checkin="activeCheckin"
-            :edit-mode="false"
-            @cancel-checkin="closeCheckinDialog"
-            @save-checkin="saveCheckin"
-        />
+      <CheckinDialog
+        assignee="People"
+        :active-checkin="activeCheckin"
+        :edit-mode="false"
+        @cancel-checkin="closeCheckinDialog"
+        @save-checkin="saveCheckin"
+      />
     </v-dialog>
     <v-snackbar v-model="snackbar" :timeout="3000" class="custom-snackbar">
       {{ snackbarText }}
