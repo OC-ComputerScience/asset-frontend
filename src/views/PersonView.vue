@@ -263,6 +263,20 @@ onMounted(async () => {
                     :items-per-page-options="[5, 10, 20, 50]"
                     v-model:sort-by="assetSortBy"
                   >
+                    <template v-slot:item.view="{ item }">
+                      <div
+                        class="d-flex align-center justify-start"
+                        style="padding-left: 10%"
+                      >
+                        <v-btn
+                          icon
+                          class="table-icons"
+                          @click="viewSerializedAsset(item.serializedAssetId)"
+                        >
+                          <v-icon>mdi-eye</v-icon>
+                        </v-btn>
+                      </div>
+                    </template>
                     <template v-slot:item.checkoutDate="{ item }">
                       <td>{{ formatDate(item.checkoutDate) }}</td>
                     </template>
