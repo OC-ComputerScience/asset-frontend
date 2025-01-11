@@ -140,7 +140,7 @@ const router = createRouter({
       },
     },
     {
-      path: "/serializedAssetView:serializedAssetId",
+      path: "/serializedAssetView:serializedAssetId/:personId",
       name: "serializedAssetView",
       component: SerializedAssetView,
       props: true,

@@ -1,9 +1,9 @@
 <script setup>
 import SerializedAssetServices from "../services/serializedAssetServices";
-import ProfileDataServices from "../services/profileDataServices";
 import BuildingAssetServices from "../services/buildingAssetServices";
 import RoomAssetServices from "../services/roomAssetServices";
 import PersonAssetServices from "../services/personAssetServices";
+import AssetProfileServices from "../services/assetProfileServices";
 import LogServices from "../services/logServices";
 import WarrantyServices from "../services/warrantyServices";
 import BarcodeServices from "../services/barcodeServices";
@@ -32,6 +32,9 @@ const assignmentSortBy = ref([{ key: "checkoutDate", order: "desc" }]);
 const maintenanceSortBy = ref([{ key: "serviceDate", order: "desc" }]);
 const warrantiesSortBy = ref([{ key: "endDate", order: "desc" }]);
 const leasesSortBy = ref([{ key: "endDate", order: "desc" }]);
+const customFields = ref([]);
+const profileData = ref([]);
+const profileDetails = ref({});
 
 const rules = {
   required: (value) => !!value || "Required.",
@@ -40,6 +43,9 @@ const rules = {
 const props = defineProps({
   serializedAssetId: {
     required: true,
+  },
+  personId: {
+    required: false,
   },
 });
 
@@ -237,15 +243,25 @@ const retrieveAssetDetails = async () => {
   }
 };
 
-const profileDetails = ref({});
-
 const retrieveProfileData = async () => {
   try {
     await retrieveAssetDetails();
-    const response = await ProfileDataServices.getByProfileId(
+    const response = await AssetProfileServices.getById(
       assetDetails.value.profileId
     );
     profileDetails.value = response.data;
+    profileData.value = response.data.profileData;
+    profileData.value.sort((a, b) => {
+      let avalue = a.customFieldValue.customField.customFieldTypes[0].sequence
+        ? a.customFieldValue.customField.customFieldTypes[0].sequence
+        : 100;
+      let bvalue = b.customFieldValue.customField.customFieldTypes[0].sequence
+        ? b.customFieldValue.customField.customFieldTypes[0].sequence
+        : 100;
+      return avalue - bvalue;
+    });
+
+    console.log("Profile Data", profileData.value);
   } catch (error) {
     console.error("Error loading profile details:", error);
     message.value = "Failed to load profile details.";
@@ -310,6 +326,11 @@ const goBack = () => {
       name: "profileView",
       params: { profileId: assetDetails.value.profileId },
     });
+  } else if (sourcePage === "personView") {
+    router.push({
+      name: "personView",
+      params: { personId: props.personId },
+    });
   } else {
     router.push({ name: "assetManage" });
   }
@@ -341,7 +362,14 @@ onMounted(async () => {
           }}</v-toolbar-title>
         </v-toolbar>
         <v-divider class="my-4"></v-divider>
-
+        <v-row>
+          <v-col cols="12" sm="6" md="4" v-for="data in profileData">
+            <div class="asset-detail">
+              <strong>{{ data.customFieldValue.customField.name }}</strong>
+              <div>{{ data.customFieldValue.value }}</div>
+            </div>
+          </v-col>
+        </v-row>
         <!-- Purchase Price and Acquisition Date -->
         <v-row>
           <v-col cols="12" sm="6" md="4">
@@ -369,22 +397,6 @@ onMounted(async () => {
         </v-row>
 
         <!-- Profile Details -->
-        <v-row>
-          <v-col
-            v-for="(profile, index) in profileDetails"
-            :key="index"
-            cols="12"
-            sm="6"
-            md="4"
-          >
-            <div class="profile-detail">
-              <div class="profile-field">
-                {{ fixProfileField(profile.field) }}
-              </div>
-              <div class="profile-data">{{ profile.data }}</div>
-            </div>
-          </v-col>
-        </v-row>
 
         <div v-if="!assetDetails.activeStatus">
           <!-- Disposal Information if activeStatus is 0 -->
