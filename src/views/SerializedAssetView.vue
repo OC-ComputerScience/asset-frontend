@@ -210,15 +210,17 @@ const leaseHeaders = ref([
 // Misc Section
 
 const fixProfileField = (profileField) => {
+  let field = "";
   if (profileField != null && profileField === profileField.toUpperCase()) {
     return profileField;
   }
-
-  let field = profileField.split(/(?=[A-Z])/);
-
-  return field
-    .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
-    .join(" ");
+  if (profileField != null) {
+    field = profileField.split(/(?=[A-Z])/);
+    return field
+      .map((field) => field.charAt(0).toUpperCase() + field.slice(1))
+      .join(" ");
+  }
+  return field;
 };
 
 const assetDetails = ref({ serializedAssetName: "Loading..." });

@@ -83,20 +83,21 @@ const loadFilters = () => {
   const typeIdValue = localStorage.getItem("selectedTypeId");
   const searchKeyValue = localStorage.getItem("searchKey");
   const showArchivedValue = localStorage.getItem("showArchived");
-  if (profileIdValue === "null") {
+  console.log(profileIdValue, typeIdValue, searchKeyValue, showArchivedValue);
+  if (profileIdValue === "null" || profileIdValue === null) {
     selectedProfileId.value = null;
   } else {
     selectedProfileId.value = Number(profileIdValue);
     filterPanel.value = ["filters"];
   }
-  if (typeIdValue === "null") {
+  if (typeIdValue === "null" || typeIdValue === null) {
     selectedTypeId.value = null;
   } else {
     selectedTypeId.value = Number(typeIdValue);
     filterPanel.value = ["filters"];
   }
 
-  if (searchKeyValue === "null") {
+  if (searchKeyValue === "null" || searchKeyValue === null) {
     searchKey.value = null;
   } else {
     searchKey.value = searchKeyValue;
@@ -184,6 +185,9 @@ const cancelActivate = () => {
 
 onMounted(() => {
   loadFilters();
+  if (filterPanel.value.length > 0) {
+    searchAssets();
+  }
 });
 </script>
 <template>

@@ -231,7 +231,7 @@ const saveFields = async (typeId) => {
                 item-value="key"
                 :rules="[props.rules.required]"
                 clearable
-                return-object="false"
+                :return-object="false"
                 prepend-icon="mdi-folder-multiple-outline"
                 @update:modelValue="
                   () => {
@@ -311,12 +311,13 @@ const saveFields = async (typeId) => {
                 <v-combobox
                   v-if="field.identifier"
                   label="Sequence"
+                  :disabled="fieldSequence.length < 1"
                   variant="outlined"
                   v-model="field.sequence"
-                  :rules="[props.rules.required]"
                   :items="fieldSequence"
                   class="mt-3 w-25 h-50"
                   density="compact"
+                  :rules="[props.rules.required]"
                   @update:modelValue="updateSequenceCount(field)"
                 ></v-combobox>
               </v-col>

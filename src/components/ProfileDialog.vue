@@ -316,19 +316,17 @@ const saveProfile = async () => {
   }
 };
 
-
-const saveFieldValues = async(profileId) => {
-  for(let field of customFields.value){
-    if(field.changed){
+const saveFieldValues = async (profileId) => {
+  for (let field of customFields.value) {
+    if (field.changed) {
       let data = {
         customFieldId: field.customFieldId,
         value: field.value,
       };
       try {
-        if(field.fieldValueId){
+        if (field.fieldValueId) {
           handleFieldValueWithId(field, data, profileId);
-        }
-        else {
+        } else {
           handleFieldValueWithoutId(field, data, profileId);
         }
       } catch (err) {
@@ -338,36 +336,33 @@ const saveFieldValues = async(profileId) => {
   }
 };
 
-const handleFieldValueWithId = async(field, data, profileId) => {
+const handleFieldValueWithId = async (field, data, profileId) => {
   if (field.type != "List") {
     await customFieldValueServices.update(field.fieldValueId, data);
-  } 
-  else if (field.type == "List") {
+  } else if (field.type == "List") {
     let newFieldValue = { fieldValueId: field.fieldValueId };
-    if(field.profileDataId){
+    if (field.profileDataId) {
       await profileDataServices.update(field.profileDataId, newFieldValue);
-    }
-    else {
+    } else {
       let profileData = {
         profileId: profileId,
-        fieldValueId: field.fieldValueId
-      }
+        fieldValueId: field.fieldValueId,
+      };
       await profileDataServices.create(profileData);
     }
-  } 
+  }
 };
 
-const handleFieldValueWithoutId = async(field, data, profileId) => {
+const handleFieldValueWithoutId = async (field, data, profileId) => {
   let response = await customFieldValueServices.create(data);
   let fieldValueId = response.data.id;
   let profileData = {
-    profileId: profileId, 
-    fieldValueId: fieldValueId
+    profileId: profileId,
+    fieldValueId: fieldValueId,
   };
-  if(field.profileDataId){
+  if (field.profileDataId) {
     await profileDataServices.update(profileData);
-  }
-  else {
+  } else {
     await profileDataServices.create(profileData);
   }
 };
