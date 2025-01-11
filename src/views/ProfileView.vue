@@ -204,12 +204,22 @@ const saveSerializedAsset = async () => {
 
       snackbarText.value = "Asset updated successfully.";
     } else {
-      const response = await SerializedAssetServices.create(serializedAssetData)
+      const response = await SerializedAssetServices.create(
+        serializedAssetData
+      );
       newSerializedAsset.value.id = response.data.serializedAssetId;
-      if (rawWarrStartDate.value && rawWarrEndDate.value && showAssetWarranty.value) {
+      if (
+        rawWarrStartDate.value &&
+        rawWarrEndDate.value &&
+        showAssetWarranty.value
+      ) {
         await addAssetWarranty();
       }
-      if(assetMaintenanceDate.value && assetMaintenanceDesc.value && showAssetMaintenance.value){
+      if (
+        assetMaintenanceDate.value &&
+        assetMaintenanceDesc.value &&
+        showAssetMaintenance.value
+      ) {
         await addAssetMaintenance();
       }
       await addAssetBarcodes();
@@ -226,7 +236,7 @@ const saveSerializedAsset = async () => {
   }
 };
 
-const addAssetWarranty = async() => {
+const addAssetWarranty = async () => {
   let formattedWarrStartDate = format(
     new Date(rawWarrStartDate.value),
     "MMM dd, yyyy"
@@ -248,9 +258,9 @@ const addAssetWarranty = async() => {
     warrantyNotes: newSerializedAsset.value.warrantyNotes,
   };
   await WarrantyServices.create(newWarranty);
-}
+};
 
-const addAssetMaintenance = async() => {
+const addAssetMaintenance = async () => {
   let formattedMaintenanceDate = format(
     new Date(assetMaintenanceDate.value),
     "MMM dd, yyyy"
@@ -261,12 +271,12 @@ const addAssetMaintenance = async() => {
     description: assetMaintenanceDesc.value,
     isPreventative: true,
     isRepair: false,
-    isUpgrade: false
-  }
+    isUpgrade: false,
+  };
   await logServices.create(newLog);
-}
+};
 
-const addAssetBarcodes = async() => {
+const addAssetBarcodes = async () => {
   barcodes.value.forEach((barcode) => {
     let newBarcode = {
       barcodeType: barcode.barcodeType,
@@ -275,7 +285,7 @@ const addAssetBarcodes = async() => {
     };
     BarcodeServices.create(newBarcode);
   });
-}
+};
 
 // Delete asset
 const deleteSerializedAsset = async (serializedAssetId) => {
@@ -302,7 +312,7 @@ const openAddSerializedAssetDialog = () => {
     targetTime1.getTime() + tzDifference1 * 60 * 1000
   );
 
-  if(profileDetails.value.warrantyStartDate) showAssetWarranty.value = true;
+  if (profileDetails.value.warrantyStartDate) showAssetWarranty.value = true;
   targetTime1 = parseISO(profileDetails.value.warrantyStartDate);
   tzDifference1 = targetTime1.getTimezoneOffset();
   const tempWarrStartDate = new Date(
@@ -505,6 +515,15 @@ const retrieveProfileDetails = async () => {
     const response = await AssetProfileServices.getById(props.profileId);
     profileDetails.value = response.data;
     profileData.value = response.data.profileData;
+    profileData.value.sort((a, b) => {
+      let avalue = a.customFieldValue.customField.customFieldTypes[0].sequence
+        ? a.customFieldValue.customField.customFieldTypes[0].sequence
+        : 100;
+      let bvalue = b.customFieldValue.customField.customFieldTypes[0].sequence
+        ? b.customFieldValue.customField.customFieldTypes[0].sequence
+        : 100;
+      return avalue - bvalue;
+    });
   } catch (error) {
     console.error("Error loading profile details:", error);
     message.value = "Failed to load profile details.";
@@ -694,6 +713,12 @@ onMounted(async () => {
 
           <!-- Purchase Price and Acquisition Date -->
           <v-row>
+            <v-col cols="12" sm="6" md="4" v-for="data in profileData">
+              <div class="asset-detail">
+                <strong>{{ data.customFieldValue.customField.name }}</strong>
+                <div>{{ data.customFieldValue.value }}</div>
+              </div>
+            </v-col>
             <v-col cols="12" sm="6" md="4">
               <div class="asset-detail">
                 <strong>Purchase Price</strong>
@@ -706,12 +731,6 @@ onMounted(async () => {
                 <div>
                   {{ formatDate(profileDetails.acquisitionDate) || "N/A" }}
                 </div>
-              </div>
-            </v-col>
-            <v-col cols="12" sm="6" md="4" v-for="data in profileData">
-              <div class="asset-detail">
-                <strong>{{ data.customFieldValue.customField.name }}</strong>
-                <div>{{ data.customFieldValue.value }}</div>
               </div>
             </v-col>
           </v-row>
@@ -998,13 +1017,16 @@ onMounted(async () => {
                 </v-col>
 
                 <v-col cols="12" class="mb-n8" v-if="!editingSerializedAsset">
-                  <v-checkbox 
+                  <v-checkbox
                     v-model="showAssetWarranty"
                     color="primary"
                     label="Add Warranty"
                   />
                 </v-col>
-                <v-col cols="12" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="12"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-text-field
                     label="Warranty Description"
                     variant="outlined"
@@ -1014,7 +1036,10 @@ onMounted(async () => {
                     prepend-icon="mdi-note"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="12" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="12"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-text-field
                     label="Warranty Notes"
                     variant="outlined"
@@ -1024,7 +1049,10 @@ onMounted(async () => {
                     prepend-icon="mdi-note"
                   ></v-text-field>
                 </v-col>
-                <v-col cols="6" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="6"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-date-input
                     v-model="rawWarrStartDate"
                     clearable
@@ -1034,7 +1062,10 @@ onMounted(async () => {
                     prepend-icon="mdi-calendar"
                   ></v-date-input>
                 </v-col>
-                <v-col cols="6" v-if="!editingSerializedAsset && showAssetWarranty">
+                <v-col
+                  cols="6"
+                  v-if="!editingSerializedAsset && showAssetWarranty"
+                >
                   <v-date-input
                     v-model="rawWarrEndDate"
                     clearable
@@ -1045,14 +1076,14 @@ onMounted(async () => {
                   ></v-date-input>
                 </v-col>
                 <v-col cols="12" class="mb-n8" v-if="!editingSerializedAsset">
-                  <v-checkbox 
+                  <v-checkbox
                     v-model="showAssetMaintenance"
                     color="primary"
                     label="Schedule Maintenance"
                   />
                 </v-col>
                 <v-col cols="12" v-if="showAssetMaintenance">
-                  <v-date-input 
+                  <v-date-input
                     v-model="assetMaintenanceDate"
                     clearable
                     label="Maintenance Date"
