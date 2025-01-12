@@ -24,6 +24,7 @@ const editMode = ref(false);
 const overrideTitle = ref(false);
 const dataLoaded = ref(false);
 const profileInfoChanged = ref(false);
+const fieldValuesChanged = ref(false);
 
 const intRegex = /^-?\d+$/;
 const intTest = (value) => intRegex.test(value) || "Enter only integers";
@@ -91,7 +92,7 @@ const newProfile = ref({
 });
 
 const changeProfileInfo = () => {
-  console.log(newProfile.value.purchasePrice);
+  console.log("Profile info changed");
   profileInfoChanged.value = true;
 };
 
@@ -230,6 +231,8 @@ const retrieveFieldValues = async (profileId) => {
 };
 
 const changeFieldValue = (field) => {
+  fieldValuesChanged.value = true;
+  console.log(field);
   field.changed = true;
   if (field.type == "List") {
     let newValue = field.listValues.find(
@@ -288,16 +291,20 @@ const saveProfile = async () => {
 
   try {
     // Check if editing profile
-    if (newProfile.value.id && profileInfoChanged.value) {
-      // Update the profile itself
-      const response = await AssetProfileServices.update(
-        newProfile.value.id,
-        profilePayload
-      );
+    if (newProfile.value.id) {
+      if (profileInfoChanged.value) {
+        // Update the profile itself
+        const response = await AssetProfileServices.update(
+          newProfile.value.id,
+          profilePayload
+        );
+      }
+
+      if (fieldValuesChanged.value) {
+        await saveFieldValues(newProfile.value.id);
+      }
 
       // Update the profile data
-
-      await saveFieldValues(newProfile.value.id);
 
       emitUpdateSnackbar();
     } else if (!newProfile.value.id) {
@@ -364,7 +371,7 @@ const handleFieldValueWithoutId = async (field, data, profileId) => {
     fieldValueId: fieldValueId,
   };
   if (field.profileDataId) {
-    await profileDataServices.update(profileData);
+    await profileDataServices.update(field.profileDataId, profileData);
   } else {
     await profileDataServices.create(profileData);
   }
@@ -480,7 +487,7 @@ onMounted(async () => {
 
     if (editMode.value) {
       loadProfileForEditing(selectedProfile.value); // Load the profile for editing
-      overrideTitle.value = !titleArray.value.length > 0;
+      //overrideTitle.value = !titleArray.value.length > 0;
     }
   } catch (error) {
     console.error("Error during initialization:", error);
