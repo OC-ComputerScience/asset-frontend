@@ -1,7 +1,7 @@
 <script setup>
-import { ref } from "vue"
-import PersonServices from "../services/personServices.js"
-import RoomServices from "../services/roomServices.js"
+import { ref } from "vue";
+import PersonServices from "../services/personServices.js";
+import RoomServices from "../services/roomServices.js";
 
 const message = ref(null);
 const messageText = ref(null);
@@ -25,8 +25,9 @@ const getOCPerson = async () => {
         return;
       }
       roomNumber = response.data.OfficeNumber;
+
       let roomId = null;
-      if (roomNumber != null) {
+      if (roomNumber != null && roomNumber.length > 4) {
         const roomResponse = await RoomServices.getByBldRoomNumber(roomNumber);
         if (roomResponse.data.length > 0) roomId = roomResponse.data[0].roomId;
         else {
@@ -60,7 +61,7 @@ const getOCPerson = async () => {
       roomNumber = response.data.OfficeNumber;
 
       let roomId = null;
-      if (roomNumber != null) {
+      if (roomNumber != null && roomNumber.length > 4) {
         await RoomServices.getByBldRoomNumber(roomNumber).then(
           (roomResponse) => {
             if (roomResponse.data.length > 0)
@@ -97,86 +98,83 @@ const saveNewPerson = async () => {
     let response = await PersonServices.create(newPerson.value);
     person = response.data;
     responseText = "Person added successfully.";
-  }
-  catch(err){
+  } catch (err) {
     console.error(err);
     responseText = "Failed to add the person.";
-  }
-  finally{
-    emit('savePerson', person, responseText);
+  } finally {
+    emit("savePerson", person, responseText);
   }
 };
-
 </script>
 
 <template>
-<div>
+  <div>
     <v-card class="rounded-xl">
-        <v-card-title class="justify-space-between">
-          <span class="headline">Add New Person</span>
-        </v-card-title>
-        <v-form ref="personAddForm">
-          <v-card-text>
-            <v-row>
-              <v-col cols="12">
-                <v-text-field
-                  v-model="idNumber"
-                  label="OC Id Number"
-                  variant="outlined"
-                  prepend-icon="mdi-account"
-                  clearable
-                ></v-text-field>
-                OR
-                <v-text-field
-                  v-model="email"
-                  label="OC Email"
-                  variant="outlined"
-                  prepend-icon="mdi-account"
-                  clearable
-                ></v-text-field>
-              </v-col>
+      <v-card-title class="justify-space-between">
+        <span class="headline">Add New Person</span>
+      </v-card-title>
+      <v-form ref="personAddForm">
+        <v-card-text>
+          <v-row>
+            <v-col cols="12">
+              <v-text-field
+                v-model="idNumber"
+                label="OC Id Number"
+                variant="outlined"
+                prepend-icon="mdi-account"
+                clearable
+              ></v-text-field>
+              OR
+              <v-text-field
+                v-model="email"
+                label="OC Email"
+                variant="outlined"
+                prepend-icon="mdi-account"
+                clearable
+              ></v-text-field>
+            </v-col>
+          </v-row>
+          <div v-if="newPerson != null">
+            <v-row class="ml-10" v-if="newPerson.idNumber"> Found: </v-row>
+            <v-row class="ml-16">
+              {{ newPerson.idNumber }}
             </v-row>
-            <div v-if="newPerson != null">
-              <v-row class="ml-10" v-if="newPerson.idNumber"> Found: </v-row>
-              <v-row class="ml-16">
-                {{ newPerson.idNumber }}
-              </v-row>
-              <v-row class="ml-16">
-                {{ newPerson.fName }}
-                {{ newPerson.lName }}
-              </v-row>
-              <v-row class="ml-16">
-                {{ newPerson.email }}
-              </v-row>
-              <v-row class="ml-16">
-                {{ newPerson.roomNumber }}
-              </v-row>
-            </div>
-            <div class="ml-10" v-if="message != ''">
-              {{ message }}
-            </div>
-          </v-card-text>
-          <v-card-text v-if="messageText" class="text-red text-right">
-            {{ messageText }}
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="green" class="ma-2" text @click="getOCPerson"
-              >Get OC Info</v-btn
-            >
-            <v-btn color="cancelgrey" text @click="$emit('closeDialog')"
-              >Cancel</v-btn
-            >
-            <v-btn
-              color="saveblue"
-              class="ma-2"
-              text
-              @click="saveNewPerson"
-              :disabled="newPerson == null"
-              >Save New Person</v-btn
-            >
-          </v-card-actions>
-        </v-form>
-      </v-card>
-</div>
+            <v-row class="ml-16">
+              {{ newPerson.fName }}
+              {{ newPerson.lName }}
+            </v-row>
+            <v-row class="ml-16">
+              {{ newPerson.email }}
+            </v-row>
+            <v-row class="ml-16">
+              {{ newPerson.roomNumber }}
+            </v-row>
+          </div>
+          <div class="ml-10" v-if="message != ''">
+            {{ message }}
+          </div>
+        </v-card-text>
+        <v-card-text v-if="messageText" class="text-red text-right">
+          {{ messageText }}
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="green" class="ma-2" text @click="getOCPerson"
+            >Get OC Info</v-btn
+          >
+          <v-btn color="cancelgrey" text @click="$emit('closeDialog')"
+            >Cancel</v-btn
+          >
+          <v-btn
+            color="saveblue"
+            class="ma-2"
+            text
+            @click="saveNewPerson"
+            :disabled="newPerson == null"
+            >Save New Person</v-btn
+          >
+        </v-card-actions>
+      </v-form>
+    </v-card>
+  </div>
 </template>
