@@ -92,7 +92,6 @@ const newProfile = ref({
 });
 
 const changeProfileInfo = () => {
-  console.log("Profile info changed");
   profileInfoChanged.value = true;
 };
 
@@ -568,6 +567,7 @@ onMounted(async () => {
                     label="Acquisition Date"
                     variant="outlined"
                     color="blue"
+                    @update:modelValue="changeProfileInfo"
                   ></v-date-input>
                 </v-col>
                 <v-col cols="6">
@@ -576,6 +576,7 @@ onMounted(async () => {
                     label="Features"
                     variant="outlined"
                     v-model="newProfile.features"
+                    @update:modelValue="changeProfileInfo"
                   >
                   </v-textarea>
                 </v-col>
@@ -585,6 +586,7 @@ onMounted(async () => {
                     variant="outlined"
                     v-model="newProfile.accessories"
                     prepend-icon="mdi-headphones"
+                    @update:modelValue="changeProfileInfo"
                   >
                   </v-textarea>
                 </v-col>
@@ -594,6 +596,7 @@ onMounted(async () => {
                     prepend-icon="mdi-note"
                     variant="outlined"
                     v-model="newProfile.warrantyDescription"
+                    @update:modelValue="changeProfileInfo"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -603,6 +606,7 @@ onMounted(async () => {
                     variant="outlined"
                     v-model="newProfile.warrantyNotes"
                     :rules="[rules.maxNotesLength]"
+                    @update:modelValue="changeProfileInfo"
                   ></v-textarea>
                 </v-col>
                 <v-col>
@@ -612,6 +616,7 @@ onMounted(async () => {
                     label="Warranty Start Date"
                     variant="outlined"
                     color="blue"
+                    @update:modelValue="changeProfileInfo"
                   ></v-date-input>
                 </v-col>
                 <v-col>
@@ -621,6 +626,7 @@ onMounted(async () => {
                     label="Warranty End Date"
                     variant="outlined"
                     color="blue"
+                    @update:modelValue="changeProfileInfo"
                   ></v-date-input>
                 </v-col>
               </v-row>
