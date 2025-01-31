@@ -6,7 +6,12 @@ import { zonedTimeToUtc } from "date-fns-tz";
 import serializedAssetServices from "../services/serializedAssetServices";
 import store from "../store/store.js";
 
-const props = defineProps(["assignee", "activeCheckin", "checkouts", "editMode"]);
+const props = defineProps([
+  "assignee",
+  "activeCheckin",
+  "checkouts",
+  "editMode",
+]);
 const emit = defineEmits(["saveCheckin", "cancelCheckin"]);
 
 const availableCheckins = ref([]);
@@ -16,93 +21,92 @@ const checkinNote = ref("");
 const oldNote = ref("");
 const loginUser = computed(() => store.getters.getLoginUserInfo);
 const currentUser = `${loginUser.value.fName} ${loginUser.value.lName}`;
-
+const checkInBtn = props.editMode ? "Update Checkin" : "Checkin";
 const hasNoteChanged = computed(() => {
-    return checkinNote.value !== oldNote.value;
-})
+  return checkinNote.value !== oldNote.value;
+});
 
 const isFormValid = computed(() => {
-    return props.editMode ? hasNoteChanged.value : checkinFormValid.value;
-})
+  return props.editMode ? hasNoteChanged.value : checkinFormValid.value;
+});
 
 const rules = {
-    required: (value) => !!value || "Required.",
-    maxNotesLength: (value) => value === null || value.length <= 255,
+  required: (value) => !!value || "Required.",
+  maxNotesLength: (value) => value === null || value.length <= 255,
 };
 
-onMounted(async() => {
-    if(!props.activeCheckin){
-        availableCheckins.value = props.checkouts;
-        availableCheckins.value.forEach((asset) => {
-          makeTitle(asset);
-        })
-    }
-    else{
-        activeCheckin.value = props.activeCheckin;
-        makeTitle(activeCheckin.value);
-        oldNote.value = activeCheckin.value.checkinNote;
-        checkinNote.value = activeCheckin.value.checkinNote;
-    }
-})
+onMounted(async () => {
+  if (!props.activeCheckin) {
+    availableCheckins.value = props.checkouts;
+    availableCheckins.value.forEach((asset) => {
+      makeTitle(asset);
+    });
+  } else {
+    activeCheckin.value = props.activeCheckin;
+    makeTitle(activeCheckin.value);
+    oldNote.value = activeCheckin.value.checkinNote;
+    checkinNote.value = activeCheckin.value.checkinNote;
+  }
+});
 
 const makeTitle = (asset) => {
   let title = "";
-  if(props.assignee === "People") title += asset.person.fullNameWithId;
-  else if(props.assignee === "Buildings") title += asset.building.name;
-  else if(props.assignee === "Rooms") title += asset.room.roomName;
+  if (props.assignee === "People") title += asset.person.fullNameWithId;
+  else if (props.assignee === "Buildings") title += asset.building.name;
+  else if (props.assignee === "Rooms") title += asset.room.roomName;
   title += `: ${asset.serializedAsset.serializedAssetName}`;
   asset.title = title;
-}
+};
 
 const convertToUtcForStorage = (localDate) => {
-    const timeZone = "America/Chicago"; 
-    return zonedTimeToUtc(localDate, timeZone);
-}
+  const timeZone = "America/Chicago";
+  return zonedTimeToUtc(localDate, timeZone);
+};
 
-const saveCheckin = async() => {
-    let responseText;
-    const checkinDateUtc = convertToUtcForStorage(new Date());
-    const formattedCheckinDate = format(
-        checkinDateUtc,
-        "yyyy-MM-dd'T'HH:mm:ss'Z'"
-    );
+const saveCheckin = async () => {
+  let responseText;
+  const checkinDateUtc = convertToUtcForStorage(new Date());
+  const formattedCheckinDate = format(
+    checkinDateUtc,
+    "yyyy-MM-dd'T'HH:mm:ss'Z'"
+  );
 
-    let checkinData = {
-        checkoutStatus: 0,
-        checkinDate: formattedCheckinDate,
-        checkinNote: checkinNote.value ?? null,
-        checkedInBy: currentUser
-    };
+  let checkinData = {
+    checkoutStatus: 0,
+    checkinDate: formattedCheckinDate,
+    checkinNote: checkinNote.value ?? null,
+    checkedInBy: currentUser,
+  };
 
-    let key;
-    if(props.assignee === "People") key = activeCheckin.value.personAssetId;
-    else if(props.assignee === "Buildings") key = activeCheckin.value.buildingAssetId;
-    else if(props.assignee === "Rooms") key = activeCheckin.value.roomAssetId;
+  let key;
+  if (props.assignee === "People") key = activeCheckin.value.personAssetId;
+  else if (props.assignee === "Buildings")
+    key = activeCheckin.value.buildingAssetId;
+  else if (props.assignee === "Rooms") key = activeCheckin.value.roomAssetId;
 
-    try{
-        await assignmentServices.update(props.assignee, key, checkinData);
-        if(!props.activeCheckin){
-          await serializedAssetServices.updateCheckoutStatus(activeCheckin.value.serializedAssetId, false);
-          responseText = "Asset checked in successfully.";
-        }else{
-          responseText = "Checkin updated successfully.";
-        }
-
+  try {
+    await assignmentServices.update(props.assignee, key, checkinData);
+    if (!props.editMode) {
+      await serializedAssetServices.updateCheckoutStatus(
+        activeCheckin.value.serializedAssetId,
+        false
+      );
+      responseText = "Asset checked in successfully.";
+    } else {
+      responseText = "Checkin updated successfully.";
     }
-    catch(err){
-        console.error(err);
-        responseText = "Some Error occureed. Please try again later.";
-    }
-    finally{
-        emit("saveCheckin", responseText);
-    }
-}
-
+  } catch (err) {
+    console.error(err);
+    responseText = "Some Error occureed. Please try again later.";
+  } finally {
+    emit("saveCheckin", responseText);
+  }
+};
 </script>
 
 <template>
-<div>
-  <v-card class="pa-4 rounded-xl">
+  <div>
+    <v-card class="pa-4 rounded-xl">
       <v-card-title>
         <span class="headline">Check-in Asset</span>
       </v-card-title>
@@ -150,10 +154,10 @@ const saveCheckin = async() => {
             text
             @click="saveCheckin"
             :disabled="!isFormValid"
-            >Check-in</v-btn
+            >{{ checkInBtn }}</v-btn
           >
         </v-card-actions>
       </v-form>
     </v-card>
-</div>
+  </div>
 </template>
